@@ -5,6 +5,10 @@ import { AppService } from './app.service';
 import { HealthController } from './health/health.controller';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
+import { SupabaseModule } from './supabase/supabase.module';
+import { AuthModule } from './auth/auth.module';
+import { ActivityLogModule } from './activity-log/activity-log.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -13,6 +17,10 @@ import { PrismaModule } from './prisma/prisma.module';
       validate: validateEnv,
     }),
     PrismaModule,
+    SupabaseModule,
+    AuthModule,
+    ActivityLogModule,
+    UsersModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
