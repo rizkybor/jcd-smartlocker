@@ -8,6 +8,12 @@ build/
 .next/
 *.tsbuildinfo
 
+# Stray compiled output from ad hoc `tsc`/`ts-node` runs outside dist/
+# (mis. prisma/seed.js) — sumbernya tetap .ts, jangan commit hasil compile.
+prisma/*.js
+prisma/*.js.map
+prisma/*.d.ts
+
 # Env — never commit real secrets (lihat docs/PRD-Smartbox.md §7.1)
 .env
 .env.local
