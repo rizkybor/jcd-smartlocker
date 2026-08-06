@@ -9,6 +9,8 @@ import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { UsersModule } from './users/users.module';
+import { LokasiModule } from './lokasi/lokasi.module';
+import { MitraModule } from './mitra/mitra.module';
 
 @Module({
   imports: [
@@ -21,6 +23,8 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     ActivityLogModule,
     UsersModule,
+    LokasiModule,
+    MitraModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
