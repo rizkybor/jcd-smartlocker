@@ -12,5 +12,12 @@
     "lint": "pnpm -r run lint",
     "test": "pnpm -r run test",
     "build": "pnpm -r run build"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma"
+    ]
   }
 }

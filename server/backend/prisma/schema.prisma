@@ -1,0 +1,379 @@
+// Skema database Smartbox — diturunkan 1:1 dari docs/ERD-Smartbox.md.
+// Konvensi: model/field Prisma pakai camelCase (idiomatik TS), di-@map ke
+// nama tabel/kolom snake_case di Postgres (konsisten dengan ERD & konvensi
+// Supabase/Postgres). Enum juga di-@map supaya nilai di database persis
+// sama dengan yang didokumentasikan di ERD.
+//
+// Prasyarat: DATABASE_URL (koneksi pooled, mis. Supabase pgbouncer port
+// 6543) dan DIRECT_URL (koneksi langsung, port 5432, dipakai `prisma
+// migrate` — bypass pgbouncer supaya DDL migration tidak gagal). Lihat
+// docs/PRD-Smartbox.md §9.2, §14.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enum
+// ---------------------------------------------------------------------------
+
+/// Skema kerja sama mitra (docs/PRD-Smartbox.md §10).
+enum TipeSkema {
+  FIXED_RENTAL    @map("fixed_rental")
+  REVENUE_SHARING @map("revenue_sharing")
+
+  @@map("tipe_skema")
+}
+
+/// Status pengajuan persentase revenue sharing (§10, §12 poin 2).
+enum StatusApproval {
+  PENDING  @map("pending")
+  APPROVED @map("approved")
+  REJECTED @map("rejected")
+
+  @@map("status_approval")
+}
+
+/// Mode pemakaian unit — berbayar vs fasilitas gratis (§4.4a).
+enum ModePemakaian {
+  BERBAYAR @map("berbayar")
+  GRATIS   @map("gratis")
+
+  @@map("mode_pemakaian")
+}
+
+/// Status loker — 5 nilai resmi terkunci, konsisten dengan design system
+/// (§12 poin 9, §13.1). Jangan tambah nilai lain tanpa update PRD/ERD.
+enum LokerStatus {
+  TERSEDIA    @map("tersedia")
+  TERISI      @map("terisi")
+  MAINTENANCE @map("maintenance")
+  OFFLINE     @map("offline")
+  NONAKTIF    @map("nonaktif")
+
+  @@map("loker_status")
+}
+
+/// Metode akses kiosk — nomor_hp aktif di MVP, sisanya Fase 2 (§4.2).
+/// face_recognition belum terverifikasi hardware (§12 poin 6) — ada di enum
+/// supaya migrasi skema besar tidak perlu diulang begitu terverifikasi,
+/// tapi jangan diaktifkan di UI sampai konfirmasi.
+enum MetodeAkses {
+  NOMOR_HP         @map("nomor_hp")
+  RFID             @map("rfid")
+  PIN              @map("pin")
+  FACE_RECOGNITION @map("face_recognition")
+
+  @@map("metode_akses")
+}
+
+/// Status pembayaran sesi transaksi.
+enum StatusBayar {
+  PENDING @map("pending")
+  PAID    @map("paid")
+  FAILED  @map("failed")
+  EXPIRED @map("expired")
+
+  @@map("status_bayar_transaksi")
+}
+
+/// Payment gateway aktif — bisa dikonfigurasi ulang, lihat abstraksi
+/// PaymentProvider di docs/API-Contract-Smartbox.md §3 (§8).
+enum PaymentProviderType {
+  XENDIT   @map("xendit")
+  MIDTRANS @map("midtrans")
+
+  @@map("payment_provider_type")
+}
+
+/// Role akun internal (§3, §5.4, §7) — hanya SUPER_ADMIN yang boleh menulis
+/// ke tabel AkunInternal (provisioning user).
+enum AkunInternalRole {
+  SUPER_ADMIN @map("super_admin")
+  OPS         @map("ops")
+  MANAGER     @map("manager")
+  STAFF       @map("staff")
+
+  @@map("akun_internal_role")
+}
+
+/// Kategori LogAktivitas — satu tabel untuk audit keamanan (§7.1) dan
+/// activity log operasional (§5.6).
+enum LogKategori {
+  KEAMANAN    @map("keamanan")
+  OPERASIONAL @map("operasional")
+
+  @@map("log_kategori")
+}
+
+// ---------------------------------------------------------------------------
+// Model
+// ---------------------------------------------------------------------------
+
+model Lokasi {
+  id        String    @id @default(uuid()) @db.Uuid
+  nama      String
+  alamat    String
+  /// IANA timezone name, mis. "Asia/Jakarta" — wajib diisi eksplisit saat
+  /// pendaftaran, jangan asumsikan default (§7.2).
+  timezone  String
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  units           Unit[]
+  mitraLokasi     MitraLokasi[]
+  akunMitraLokasi AkunMitraLokasi[]
+
+  @@map("lokasi")
+}
+
+model Mitra {
+  id        String    @id @default(uuid()) @db.Uuid
+  nama      String
+  kontak    String?
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  mitraLokasi MitraLokasi[]
+  akunMitra   AkunMitra[]
+
+  @@map("mitra")
+}
+
+/// Relasi Mitra–Lokasi: tipe skema & persentase sengaja di sini (bukan di
+/// Mitra langsung) karena satu mitra bisa punya beberapa lokasi dengan
+/// skema berbeda (§10). `persentaseAktif` adalah snapshot dari histori yang
+/// sedang berlaku — sumber kebenaran tetap MitraLokasiSkemaHistori.
+model MitraLokasi {
+  id              String    @id @default(uuid()) @db.Uuid
+  mitraId         String    @map("mitra_id") @db.Uuid
+  lokasiId        String    @map("lokasi_id") @db.Uuid
+  tipeSkema       TipeSkema @map("tipe_skema")
+  /// 0–100, null jika tipeSkema = FIXED_RENTAL (§12 poin 2). CHECK
+  /// constraint database ditambahkan lewat prisma/sql/constraints.sql.
+  persentaseAktif Decimal?  @map("persentase_aktif") @db.Decimal(5, 2)
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  mitra        Mitra                     @relation(fields: [mitraId], references: [id])
+  lokasi       Lokasi                    @relation(fields: [lokasiId], references: [id])
+  skemaHistori MitraLokasiSkemaHistori[]
+
+  @@unique([mitraId, lokasiId])
+  @@map("mitra_lokasi")
+}
+
+/// Riwayat & alur approval persentase revenue sharing (§10). Baris baru per
+/// pengajuan (status PENDING) — hanya role MANAGER yang boleh mengubahnya
+/// jadi APPROVED/REJECTED (ditegakkan di service layer, lihat SMB-108).
+/// Baris lama diberi berlakuSampai saat baris baru disetujui — tidak pernah
+/// diedit/dihapus (append-only, §7.1).
+model MitraLokasiSkemaHistori {
+  id             String         @id @default(uuid()) @db.Uuid
+  mitraLokasiId  String         @map("mitra_lokasi_id") @db.Uuid
+  persentase     Decimal        @db.Decimal(5, 2)
+  statusApproval StatusApproval @default(PENDING) @map("status_approval")
+  diajukanOleh   String         @map("diajukan_oleh") @db.Uuid
+  disetujuiOleh  String?        @map("disetujui_oleh") @db.Uuid
+  diajukanAt     DateTime       @default(now()) @map("diajukan_at") @db.Timestamptz
+  disetujuiAt    DateTime?      @map("disetujui_at") @db.Timestamptz
+  berlakuDari    DateTime?      @map("berlaku_dari") @db.Timestamptz
+  berlakuSampai  DateTime?      @map("berlaku_sampai") @db.Timestamptz
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz
+
+  mitraLokasi MitraLokasi   @relation(fields: [mitraLokasiId], references: [id])
+  pengaju     AkunInternal  @relation("SkemaPengaju", fields: [diajukanOleh], references: [id])
+  penyetuju   AkunInternal? @relation("SkemaPenyetuju", fields: [disetujuiOleh], references: [id])
+
+  @@map("mitra_lokasi_skema_histori")
+}
+
+model Unit {
+  id                String        @id @default(uuid()) @db.Uuid
+  lokasiId          String        @map("lokasi_id") @db.Uuid
+  kodeUnit          String        @unique @map("kode_unit")
+  /// Teks bebas, bukan enum tertutup — dimensi bisa custom per proyek
+  /// (§8.3).
+  varianKompartemen String?       @map("varian_kompartemen")
+  jumlahLoker       Int           @map("jumlah_loker")
+  modePemakaian     ModePemakaian @default(BERBAYAR) @map("mode_pemakaian")
+  aktif             Boolean       @default(true)
+  deletedAt         DateTime?     @map("deleted_at") @db.Timestamptz
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
+
+  lokasi      Lokasi            @relation(fields: [lokasiId], references: [id])
+  lokers      Loker[]
+  durasiHarga UnitDurasiHarga[]
+
+  @@map("unit")
+}
+
+model UnitDurasiHarga {
+  id        String   @id @default(uuid()) @db.Uuid
+  unitId    String   @map("unit_id") @db.Uuid
+  durasiJam Int      @map("durasi_jam")
+  /// Angka, bukan string berformat (§6) — presisi untuk perhitungan bagi
+  /// hasil.
+  harga     Decimal  @db.Decimal(12, 2)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  unit          Unit            @relation(fields: [unitId], references: [id])
+  sesiTransaksi SesiTransaksi[]
+
+  @@map("unit_durasi_harga")
+}
+
+model Loker {
+  id         String      @id @default(uuid()) @db.Uuid
+  unitId     String      @map("unit_id") @db.Uuid
+  nomorLoker String      @map("nomor_loker")
+  ukuranWMm  Decimal?    @map("ukuran_w_mm") @db.Decimal(8, 2)
+  ukuranHMm  Decimal?    @map("ukuran_h_mm") @db.Decimal(8, 2)
+  /// Enum Postgres 5-nilai resmi (§12 poin 9) — nilai tidak valid ditolak
+  /// di level database.
+  status     LokerStatus @default(TERSEDIA)
+  deletedAt  DateTime?   @map("deleted_at") @db.Timestamptz
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+
+  unit               Unit                 @relation(fields: [unitId], references: [id])
+  sesiTransaksi      SesiTransaksi[]
+  emergencyUnlockLog EmergencyUnlockLog[]
+
+  @@unique([unitId, nomorLoker])
+  @@map("loker")
+}
+
+/// Catatan finansial — TIDAK PERNAH dihapus (soft atau hard, §6). Tidak
+/// punya kolom deletedAt sama sekali. Field `nomorHp` di-null-kan otomatis
+/// oleh scheduled job 6 bulan setelah waktuSelesai (§7, §12 poin 4,
+/// SMB-112) — bukan penghapusan baris.
+model SesiTransaksi {
+  id                    String              @id @default(uuid()) @db.Uuid
+  lokerId               String              @map("loker_id") @db.Uuid
+  unitDurasiHargaId     String              @map("unit_durasi_harga_id") @db.Uuid
+  /// Nullable — di-purge 6 bulan setelah sesi selesai (§7, §12 poin 4).
+  nomorHp               String?             @map("nomor_hp")
+  metodeAkses           MetodeAkses         @default(NOMOR_HP) @map("metode_akses")
+  statusBayar           StatusBayar         @default(PENDING) @map("status_bayar")
+  paymentProvider       PaymentProviderType @map("payment_provider")
+  paymentProviderRefId  String?             @map("payment_provider_ref_id")
+  /// Unik per (paymentProvider, paymentProviderRefId) — cegah proses
+  /// webhook dobel (§8, §9.3).
+  paymentIdempotencyKey String?             @unique @map("payment_idempotency_key")
+  nominal               Decimal             @db.Decimal(12, 2)
+  /// Disimpan HASH, bukan plaintext, meski berlaku cuma 5 menit (§6, ERD).
+  kodeOtpAmbilHash      String?             @map("kode_otp_ambil_hash")
+  idTransaksi           String              @unique @map("id_transaksi")
+  /// UTC — dikonversi ke timezone Lokasi saat ditampilkan (§7.2).
+  waktuMulai            DateTime?           @map("waktu_mulai") @db.Timestamptz
+  waktuSelesai          DateTime?           @map("waktu_selesai") @db.Timestamptz
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  loker           Loker           @relation(fields: [lokerId], references: [id])
+  unitDurasiHarga UnitDurasiHarga @relation(fields: [unitDurasiHargaId], references: [id])
+
+  @@unique([paymentProvider, paymentProviderRefId])
+  @@map("sesi_transaksi")
+}
+
+/// Tidak menyimpan password — autentikasi didelegasikan penuh ke Supabase
+/// Auth (§9.2). Hanya SUPER_ADMIN yang boleh menulis ke tabel ini,
+/// ditegakkan di service/guard layer (§7, SMB-106).
+model AkunInternal {
+  id              String           @id @default(uuid()) @db.Uuid
+  supabaseAuthUid String           @unique @map("supabase_auth_uid") @db.Uuid
+  nama            String
+  email           String           @unique
+  role            AkunInternalRole
+  deletedAt       DateTime?        @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz
+
+  skemaDiajukan    MitraLokasiSkemaHistori[] @relation("SkemaPengaju")
+  skemaDisetujui   MitraLokasiSkemaHistori[] @relation("SkemaPenyetuju")
+  emergencyUnlocks EmergencyUnlockLog[]
+  logAktivitas     LogAktivitas[]
+
+  @@map("akun_internal")
+}
+
+model AkunMitra {
+  id              String    @id @default(uuid()) @db.Uuid
+  mitraId         String    @map("mitra_id") @db.Uuid
+  supabaseAuthUid String    @unique @map("supabase_auth_uid") @db.Uuid
+  nama            String
+  email           String    @unique
+  deletedAt       DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  mitra       Mitra             @relation(fields: [mitraId], references: [id])
+  aksesLokasi AkunMitraLokasi[]
+
+  @@map("akun_mitra")
+}
+
+/// Junction table — satu akun mitra "terikat ke 1+ lokasi" (§6). Bukan
+/// entitas inti di §6, jadi tanpa soft delete — revoke akses = hapus baris
+/// beneran.
+model AkunMitraLokasi {
+  id          String   @id @default(uuid()) @db.Uuid
+  akunMitraId String   @map("akun_mitra_id") @db.Uuid
+  lokasiId    String   @map("lokasi_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  akunMitra AkunMitra @relation(fields: [akunMitraId], references: [id])
+  lokasi    Lokasi    @relation(fields: [lokasiId], references: [id])
+
+  @@unique([akunMitraId, lokasiId])
+  @@map("akun_mitra_lokasi")
+}
+
+/// Append-only — tidak ada endpoint UPDATE/DELETE (§7.1). Proteksi lebih
+/// ketat (REVOKE UPDATE, DELETE) ditambahkan lewat
+/// prisma/sql/constraints.sql.
+model EmergencyUnlockLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  lokerId        String   @map("loker_id") @db.Uuid
+  staffId        String   @map("staff_id") @db.Uuid
+  catatan        String?
+  waktuKejadian  DateTime @map("waktu_kejadian") @db.Timestamptz
+  disinkronkanAt DateTime @default(now()) @map("disinkronkan_at") @db.Timestamptz
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  loker Loker        @relation(fields: [lokerId], references: [id])
+  staff AkunInternal @relation(fields: [staffId], references: [id])
+
+  @@map("emergency_unlock_log")
+}
+
+/// Satu tabel untuk dua tujuan — audit keamanan (§7.1) dan activity log
+/// operasional (§5.6), dibedakan lewat `kategori`. Append-only.
+model LogAktivitas {
+  id        String      @id @default(uuid()) @db.Uuid
+  aktorId   String      @map("aktor_id") @db.Uuid
+  aktorRole String      @map("aktor_role")
+  kategori  LogKategori
+  aksi      String
+  entitas   String
+  entitasId String?     @map("entitas_id") @db.Uuid
+  detail    Json?
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  aktor AkunInternal @relation(fields: [aktorId], references: [id])
+
+  @@map("log_aktivitas")
+}
