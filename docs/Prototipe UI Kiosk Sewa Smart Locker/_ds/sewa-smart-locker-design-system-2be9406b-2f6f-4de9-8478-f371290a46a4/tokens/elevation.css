@@ -1,0 +1,14 @@
+:root{
+/* Dashboard elevation ladder. Shadows are cool navy, never black. */
+--sl-elev-0:none;
+--sl-elev-1:0 1px 2px rgba(11,27,69,.06),0 1px 1px rgba(11,27,69,.04);
+--sl-elev-2:0 2px 6px rgba(11,27,69,.08),0 1px 2px rgba(11,27,69,.05);
+--sl-elev-3:0 6px 16px rgba(11,27,69,.10),0 2px 4px rgba(11,27,69,.06);
+--sl-elev-4:0 14px 32px rgba(11,27,69,.14),0 4px 8px rgba(11,27,69,.06);
+--sl-elev-5:0 28px 64px rgba(11,27,69,.20),0 8px 16px rgba(11,27,69,.08);
+--sl-elev-inset:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(11,27,69,.04);
+/* Kiosk uses borders + fills, not shadows. One exception: the lifted CTA. */
+--sl-elev-kiosk-cta:0 10px 0 var(--sl-primary-press);
+--sl-focus:0 0 0 4px rgba(124,58,237,.35);
+--sl-focus-inverse:0 0 0 4px rgba(255,255,255,.55);
+}

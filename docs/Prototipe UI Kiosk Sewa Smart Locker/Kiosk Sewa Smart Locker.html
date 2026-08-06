@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Kiosk Sewa Smart Locker — Prototipe Alur</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/colors.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/typography.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/spacing.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/elevation.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/motion.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/animations.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/tokens/base.css">
+<link rel="stylesheet" href="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/styles.css">
+<style>
+html,body{margin:0;background:var(--sl-n-100)}
+a{color:var(--sl-text-link)}a:hover{color:var(--sl-text-link-hover)}
+.kx-outer{min-height:100vh;display:grid;place-items:center;padding:24px}
+.kx-scale{transform-origin:center center}
+.kx-bezel{padding:28px;background:var(--sl-ink-navy);border-radius:var(--sl-radius-2xl);box-shadow:var(--sl-elev-4)}
+.kx-panel{position:relative;width:800px;height:1280px;overflow:hidden;border-radius:var(--sl-radius-sm);background:var(--sl-surface-kiosk)}
+.kx-devbar{display:flex;align-items:center;justify-content:center;gap:12px;margin-top:16px;font-family:var(--sl-font-body);font-size:var(--sl-fs-13,13px)}
+.kx-devlabel{text-transform:uppercase;letter-spacing:.08em;font-size:11px;font-weight:var(--sl-fw-bold);color:var(--sl-text-faint)}
+.kx-devtoggle{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:var(--sl-radius-pill);border:1px solid var(--sl-n-300);background:#fff;color:var(--sl-text-muted);font:var(--sl-fw-semibold) 13px var(--sl-font-body);cursor:pointer}
+.kx-devtoggle .kx-devdot{width:8px;height:8px;border-radius:var(--sl-radius-pill);background:var(--sl-n-300)}
+.kx-devtoggle.on{background:var(--sl-primary-tint);border-color:var(--sl-secondary);color:var(--sl-primary)}
+.kx-devtoggle.on .kx-devdot{background:var(--sl-secondary)}
+.kx-devinfo{font-family:var(--sl-font-mono);font-size:12px;color:var(--sl-text-faint)}
+
+.kx-screen{display:flex;flex-direction:column;height:1280px;padding:var(--sl-kiosk-pad);box-sizing:border-box;gap:var(--sl-space-6)}
+.kx-idle>div>div:nth-of-type(2)>div:nth-child(1),.kx-idle>div>div:nth-of-type(2)>div:nth-child(2){width:220px!important}
+.kx-idle>div>div:nth-of-type(2)>div:nth-child(1){height:129px!important}
+.kx-idle>div>div:nth-of-type(2)>div>div:first-child{font-size:32px!important}
+.kx-idle>div>div:nth-of-type(3){top:350px!important}
+.kx-head{position:relative;padding-bottom:56px}
+.kx-head--menu{display:flex;align-items:center;justify-content:center}
+.kx-logo{height:64px;width:auto}
+.kx-sesspill{position:absolute;left:50%;bottom:0;transform:translateX(-50%);padding:8px 24px;border-radius:var(--sl-radius-pill);background:var(--sl-status-occupied-tint);color:var(--sl-status-occupied-strong);font:var(--sl-fw-semibold) var(--sl-kiosk-fs-caption)/1.2 var(--sl-font-display);white-space:nowrap}
+.kx-body{flex:1;min-height:0;display:flex;flex-direction:column;gap:var(--sl-space-6)}
+.kx-foot{display:flex;flex-direction:column;gap:var(--sl-space-4)}
+.kx-footrow{display:flex;align-items:stretch;gap:var(--sl-touch-gap)}
+.kx-foot--menu{align-items:center}
+.kx-footnote{font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1.4 var(--sl-font-body);color:var(--sl-text-faint);text-align:center}
+.kx-title{font:var(--sl-fw-bold) var(--sl-kiosk-fs-title)/1.15 var(--sl-font-display);color:var(--sl-text-strong);letter-spacing:var(--sl-ls-tight)}
+.kx-sub{font:var(--sl-fw-regular) var(--sl-kiosk-fs-body)/1.45 var(--sl-font-body);color:var(--sl-text-muted);text-wrap:pretty;max-width:700px}
+.kx-title--center,.kx-sub--center{text-align:center;margin-left:auto;margin-right:auto}
+.kx-eyebrow{display:flex;align-items:center;gap:12px;font:var(--sl-fw-medium) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-mono{font-family:var(--sl-font-mono);letter-spacing:.04em;color:var(--sl-text-body)}
+.kx-dotsep{color:var(--sl-n-300)}
+.kx-stack{display:flex;flex-direction:column;gap:var(--sl-touch-gap)}
+.kx-slot{width:100%}
+.kx-slot--hero{height:300px}
+.kx-slot--full{width:480px;height:360px;margin:0 auto}
+.kx-slot--door{width:440px;height:440px;margin:0 auto}
+
+.kx-durlist{display:flex;flex-direction:column;gap:var(--sl-touch-gap)}
+.kx-durcard{position:relative;display:flex;align-items:center;justify-content:space-between;gap:var(--sl-space-6);min-height:136px;padding:0 var(--sl-space-8);background:#fff;border:var(--sl-border-w-kiosk) solid var(--sl-border-kiosk);border-radius:var(--sl-radius-lg);overflow:hidden;cursor:pointer;text-align:left;transition:transform var(--sl-dur-instant) var(--sl-ease-standard),background var(--sl-dur-fast) var(--sl-ease-standard)}
+.kx-durcard.sel{background:var(--sl-primary);border:var(--sl-border-w-selected) solid var(--sl-ink-navy);transform:translateY(-2px)}
+.kx-spark{position:absolute;left:0;top:0;bottom:0;width:8px;background:var(--sl-spark)}
+.kx-durleft{display:flex;flex-direction:column;gap:6px}
+.kx-durhours{font:var(--sl-fw-bold) var(--sl-kiosk-fs-title)/1 var(--sl-font-display);color:var(--sl-text-strong)}
+.kx-durnote{font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-durprice{font:var(--sl-fw-extrabold) var(--sl-kiosk-fs-title)/1 var(--sl-font-display);color:var(--sl-primary);font-variant-numeric:tabular-nums}
+.kx-durcard.sel .kx-durhours,.kx-durcard.sel .kx-durprice{color:#fff}
+.kx-durcard.sel .kx-durnote{color:rgba(234,240,255,.8)}
+.kx-summary{display:flex;align-items:center;justify-content:space-between;gap:var(--sl-space-6);padding:var(--sl-space-3) var(--sl-space-3) var(--sl-space-3) var(--sl-space-6);background:var(--sl-n-100);border-radius:var(--sl-radius-md);font:var(--sl-fw-medium) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-sumright{display:flex;align-items:center;gap:var(--sl-space-4)}
+.kx-sumval{font-family:var(--sl-font-display);font-weight:var(--sl-fw-bold);color:var(--sl-text-strong);font-variant-numeric:tabular-nums;font-size:var(--sl-kiosk-fs-body)}
+.kx-changebtn{min-height:var(--sl-touch-min);padding:0 var(--sl-space-8);background:#fff;border:var(--sl-border-w-kiosk) solid var(--sl-border-kiosk);border-radius:var(--sl-radius-lg);font:var(--sl-fw-semibold) var(--sl-kiosk-fs-body)/1 var(--sl-font-display);color:var(--sl-primary);cursor:pointer}
+
+.kx-phonewrap{display:flex;flex-direction:column;gap:var(--sl-space-3)}
+.kx-body:has(.kx-tight){gap:var(--sl-space-4)}
+.kx-phonedisplay{display:flex;flex-direction:column;justify-content:center;gap:8px;min-height:104px;padding:0 var(--sl-space-8);background:#fff;border:var(--sl-border-w-kiosk) solid var(--sl-border-kiosk);border-radius:var(--sl-radius-lg);box-shadow:var(--sl-elev-inset)}
+.kx-phonedisplay.err{border-color:var(--sl-status-offline)}
+.kx-phonelabel{font:var(--sl-fw-medium) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-phonevalue{font:var(--sl-fw-bold) var(--sl-kiosk-fs-hero)/1 var(--sl-font-display);color:var(--sl-primary);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+.kx-phoneghost{color:var(--sl-n-300)}
+.kx-phonehint{min-height:26px;font:var(--sl-fw-medium) var(--sl-kiosk-fs-caption)/1.3 var(--sl-font-body);color:var(--sl-text-muted);text-align:center}
+.kx-phonedisplay.err+.kx-phonehint,.kx-phonehint:has(+.err){color:var(--sl-status-offline-strong)}
+.sl-phonepad{display:flex;justify-content:center}
+.sl-phonepad>div>div:first-child{display:none!important}
+
+.kx-banner{display:flex;align-items:center;gap:var(--sl-space-3);padding:var(--sl-space-5) var(--sl-space-6);border-radius:var(--sl-radius-md);background:var(--sl-status-available-tint);color:var(--sl-status-available-strong);font:var(--sl-fw-semibold) var(--sl-kiosk-fs-caption)/1.3 var(--sl-font-display)}
+.kx-bdot{flex:none;width:14px;height:14px;border-radius:var(--sl-radius-pill);background:var(--sl-status-available)}
+.kx-otpnote{font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1.4 var(--sl-font-body);color:var(--sl-text-muted);text-align:center}
+.kx-qrnote{max-width:600px;font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1.4 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-waiting{flex:1;display:flex;align-items:center;justify-content:center;gap:var(--sl-space-3);font:var(--sl-fw-semibold) var(--sl-kiosk-fs-caption)/1 var(--sl-font-display);color:var(--sl-text-muted)}
+.kx-pulse{width:16px;height:16px;border-radius:var(--sl-radius-pill);background:var(--sl-secondary);animation:kx-halo 1600ms var(--sl-ease-standard) infinite}
+.kx-pulsebig{width:96px;height:96px;margin:0 auto;border-radius:var(--sl-radius-pill);background:var(--sl-secondary);animation:kx-halo 1600ms var(--sl-ease-standard) infinite}
+@keyframes kx-halo{0%{box-shadow:0 0 0 0 rgba(37,99,235,.35)}70%{box-shadow:0 0 0 28px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+@media (prefers-reduced-motion:reduce){.kx-pulse,.kx-pulsebig{animation-duration:1ms}}
+.kx-doorwrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:150px 140px 0;box-sizing:border-box}
+.kx-storehead{min-height:480px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:var(--sl-space-4)}
+.kx-storewait{display:flex;flex-direction:column;align-items:center;gap:var(--sl-space-4);animation:kx-fade var(--sl-dur-base) var(--sl-ease-standard) both}
+.kx-doorbox{padding:72px 0 64px;display:grid;place-items:center}
+.kx-storefoot{min-height:var(--sl-touch-cta);display:flex;align-items:center;justify-content:center}
+@keyframes kx-fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.kx-storewait{animation-duration:1ms}}
+.kx-doorcaption{margin-top:200px;font:var(--sl-fw-semibold) var(--sl-kiosk-fs-body)/1.3 var(--sl-font-display);color:var(--sl-status-available-strong);text-align:center}
+.kx-receipt{padding:var(--sl-space-4) var(--sl-space-8);background:#fff;border:var(--sl-border-w-kiosk) solid var(--sl-border-kiosk);border-radius:var(--sl-radius-lg)}
+.kx-rrow{display:flex;align-items:center;justify-content:space-between;gap:var(--sl-space-6);min-height:60px;border-bottom:1px solid var(--sl-n-100);font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-rrow:last-child{border-bottom:0}
+.kx-rval{font:var(--sl-fw-bold) var(--sl-kiosk-fs-body)/1 var(--sl-font-display);color:var(--sl-text-strong);font-variant-numeric:tabular-nums}
+.kx-lockerbig{display:flex;flex-direction:column;align-items:center;gap:4px}
+.kx-lockerlabel{font:var(--sl-fw-medium) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-muted)}
+.kx-lockernum{font:var(--sl-fw-extrabold) var(--sl-kiosk-fs-mega)/1 var(--sl-font-display);color:var(--sl-primary);font-variant-numeric:tabular-nums}
+.kx-autoback{font:var(--sl-fw-regular) var(--sl-kiosk-fs-caption)/1 var(--sl-font-body);color:var(--sl-text-faint);text-align:center;margin-top:var(--sl-space-6)}
+</style>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="_ds/sewa-smart-locker-design-system-2be9406b-2f6f-4de9-8478-f371290a46a4/_ds_bundle.js"></script>
+<script src="image-slot.js"></script>
+<script type="text/babel" src="kiosk-shell.jsx"></script>
+<script type="text/babel" src="kiosk-app.jsx"></script>

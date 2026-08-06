@@ -1,0 +1,16 @@
+{
+  "name": "@smartbox/backend",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Backend API — NestJS/Fastify + TypeScript, Supabase (Postgres/Auth/Realtime/Storage), payment provider abstraction (docs/PRD-Smartbox.md §9.1-§9.3, docs/API-Contract-Smartbox.md).",
+  "scripts": {
+    "dev": "echo \"TODO: scaffold NestJS (PRD §9.1)\" && exit 1",
+    "build": "echo \"TODO\" && exit 1",
+    "start": "echo \"TODO\" && exit 1",
+    "lint": "echo \"TODO\" && exit 1",
+    "test": "echo \"TODO\" && exit 1",
+    "migrate": "echo \"TODO: Prisma/Supabase migration dari docs/ERD-Smartbox.md\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

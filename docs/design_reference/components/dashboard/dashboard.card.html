@@ -1,0 +1,53 @@
+<!-- @dsCard group="Components" viewport="700x900" name="Admin Dashboard" subtitle="Sidebar, stat cards, table, badges, forms, elevation" -->
+<meta charset="utf-8"><title>Dashboard components</title><link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:20px;background:var(--sl-surface-card)}#root{display:block}.lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sl-text-faint);margin:0 0 10px}</style>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+window.SL_ICON_BASE = "../../assets/icons";
+const { Sidebar, StatCard, StatusBadge, Panel, DataTable, Field, Button, Icon } = window.SewaSmartLockerDesignSystem_2be940;
+const rows=[
+ {id:"TRX-88214",unit:"Green Bay Lobby A",lok:"A-04",amount:"Rp 15.000",status:"occupied"},
+ {id:"TRX-88213",unit:"Kolam Renang GBK",lok:"C-11",amount:"Rp 25.000",status:"online"},
+ {id:"TRX-88212",unit:"Mall Kelapa Gading",lok:"B-02",amount:"Rp 15.000",status:"maintenance"}];
+function Demo(){
+  const [view,setView]=React.useState("units");
+  return (<div style={{display:"grid",gap:24}}>
+    <div style={{display:"flex",gap:20,alignItems:"stretch"}}>
+      <Sidebar activeId={view} onSelect={setView} logoSrc="../../assets/logo-mono-light.png" style={{minHeight:420,borderRadius:"var(--sl-radius-md)",overflow:"hidden"}}
+        items={[{id:"overview",label:"Ringkasan",icon:<Icon name="chart-column" />},{section:"Operasional"},{id:"units",label:"Unit Loker",icon:<Icon name="grid-2x2" />},{id:"trx",label:"Transaksi",icon:<Icon name="receipt" />},{id:"alerts",label:"Peringatan",icon:<Icon name="triangle-alert" />,badge:"3"},{section:"Pengaturan"},{id:"tariff",label:"Tarif & Durasi",icon:<Icon name="timer" />},{id:"users",label:"Pengguna",icon:<Icon name="users" />}]}
+        footer="v2.4 · PT Jendela Cakra Digital" />
+      <div style={{flex:1,display:"grid",gap:20,alignContent:"start"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:14}}>
+          <StatCard label="Pendapatan Hari Ini" value="Rp 4,82jt" delta="12,4%" deltaDirection="up" caption="vs kemarin" />
+          <StatCard label="Loker Terisi" value="128" unit="/ 180" accent="occupied" delta="6" deltaDirection="up" />
+          <StatCard label="Unit Offline" value="2" accent="offline" delta="1" deltaDirection="down" caption="perlu teknisi" />
+        </div>
+        <Panel title="Transaksi Terakhir" description="Realtime" flush actions={<Button tone="outline" size="sm" icon={<Icon name="download" size={16} />}>Ekspor CSV</Button>}>
+          <DataTable striped rows={rows} footer={<><span>Menampilkan 3 dari 248</span><Button tone="ghost" size="sm">Muat lebih</Button></>}
+            columns={[{key:"id",header:"ID Transaksi"},{key:"unit",header:"Unit",wrap:true},{key:"lok",header:"Loker",numeric:true},{key:"amount",header:"Nominal",numeric:true,align:"right"},{key:"status",header:"Status",render:r=><StatusBadge status={r.status} />}]} />
+        </Panel>
+      </div>
+    </div>
+    <div style={{display:"flex",gap:20,flexWrap:"wrap"}}>
+      <Panel title="Status Badge" style={{flex:"1 1 280px"}}>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+          <StatusBadge status="online" pulse /><StatusBadge status="available" /><StatusBadge status="occupied" /><StatusBadge status="maintenance" /><StatusBadge status="offline" solid /><StatusBadge status="idle" /><StatusBadge status="online" size="lg" />
+        </div>
+      </Panel>
+      <Panel title="Form" style={{flex:"1 1 320px"}} elevation={2}>
+        <div style={{display:"grid",gap:14}}>
+          <Field label="Nama Unit" required placeholder="Apartemen Green Bay Lobby A" hint="Muncul di dashboard dan struk." />
+          <Field label="Tipe Properti" options={[{value:"apt",label:"Apartemen"},{value:"mall",label:"Mall"},{value:"pool",label:"Kolam Renang"}]} />
+          <Field label="Tarif per 3 Jam" error="Tarif tidak boleh kosong." />
+          <div style={{display:"flex",gap:10}}><Button tone="primary">Simpan</Button><Button tone="ghost">Batal</Button><Button tone="danger" size="md">Set Maintenance</Button></div>
+        </div>
+      </Panel>
+    </div>
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>

@@ -1,0 +1,30 @@
+:root{
+--sl-space-1:4px;--sl-space-2:8px;--sl-space-3:12px;--sl-space-4:16px;--sl-space-5:20px;
+--sl-space-6:24px;--sl-space-8:32px;--sl-space-10:40px;--sl-space-12:48px;--sl-space-16:64px;--sl-space-20:80px;
+
+--sl-radius-xs:4px;--sl-radius-sm:8px;--sl-radius-md:12px;--sl-radius-lg:16px;
+--sl-radius-xl:24px;--sl-radius-2xl:32px;--sl-radius-pill:999px;
+
+/* Touch: kiosk minimum 88px, comfortable 112px, primary CTA 128px */
+--sl-touch-min:88px;
+--sl-touch-comfort:112px;
+--sl-touch-cta:128px;
+--sl-touch-gap:20px;      /* never less between two kiosk targets */
+
+--sl-border-w:1px; /* @kind spacing */
+--sl-border-w-kiosk:2px; /* @kind spacing */
+--sl-border-w-selected:4px; /* @kind spacing */
+
+--sl-sidebar-w:264px;
+--sl-sidebar-w-collapsed:76px;
+--sl-container-max:1440px;
+/* Reference kiosk: 8" tablet, 1280x800 panel (~189x118mm, ~189ppi).
+   Design portrait-first at 800x1280 CSS px; landscape swaps the two. */
+--sl-kiosk-w:800px;
+--sl-kiosk-h:1280px;
+--sl-kiosk-w-landscape:1280px;
+--sl-kiosk-h-landscape:800px;
+--sl-kiosk-pad:32px;        /* page gutter on an 8" panel */
+--sl-kiosk-pad-landscape:40px;
+--sl-kiosk-content-max:736px; /* 800 - 2x32 */
+}

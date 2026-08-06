@@ -1,0 +1,21 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  client/dashboard-company: {}
+
+  client/dashboard-mitra: {}
+
+  client/kiosk: {}
+
+  client/packages/ui: {}
+
+  server/backend: {}
+
+  server/gateway: {}

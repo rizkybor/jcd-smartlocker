@@ -1,0 +1,4 @@
+/* Self-hosted variable fonts (SIL Open Font License — see assets/fonts/*-OFL.txt).
+   Variable axis wght 100-900; no CDN, so kiosks work offline. */
+@font-face{font-family:"Lexend";src:url("../assets/fonts/Lexend-Variable.ttf") format("truetype-variations"),url("../assets/fonts/Lexend-Variable.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Manrope";src:url("../assets/fonts/Manrope-Variable.ttf") format("truetype-variations"),url("../assets/fonts/Manrope-Variable.ttf") format("truetype");font-weight:200 800;font-style:normal;font-display:swap}

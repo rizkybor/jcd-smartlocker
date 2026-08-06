@@ -1,0 +1,14 @@
+{
+  "name": "@smartbox/ui",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Design system internal — diformalkan dari docs/design_reference/ (tokens, komponen kiosk/dashboard). Lihat docs/PRD-Smartbox.md §13, ticket SMB-002.",
+  "main": "./index.ts",
+  "scripts": {
+    "build": "echo \"TODO: bundle package (PRD §9.1, §13.3)\" && exit 1",
+    "lint": "echo \"TODO: lanjutkan pola docs/design_reference/_adherence.oxlintrc.json (PRD §9.4)\" && exit 1",
+    "test": "echo \"TODO\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

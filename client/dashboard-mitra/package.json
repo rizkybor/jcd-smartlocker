@@ -1,0 +1,14 @@
+{
+  "name": "@smartbox/dashboard-mitra",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Dashboard Mitra — eksternal, monitoring-only. Tidak ada endpoint/route tulis (docs/PRD-Smartbox.md §5.5).",
+  "scripts": {
+    "dev": "echo \"TODO: scaffold Vite + React + TypeScript, consume @smartbox/ui (PRD §9.1)\" && exit 1",
+    "build": "echo \"TODO\" && exit 1",
+    "lint": "echo \"TODO\" && exit 1",
+    "test": "echo \"TODO\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

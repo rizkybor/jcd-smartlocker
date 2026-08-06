@@ -1,0 +1,14 @@
+{
+  "name": "@smartbox/kiosk",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Kiosk touchscreen app — alur sewa & ambil barang (docs/PRD-Smartbox.md §5.1-§5.2). Canvas target: 1024x600 landscape (§8.1, §12 poin 8).",
+  "scripts": {
+    "dev": "echo \"TODO: scaffold Vite + React + TypeScript (PRD §9.1)\" && exit 1",
+    "build": "echo \"TODO\" && exit 1",
+    "lint": "echo \"TODO\" && exit 1",
+    "test": "echo \"TODO\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

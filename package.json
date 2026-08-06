@@ -1,0 +1,16 @@
+{
+  "name": "jcd-smartlocker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Smartbox — Sewa Smart Locker. Monorepo: client (kiosk, dashboard-company, dashboard-mitra, @smartbox/ui) + server (backend, gateway).",
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.18.3",
+  "scripts": {
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "build": "pnpm -r run build"
+  }
+}

@@ -1,0 +1,36 @@
+<!-- @dsCard group="Components" viewport="700x760" name="Icons — Lucide" subtitle="65 vendored glyphs; masked to inherit currentColor" -->
+<meta charset="utf-8"><title>Icons</title><link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:20px;background:var(--sl-surface-card)}.lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sl-text-faint);margin:0 0 10px}</style>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+window.SL_ICON_BASE = "../../assets/icons";
+const { Icon } = window.SewaSmartLockerDesignSystem_2be940;
+const GROUPS = {"Loker & pintu":["lock","lock-open","door-closed","door-open","key-round","package","package-open","grid-2x2","layout-grid","shield-check"],"Pembayaran":["qr-code","scan-line","wallet","banknote","credit-card","receipt","smartphone","nfc","hand"],"Status & waktu":["circle-check","circle-alert","circle-x","triangle-alert","wifi-off","wrench","power","zap","cpu","clock","timer","refresh-cw"],"Dashboard":["chart-column","activity","trending-up","trending-down","table","list","settings","users","user","bell","search","download","log-out","panel-left","monitor","calendar","ellipsis-vertical","eye","info","plus"],"Properti":["building-2","house","dumbbell","shopping-bag","map-pin"],"Navigasi":["chevron-left","chevron-right","chevron-up","chevron-down","arrow-left","arrow-right","check","x","delete"]};
+function Demo(){
+  return (<div style={{display:"grid",gap:22}}>
+    <div><p className="lbl">Sizes — 16 / 20 / 24 dashboard · 48 / 64 kiosk</p>
+      <div style={{display:"flex",alignItems:"flex-end",gap:22,color:"var(--sl-primary)"}}>
+        {[16,20,24,48,64].map(s=><div key={s} style={{textAlign:"center"}}><Icon name="lock-open" size={s} /><div style={{fontFamily:"var(--sl-font-mono)",fontSize:10,color:"var(--sl-text-faint)",marginTop:6}}>{s}</div></div>)}
+        <div style={{display:"flex",gap:14,marginLeft:12}}>
+          <Icon name="circle-check" size={28} color="var(--sl-status-available)" />
+          <Icon name="clock" size={28} color="var(--sl-status-occupied-strong)" />
+          <Icon name="wrench" size={28} color="var(--sl-status-offline)" />
+        </div>
+      </div></div>
+    {Object.keys(GROUPS).map(g=>(
+      <div key={g}><p className="lbl">{g}</p>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(84px,1fr))",gap:10}}>
+          {GROUPS[g].map(n=>(
+            <div key={n} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:6,padding:"10px 4px",border:"1px solid var(--sl-border)",borderRadius:"var(--sl-radius-sm)",background:"var(--sl-n-25)"}}>
+              <Icon name={n} size={24} style={{color:"var(--sl-text-strong)"}} />
+              <span style={{fontFamily:"var(--sl-font-mono)",fontSize:9,color:"var(--sl-text-muted)",textAlign:"center",wordBreak:"break-word"}}>{n}</span>
+            </div>))}
+        </div></div>))}
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>

@@ -1,0 +1,23 @@
+:root{
+--sl-font-display:"Lexend","Segoe UI",system-ui,sans-serif;   /* headings, kiosk, numerals */
+--sl-font-body:"Manrope","Segoe UI",system-ui,sans-serif;     /* running text, dashboard UI */
+--sl-font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace; /* locker IDs, PIN echo, logs */
+
+--sl-fw-light:300; /* @kind font */--sl-fw-regular:400; /* @kind font */--sl-fw-medium:500; /* @kind font */--sl-fw-semibold:600; /* @kind font */--sl-fw-bold:700; /* @kind font */--sl-fw-extrabold:800; /* @kind font */
+
+/* Dashboard / screen scale (1.25) */
+--sl-fs-11:11px;--sl-fs-12:12px;--sl-fs-13:13px;--sl-fs-14:14px;--sl-fs-16:16px;
+--sl-fs-18:18px;--sl-fs-20:20px;--sl-fs-24:24px;--sl-fs-30:30px;--sl-fs-38:38px;--sl-fs-48:48px;
+
+/* Kiosk scale — read while standing 50-90cm away. 24px is the FLOOR. */
+--sl-kiosk-fs-min:24px;      /* legal minimum for any kiosk text */
+--sl-kiosk-fs-caption:24px;  /* helper text, fine print */
+--sl-kiosk-fs-body:28px;     /* instructions, list rows */
+--sl-kiosk-fs-label:32px;    /* button labels, field labels */
+--sl-kiosk-fs-title:40px;    /* step titles */
+--sl-kiosk-fs-hero:56px;     /* prices, locker numbers, idle headline */
+--sl-kiosk-fs-mega:80px;     /* countdown, single big number */
+
+--sl-lh-tight:1.1; /* @kind font */--sl-lh-snug:1.25; /* @kind font */--sl-lh-normal:1.5; /* @kind font */--sl-lh-loose:1.65; /* @kind font */
+--sl-ls-tight:-0.02em; /* @kind font */--sl-ls-normal:0; /* @kind font */--sl-ls-wide:0.02em; /* @kind font */--sl-ls-caps:0.08em; /* @kind font */
+}

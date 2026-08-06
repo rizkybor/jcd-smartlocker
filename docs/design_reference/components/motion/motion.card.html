@@ -1,0 +1,33 @@
+<!-- @dsCard group="Components" viewport="700x480" name="Motion" subtitle="Door open, payment success, realtime pulse" -->
+<meta charset="utf-8"><title>Motion components</title><link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:20px;background:var(--sl-surface-card)}#root{display:block}.lbl{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--sl-text-faint);margin:0 0 10px}</style>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<script type="text/babel">
+window.SL_ICON_BASE = "../../assets/icons";
+const { DoorTransition, SuccessBurst, StatusPulse, KioskButton, Icon } = window.SewaSmartLockerDesignSystem_2be940;
+function Demo(){
+  const [open,setOpen]=React.useState(false);
+  const [n,setN]=React.useState(0);
+  return (<div style={{display:"grid",gap:24}}>
+    <div style={{display:"flex",gap:40,flexWrap:"wrap",alignItems:"flex-start"}}>
+      <div><p className="lbl">DoorTransition</p>
+        <DoorTransition open={open} id="A-04" size={200} label={open?"Pintu terbuka — silakan ambil barang":"Tekan untuk membuka"} />
+        <div style={{marginTop:16}}><KioskButton tone={open?"neutral":"secondary"} size="md" onClick={()=>setOpen(!open)} icon={<Icon name={open?"door-closed":"door-open"} size={32} />}>{open?"Tutup":"Buka Pintu"}</KioskButton></div></div>
+      <div><p className="lbl">SuccessBurst</p>
+        <div key={n}><SuccessBurst size={140} title="Pembayaran Berhasil" detail="Loker A-04 · berlaku sampai 18:30" /></div>
+        <div style={{marginTop:16}}><KioskButton tone="neutral" size="md" onClick={()=>setN(n+1)} icon={<Icon name="refresh-cw" size={28} />}>Putar ulang</KioskButton></div></div>
+    </div>
+    <div><p className="lbl">StatusPulse</p>
+      <div style={{display:"flex",gap:28,flexWrap:"wrap"}}>
+        <StatusPulse status="available">Realtime — diperbarui 2 detik lalu</StatusPulse>
+        <StatusPulse status="occupied">14 pintu sedang disewa</StatusPulse>
+        <StatusPulse status="offline" live={false}>Koneksi terputus</StatusPulse>
+      </div></div>
+  </div>);
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Demo />);
+</script>

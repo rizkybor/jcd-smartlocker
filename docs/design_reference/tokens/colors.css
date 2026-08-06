@@ -1,0 +1,69 @@
+:root{
+/* ---------- Brand ---------- */
+--sl-primary:#1E3A8A;
+--sl-primary-hover:#1B3479;
+--sl-primary-press:#152A63;
+--sl-primary-tint:#E8EDFA;
+--sl-secondary:#2563EB;
+--sl-secondary-hover:#1D4FD0;
+--sl-secondary-press:#1943B4;
+--sl-secondary-tint:#E4EDFE;
+--sl-accent:#7C3AED;
+--sl-accent-hover:#6D2FD6;
+--sl-accent-tint:#F0E9FE;
+--sl-ink-navy:#0B1B45; /* logo outline navy, deepest brand ink */
+--sl-spark:#F26419;    /* the orange spark in the mark: use ONLY as a micro accent */
+
+/* ---------- Neutrals ---------- */
+--sl-n-0:#FFFFFF;
+--sl-n-25:#FAFBFD;
+--sl-n-50:#F4F6FB;
+--sl-n-100:#E9EDF5;
+--sl-n-200:#D6DCE8;
+--sl-n-300:#B4BDCE;
+--sl-n-400:#8A94A9;
+--sl-n-500:#5F6981;
+--sl-n-600:#454E63;
+--sl-n-700:#2E3648;
+--sl-n-800:#1C2333;
+--sl-n-900:#101625;
+
+/* ---------- Status (LOCKED — identical across all palettes) ---------- */
+--sl-status-available:#16A34A;
+--sl-status-available-strong:#15803D; /* text-on-white / outdoor contrast */
+--sl-status-available-tint:#E7F6EC;
+--sl-status-occupied:#EAB308;
+--sl-status-occupied-strong:#A16207; /* required for text on light bg */
+--sl-status-occupied-tint:#FEF7DE;
+--sl-status-offline:#DC2626;
+--sl-status-offline-strong:#B91C1C;
+--sl-status-offline-tint:#FDEAEA;
+--sl-status-neutral:#8A94A9;         /* compartment out of service / unassigned */
+--sl-status-neutral-tint:#EEF1F6;
+
+/* ---------- Semantic surfaces ---------- */
+--sl-surface-page:var(--sl-n-50);
+--sl-surface-card:var(--sl-n-0);
+--sl-surface-sunken:var(--sl-n-100);
+--sl-surface-inverse:var(--sl-ink-navy);
+--sl-surface-brand:var(--sl-primary);
+--sl-surface-kiosk:#F7F9FC;      /* kiosk chrome: near-white, max legibility */
+--sl-surface-kiosk-idle:var(--sl-ink-navy);
+
+/* ---------- Semantic text ---------- */
+--sl-text-strong:var(--sl-n-900);
+--sl-text-body:var(--sl-n-700);
+--sl-text-muted:var(--sl-n-500);
+--sl-text-faint:var(--sl-n-400);
+--sl-text-on-brand:#FFFFFF;
+--sl-text-on-dark:#EAF0FF;
+--sl-text-link:var(--sl-secondary);
+--sl-text-link-hover:var(--sl-primary);
+
+/* ---------- Borders ---------- */
+--sl-border:var(--sl-n-200);
+--sl-border-strong:var(--sl-n-300);
+--sl-border-brand:var(--sl-secondary);
+--sl-border-kiosk:#C9D3E6;       /* 2px minimum on kiosk */
+--sl-focus-ring:#7C3AED;
+}

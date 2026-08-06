@@ -1,0 +1,14 @@
+{
+  "name": "@smartbox/gateway",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Gateway hardware service — berjalan di Mini PC dalam unit locker. MQTT publish status loker/pintu, komunikasi serial/RS485 ke Main Controller Board, local queue SQLite (docs/PRD-Smartbox.md §8.1-§8.2, §9.1, docs/API-Contract-Smartbox.md §4).",
+  "scripts": {
+    "dev": "echo \"TODO: scaffold Node.js service (PRD §9.1)\" && exit 1",
+    "build": "echo \"TODO\" && exit 1",
+    "lint": "echo \"TODO\" && exit 1",
+    "test": "echo \"TODO\" && exit 1"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
