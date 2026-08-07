@@ -14,6 +14,8 @@ import { LokasiModule } from './lokasi/lokasi.module';
 import { MitraModule } from './mitra/mitra.module';
 import { EmergencyUnlockModule } from './emergency-unlock/emergency-unlock.module';
 import { PurgeModule } from './purge/purge.module';
+import { PaymentModule } from './payment/payment.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { PurgeModule } from './purge/purge.module';
     MitraModule,
     EmergencyUnlockModule,
     PurgeModule,
+    PaymentModule,
+    WebhooksModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],
