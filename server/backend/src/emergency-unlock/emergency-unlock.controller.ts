@@ -5,7 +5,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -22,6 +21,9 @@ import {
 
 /**
  * docs/API-Contract-Smartbox.md §5.5.
+ *
+ * Pipe Zod per-parameter, bukan `@UsePipes()` method-level — lihat catatan
+ * bug di kiosk/kiosk-sewa.controller.ts.
  */
 @Controller('company/emergency-unlock-log')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -38,9 +40,8 @@ export class EmergencyUnlockController {
 
   @Post()
   @Roles(AkunInternalRole.STAFF, AkunInternalRole.SUPER_ADMIN)
-  @UsePipes(new ZodValidationPipe(createEmergencyUnlockSchema))
   create(
-    @Body() dto: CreateEmergencyUnlockDto,
+    @Body(new ZodValidationPipe(createEmergencyUnlockSchema)) dto: CreateEmergencyUnlockDto,
     @CurrentUser() actor: AuthenticatedInternalUser,
   ) {
     return this.emergencyUnlockService.create(dto, actor);

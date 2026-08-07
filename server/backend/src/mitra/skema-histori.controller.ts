@@ -5,7 +5,6 @@ import {
   Param,
   Post,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -22,6 +21,9 @@ import { ajukanSkemaSchema, type AjukanSkemaDto } from './dto/ajukan-skema.dto';
  * Super Admin MENENTUKAN (bukan mitra mengajukan), Manager APPROVE — dua
  * role berbeda, ditegakkan lewat @Roles() terpisah per endpoint (§7, §10,
  * §12 poin 2).
+ *
+ * Pipe Zod per-parameter, bukan `@UsePipes()` method-level — lihat catatan
+ * bug di kiosk/kiosk-sewa.controller.ts.
  */
 @Controller()
 @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -36,10 +38,9 @@ export class SkemaHistoriController {
 
   @Post('company/mitra-lokasi/:id/ajukan-skema')
   @Roles(AkunInternalRole.SUPER_ADMIN)
-  @UsePipes(new ZodValidationPipe(ajukanSkemaSchema))
   ajukan(
     @Param('id') mitraLokasiId: string,
-    @Body() dto: AjukanSkemaDto,
+    @Body(new ZodValidationPipe(ajukanSkemaSchema)) dto: AjukanSkemaDto,
     @CurrentUser() actor: AuthenticatedInternalUser,
   ) {
     return this.skemaHistoriService.ajukan(mitraLokasiId, dto, actor);

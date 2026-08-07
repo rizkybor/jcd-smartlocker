@@ -8,7 +8,6 @@ import {
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -25,6 +24,11 @@ import { updateUserRoleSchema, type UpdateUserRoleDto } from './dto/update-user-
  * Manajemen User — docs/PRD-Smartbox.md §5.4, §7; docs/API-Contract-Smartbox.md §5.4.
  * HANYA Super Admin — @Roles(SUPER_ADMIN) menolak semua role lain, termasuk
  * Manager, di level guard (bukan cuma disembunyikan di UI dashboard).
+ *
+ * Pipe Zod dipasang per-parameter (`@Body(new ZodValidationPipe(...))`),
+ * bukan `@UsePipes()` method-level — lihat catatan bug di
+ * kiosk/kiosk-sewa.controller.ts (method-level pipe ikut memvalidasi
+ * `@CurrentUser()`/`@Param()`, bukan cuma body, dan selalu gagal).
  */
 @Controller('company/users')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -40,16 +44,17 @@ export class UsersController {
   }
 
   @Post()
-  @UsePipes(new ZodValidationPipe(createUserSchema))
-  create(@Body() dto: CreateUserDto, @CurrentUser() actor: AuthenticatedInternalUser) {
+  create(
+    @Body(new ZodValidationPipe(createUserSchema)) dto: CreateUserDto,
+    @CurrentUser() actor: AuthenticatedInternalUser,
+  ) {
     return this.usersService.create(dto, actor);
   }
 
   @Patch(':id/role')
-  @UsePipes(new ZodValidationPipe(updateUserRoleSchema))
   updateRole(
     @Param('id') id: string,
-    @Body() dto: UpdateUserRoleDto,
+    @Body(new ZodValidationPipe(updateUserRoleSchema)) dto: UpdateUserRoleDto,
     @CurrentUser() actor: AuthenticatedInternalUser,
   ) {
     return this.usersService.updateRole(id, dto, actor);

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from './guards/unit-key.guard';
 import { CurrentUnit } from './decorators/current-unit.decorator';
@@ -11,6 +11,13 @@ import { mulaiSewaSchema, type MulaiSewaDto } from './dto/mulai-sewa.dto';
  * docs/API-Contract-Smartbox.md §2 — alur sewa (docs/PRD-Smartbox.md §5.1).
  * Semua endpoint di sini publik-per-unit (UnitKeyGuard, bukan Supabase
  * Auth) — kiosk tidak punya akun pengguna (§1).
+ *
+ * Pipe validasi Zod SELALU dipasang per-parameter (`@Body(new
+ * ZodValidationPipe(schema))`), BUKAN `@UsePipes()` di level method —
+ * `@UsePipes()` method-level menerapkan pipe itu ke SEMUA parameter
+ * handler (termasuk `@CurrentUnit()`/`@CurrentUser()`), bukan cuma
+ * `@Body()`, jadi request selalu gagal validasi begitu ada parameter lain
+ * selain body (ditemukan & diverifikasi langsung lewat smoke test Epic 4).
  */
 @Controller('kiosk')
 @UseGuards(UnitKeyGuard)
@@ -23,15 +30,16 @@ export class KioskSewaController {
   }
 
   @Post('sewa/validasi-hp')
-  @UsePipes(new ZodValidationPipe(nomorHpSchema))
-  validasiHp(@Body() _dto: NomorHpDto) {
+  validasiHp(@Body(new ZodValidationPipe(nomorHpSchema)) _dto: NomorHpDto) {
     // Pipe sudah menolak (400) kalau format salah — sampai sini berarti valid.
     return { valid: true };
   }
 
   @Post('sewa/mulai')
-  @UsePipes(new ZodValidationPipe(mulaiSewaSchema))
-  mulaiSewa(@CurrentUnit() unit: Unit, @Body() dto: MulaiSewaDto) {
+  mulaiSewa(
+    @CurrentUnit() unit: Unit,
+    @Body(new ZodValidationPipe(mulaiSewaSchema)) dto: MulaiSewaDto,
+  ) {
     return this.kioskSewaService.mulaiSewa(unit, dto);
   }
 

@@ -100,6 +100,7 @@ export class KioskSewaService {
           lokerId: loker.id,
           unitDurasiHargaId: durasiHarga.id,
           nomorHp: dto.nomorHp,
+          email: dto.email,
           nominal: durasiHarga.harga,
           idTransaksi: generateIdTransaksi(),
           paymentProvider: this.paymentProvider.name,

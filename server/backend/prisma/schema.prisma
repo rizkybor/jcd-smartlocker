@@ -289,6 +289,11 @@ model SesiTransaksi {
   nominal               Decimal             @db.Decimal(12, 2)
   /// Disimpan HASH, bukan plaintext, meski berlaku cuma 5 menit (§6, ERD).
   kodeOtpAmbilHash      String?             @map("kode_otp_ambil_hash")
+  /// Ditandai saat verifikasi OTP ambil-barang sukses (§5.2 langkah 3) —
+  /// dicek oleh endpoint buka-pintu ambil supaya pintu tidak bisa dibuka
+  /// tanpa verifikasi OTP sukses lebih dulu (bukan sekadar dipercaya dari
+  /// urutan panggilan frontend).
+  otpVerifiedAt         DateTime?           @map("otp_verified_at") @db.Timestamptz
   idTransaksi           String              @unique @map("id_transaksi")
   /// UTC — dikonversi ke timezone Lokasi saat ditampilkan (§7.2).
   waktuMulai            DateTime?           @map("waktu_mulai") @db.Timestamptz
