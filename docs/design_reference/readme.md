@@ -8,7 +8,7 @@ Two surfaces, two very different design problems, one brand:
 
 | Surface | Context | Design consequence |
 | --- | --- | --- |
-| **Kiosk touchscreen** | Standing user, 50–90 cm away, wet/gloved hands, bright ambient light, 15–60 s session, often a first-time user. **Reference hardware: 8″ tablet, 1280×800 panel (~189×118 mm, ~189 ppi), portrait-mounted.** | 88 px minimum touch targets, 24 px minimum type, one decision per screen, light backgrounds only, borders instead of shadows, status wording never colour-alone |
+| **Kiosk touchscreen** | Standing user, 50–90 cm away, wet/gloved hands, bright ambient light, 15–60 s session, often a first-time user. **Reference hardware: 7″ IPS panel, 1024×600, ~153×90 mm, ~170 ppi, landscape-only fixed mount** (recalibrated from an earlier 8″/portrait assumption once the vendor spec was confirmed — see docs/PRD-Smartbox.md §8.1/§12 poin 8). | 88 px minimum touch targets, 24 px minimum type, one decision per screen (height, not width, is the scarce axis here), light backgrounds only, borders instead of shadows, status wording never colour-alone |
 | **Admin dashboard** | Seated operator, desktop, long sessions, dense realtime data | 32/40/48 px controls, 12–16 px type, elevation ladder, tabular numerals, navy navigation rail |
 
 This system contains the **shared foundations and reusable components only**. The kiosk UI and the admin dashboard products are deliberately *not* built here — they are the next two projects and both consume this system.
@@ -65,7 +65,7 @@ Kiosk scale — **24 px is a hard floor, not a suggestion**:
 | `--sl-kiosk-fs-body` | 28 px | Instructions, list rows |
 | `--sl-kiosk-fs-caption` | 24 px | Helper text, fine print — **minimum** |
 
-Why 24 px is the floor on this hardware: the 8″ panel runs ~189 ppi, so an 800 px-wide CSS viewport puts one px at ≈0.24 mm. 24 px ≈ 5.7 mm of type — comfortably readable at 50–90 cm. Anything smaller drops below ~13 arc-minutes and a first-time user starts leaning in. The upper end of the scale is trimmed relative to a large-format kiosk (80/56/40 instead of 96/64/44) purely because the canvas is 800 px wide, not because the user is closer.
+Why 24 px is the floor on this hardware: the 7″ panel runs ~170 ppi (recalibrated from an earlier 8″/~189ppi assumption, SMB-801), so a 1024 px-wide CSS viewport puts one px at ≈0.15 mm. 24 px ≈ 3.6 mm of type — comfortably readable at 50–90 cm, if anything more generous than on the old reference panel since the lower ppi makes each CSS px physically larger. Anything smaller drops below ~13 arc-minutes and a first-time user starts leaning in. The upper end of the scale is trimmed relative to a large-format kiosk (80/56/40 instead of 96/64/44) because the canvas is compact in both axes, not because the user is closer.
 
 Dashboard scale runs 11 → 48 px (`--sl-fs-*`); body is 14 px, table headers 12 px uppercase with `0.08em` tracking. Money and counts always set tabular numerals (`.sl-num`) so realtime updates don't jitter.
 
@@ -95,7 +95,7 @@ Dashboard scale runs 11 → 48 px (`--sl-fs-*`); body is 14 px, table headers 12
 
 **Radii.** 4 / 8 / 12 / 16 / 24 / 32 / pill. Dashboard controls 8 px; dashboard cards 12 px; kiosk buttons and tiles 16 px; kiosk QR frame 24 px. Pill is reserved for status badges, countdown pills and dots. Nothing is fully square, nothing is a circle except dots and the success badge.
 
-**Spacing & layout.** 4 px base. Dashboard uses 16/24 px gutters, 264 px sidebar (76 px collapsed), 1440 px max content width. The kiosk is designed against an **8″ tablet: 800×1280 CSS px portrait** (1280×800 landscape for wall mounts), 32 px page gutter, 736 px content column, and a minimum 20 px gap between adjacent touch targets. On this canvas a portrait screen holds exactly one column — step bar, title, one decision, one primary action; landscape splits 60/40 with content left and the keypad or QR right. Never put two columns of decisions on a kiosk. Fixed elements: dashboard sidebar (full height, non-scrolling) and the kiosk's step indicator pinned at the top of every flow screen.
+**Spacing & layout.** 4 px base. Dashboard uses 16/24 px gutters, 264 px sidebar (76 px collapsed), 1440 px max content width. The kiosk is designed against the **actual vendor panel: 1024×600 CSS px, landscape-only, fixed mount** (recalibrated from an earlier 8″/portrait-first assumption once the hardware spec was confirmed, docs/PRD-Smartbox.md §8.1/§12 poin 8, SMB-801) — 24 px page gutter, 976 px content column, and a minimum 20 px gap between adjacent touch targets. Height (600 px) is the scarce axis here, not width — budget step bar + title + one content block + CTA row inside it, no scrolling. Prefer the 60/40 split (content left, keypad or QR right) over stacking vertically whenever a screen needs both explanatory text and an input control. Never put two columns of decisions on a kiosk. Fixed elements: dashboard sidebar (full height, non-scrolling) and the kiosk's step indicator pinned at the top of every flow screen.
 
 **Interaction states.**
 - *Hover* (dashboard only — the kiosk has no pointer): fill darkens one step (`--sl-*-hover`); table rows tint to `--sl-primary-tint`; sidebar items take an 8% white wash.

@@ -172,7 +172,7 @@ Epic 0–2 adalah fondasi — hampir semua epic lain bergantung padanya. Epic 3�
 
 *Referensi: PRD §13*
 
-- **SMB-801** — Kalibrasi ulang canvas kiosk dari 800×1280 (asumsi awal) ke **1024×600 landscape** (ukuran final) — grid, breakpoint, ukuran komponen `IdleScreen`/`QRScreen`/dll. *(PRD §12 poin 8, §13.1)*
+- **SMB-801** ✅ **Selesai** — Kalibrasi ulang canvas kiosk dari 800×1280 (asumsi awal) ke **1024×600 landscape** (ukuran final) — token `--sl-kiosk-w/-h/-pad/-content-max` di `docs/design_reference/tokens/spacing.css`, guideline `kiosk-canvas.card.html`/`type-kiosk-scale.card.html`, dan `readme.md` sudah diperbarui. Komponen kiosk (`IdleScreen`/`QRScreen`/dll.) pakai token, bukan px hardcoded, jadi ikut ter-update otomatis. *(PRD §12 poin 8, §13.1)*
 - **SMB-802** — Komponen baru `ConfirmDialog` (Radix UI Dialog/AlertDialog, mengikuti token design system). *(PRD §9.3, §13.2)*
 - **SMB-803** — Komponen baru `Toast`/notifikasi non-blocking. *(PRD §9.3, §13.2)*
 - **SMB-804** — Lengkapi kontrol paginasi eksplisit di `DataTable` (kontrol halaman + info total data). *(PRD §5.6, §13.2)*

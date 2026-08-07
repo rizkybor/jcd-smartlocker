@@ -18,13 +18,17 @@
 --sl-sidebar-w:264px;
 --sl-sidebar-w-collapsed:76px;
 --sl-container-max:1440px;
-/* Reference kiosk: 8" tablet, 1280x800 panel (~189x118mm, ~189ppi).
-   Design portrait-first at 800x1280 CSS px; landscape swaps the two. */
---sl-kiosk-w:800px;
---sl-kiosk-h:1280px;
---sl-kiosk-w-landscape:1280px;
---sl-kiosk-h-landscape:800px;
---sl-kiosk-pad:32px;        /* page gutter on an 8" panel */
---sl-kiosk-pad-landscape:40px;
---sl-kiosk-content-max:736px; /* 800 - 2x32 */
+/* Reference kiosk (RECALIBRATED, docs/PRD-Smartbox.md §8.1/§12 poin 8 — SMB-801):
+   7" IPS panel, 1024x600 px, ~153x90mm, ~170ppi, LANDSCAPE-ONLY (fixed
+   physical mount, no portrait mode — unlike the earlier 8"/portrait-first
+   assumption this design system shipped with). Single canvas, no
+   portrait/landscape pair needed; the *-landscape tokens are kept as
+   aliases only so nothing that already reads them breaks. */
+--sl-kiosk-w:1024px;
+--sl-kiosk-h:600px;
+--sl-kiosk-w-landscape:1024px;
+--sl-kiosk-h-landscape:600px;
+--sl-kiosk-pad:24px;        /* page gutter — trimmed from 32px, height is now the scarce axis (600px vs the old 800/1280) */
+--sl-kiosk-pad-landscape:24px;
+--sl-kiosk-content-max:976px; /* 1024 - 2x24 */
 }

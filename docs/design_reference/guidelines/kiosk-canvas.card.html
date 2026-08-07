@@ -1,15 +1,12 @@
-<!-- @dsCard group="Spacing" viewport="700x330" name="Kiosk Canvas — 8&quot; Tablet" subtitle="800x1280 portrait reference, ~189ppi, 32px gutter" -->
+<!-- @dsCard group="Spacing" viewport="700x260" name="Kiosk Canvas — 7&quot; Panel" subtitle="1024x600 landscape, ~170ppi, 24px gutter (recalibrated, SMB-801)" -->
 <meta charset="utf-8"><link rel="stylesheet" href="../styles.css"><style>body{margin:0;padding:20px;background:var(--sl-surface-card);font-family:var(--sl-font-body)}.v{font-family:var(--sl-font-mono);font-size:10px;color:var(--sl-text-faint)}</style>
 <div style="display:flex;gap:28px;align-items:flex-start">
-<div style="display:flex;gap:18px">
-<div style="text-align:center"><div style="position:relative;width:106px;height:170px;background:var(--sl-surface-kiosk);border:6px solid var(--sl-ink-navy);border-radius:10px"><div style="position:absolute;inset:5px;border:1px dashed var(--sl-secondary)"></div></div><div style="font-size:11px;font-weight:700;margin-top:8px;color:var(--sl-text-body)">Portrait 800×1280</div><div class="v">default</div></div>
-<div style="text-align:center"><div style="position:relative;width:170px;height:106px;background:var(--sl-surface-kiosk);border:6px solid var(--sl-ink-navy);border-radius:10px"><div style="position:absolute;inset:6px;border:1px dashed var(--sl-n-400)"></div></div><div style="font-size:11px;font-weight:700;margin-top:8px;color:var(--sl-text-body)">Landscape 1280×800</div><div class="v">wall-mount</div></div>
-</div>
+<div style="text-align:center"><div style="position:relative;width:194px;height:114px;background:var(--sl-surface-kiosk);border:6px solid var(--sl-ink-navy);border-radius:10px"><div style="position:absolute;inset:5px;border:1px dashed var(--sl-secondary)"></div></div><div style="font-size:11px;font-weight:700;margin-top:8px;color:var(--sl-text-body)">Landscape 1024×600</div><div class="v">only orientation — fixed mount</div></div>
 <div style="flex:1;font-size:12px;line-height:1.8;color:var(--sl-text-body)">
-<div><b>Panel</b> 8″ diagonal · 1280×800 · ~189×118 mm · ~189 ppi</div>
-<div><b>Gutter</b> 32px portrait / 40px landscape <span class="v">--sl-kiosk-pad</span></div>
-<div><b>Content column</b> max 736px <span class="v">--sl-kiosk-content-max</span></div>
-<div><b>Touch</b> 88px ≈ 20mm · gap 20px ≈ 4,7mm <span class="v">--sl-touch-min</span></div>
-<div><b>Type floor</b> 24px ≈ 5,7mm — legible at 50–90cm</div>
-<div style="margin-top:8px;color:var(--sl-text-muted)">Portrait fits one column: step bar, title, one decision, one CTA. Landscape splits 60/40 — content left, keypad or QR right. Never two columns of decisions.</div>
+<div><b>Panel</b> 7″ diagonal · 1024×600 · ~153×90 mm · ~170 ppi</div>
+<div><b>Gutter</b> 24px, all sides <span class="v">--sl-kiosk-pad</span></div>
+<div><b>Content column</b> max 976px <span class="v">--sl-kiosk-content-max</span></div>
+<div><b>Touch</b> 88px (≈13mm) min · gap 20px min <span class="v">--sl-touch-min</span></div>
+<div><b>Type floor</b> 24px — still the legibility floor at 50–90cm; lower ppi than the old 8" reference makes it, if anything, physically larger per px, not smaller</div>
+<div style="margin-top:8px;color:var(--sl-text-muted)">Landscape-only, and shorter than the old 8" reference (600px vs 800px tall) — height is now the scarce axis. One decision per screen still applies, more strictly: budget for step bar + title + one content block + CTA row inside 600px, no scrolling. Prefer the 60/40 split (content left, keypad/QR right) over stacking vertically whenever a screen has both explanatory text and an input control.</div>
 </div></div>
