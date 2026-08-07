@@ -23,6 +23,7 @@ function parseArgs() {
 
   const email = get('email') ?? process.env.SEED_SUPER_ADMIN_EMAIL;
   const nama = get('nama') ?? process.env.SEED_SUPER_ADMIN_NAMA;
+  const password = get('password') ?? process.env.SEED_SUPER_ADMIN_PASSWORD;
 
   if (!email || !nama) {
     console.error(
@@ -32,11 +33,11 @@ function parseArgs() {
     process.exit(1);
   }
 
-  return { email, nama };
+  return { email, nama, password };
 }
 
 async function main() {
-  const { email, nama } = parseArgs();
+  const { email, nama, password } = parseArgs();
 
   const supabaseUrl = process.env.SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,8 +62,15 @@ async function main() {
     }
 
     console.log(`Membuat akun Supabase Auth untuk ${email}...`);
+    // `password` WAJIB disertakan di sini (bukan di-set belakangan lewat
+    // updateUserById) — GoTrue baru membuat baris `identities` provider
+    // "email" saat user dibuat DENGAN password sejak awal. Tanpa ini,
+    // grant_type=password akan SELALU gagal "Invalid login credentials"
+    // walaupun password sudah di-set setelahnya (ditemukan & diverifikasi
+    // langsung terhadap Supabase saat setup Epic 3).
     const { data, error } = await supabase.auth.admin.createUser({
       email,
+      password,
       email_confirm: true,
     });
     if (error || !data.user) {
@@ -81,9 +89,13 @@ async function main() {
     console.log('Super Admin pertama berhasil dibuat:');
     console.log(`  id: ${akun.id}`);
     console.log(`  email: ${akun.email}`);
-    console.log('\nUser belum punya password — kirim link "reset password" lewat Supabase Auth');
-    console.log('(Dashboard Supabase -> Authentication -> Users -> pilih user -> Send password recovery),');
-    console.log('atau pakai flow magic link / OTP email di Dashboard Company nanti.');
+    if (password) {
+      console.log('\nLogin pakai password yang di-set lewat --password/SEED_SUPER_ADMIN_PASSWORD.');
+    } else {
+      console.log('\nTidak ada password diberikan — kirim link "reset password" lewat Supabase Auth');
+      console.log('(Dashboard Supabase -> Authentication -> Users -> pilih user -> Send password recovery),');
+      console.log('atau pakai flow magic link / OTP email di Dashboard Company nanti.');
+    }
   } finally {
     await prisma.$disconnect();
   }
