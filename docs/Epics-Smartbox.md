@@ -172,7 +172,7 @@ Epic 0–2 adalah fondasi — hampir semua epic lain bergantung padanya. Epic 3�
 
 *Referensi: PRD §13*
 
-- **SMB-801** ✅ **Selesai** — Kalibrasi ulang canvas kiosk dari 800×1280 (asumsi awal) ke **1024×600 landscape** (ukuran final) — token `--sl-kiosk-w/-h/-pad/-content-max` di `docs/design_reference/tokens/spacing.css`, guideline `kiosk-canvas.card.html`/`type-kiosk-scale.card.html`, dan `readme.md` sudah diperbarui. Komponen kiosk (`IdleScreen`/`QRScreen`/dll.) pakai token, bukan px hardcoded, jadi ikut ter-update otomatis. *(PRD §12 poin 8, §13.1)*
+- **SMB-801** ✅ **Selesai (revisi kedua)** — Kalibrasi ulang canvas kiosk dari 800×1280 (asumsi awal) ke 1024×600 landscape, lalu dikoreksi lagi ke **600×1024 portrait** (ukuran final — panel 7″ 1024×600 native, mount dirotasi 90°) — token `--sl-kiosk-w/-h/-pad/-content-max` di `docs/design_reference/tokens/spacing.css`, guideline `kiosk-canvas.card.html`/`type-kiosk-scale.card.html`, dan `readme.md` sudah diperbarui. Komponen kiosk (`IdleScreen`/`QRScreen`/dll.) pakai token, bukan px hardcoded, jadi ikut ter-update otomatis; layout `client/kiosk` yang tadinya split kiri-kanan (mis. `NomorHpScreen`) sudah disusun ulang vertikal. *(PRD §12 poin 8, §13.1)*
 - **SMB-802** — Komponen baru `ConfirmDialog` (Radix UI Dialog/AlertDialog, mengikuti token design system). *(PRD §9.3, §13.2)*
 - **SMB-803** — Komponen baru `Toast`/notifikasi non-blocking. *(PRD §9.3, §13.2)*
 - **SMB-804** — Lengkapi kontrol paginasi eksplisit di `DataTable` (kontrol halaman + info total data). *(PRD §5.6, §13.2)*
@@ -213,7 +213,7 @@ Epic 0–2 adalah fondasi — hampir semua epic lain bergantung padanya. Epic 3�
 
 - **SMB-1101** — Unit test logic kritikal: perhitungan bagi hasil, validasi sesi/timeout, assign loker atomik. *(PRD §9.4)*
 - **SMB-1102** — Integration test endpoint backend (auth/RBAC per role, webhook payment, RLS isolasi mitra). *(PRD §9.4)*
-- **SMB-1103** — E2E test alur kiosk penuh (Playwright, viewport 1024×600) — sewa & ambil barang, termasuk skenario gagal bayar/timeout. *(PRD §9.4)*
+- **SMB-1103** — E2E test alur kiosk penuh (Playwright, viewport 600×1024) — sewa & ambil barang, termasuk skenario gagal bayar/timeout. *(PRD §9.4)*
 - **SMB-1104** — E2E test Dashboard Company (approval Manager, provisioning Super Admin, konfigurasi unit). *(PRD §9.4)*
 - **SMB-1105** — Test RLS Dashboard Mitra — pastikan tidak bisa akses data mitra lain via request langsung. *(Epic 7, SMB-704)*
 - **SMB-1106** — Uji beban dasar untuk endpoint publik kiosk (concurrent sewa di banyak unit). *(PRD §11)*
@@ -253,4 +253,4 @@ Epic 11 (QA) — paralel dengan semua epic implementasi, bukan fase terpisah di 
 Epic 12 (Fase 2) — seluruhnya *setelah* MVP live, kecuali SMB-1201 (verifikasi hardware) yang bisa mulai begitu unit fisik pertama diadakan (bisa tumpang tindih dengan akhir MVP).
 ```
 
-**Catatan:** Epic 3 & 4 (Kiosk) idealnya menunggu SMB-801 (kalibrasi canvas 1024×600) selesai sebelum polish visual final — tapi logic alur (state machine, API integration) bisa dikerjakan paralel di atas canvas sementara, supaya tidak ada tim yang menganggur menunggu.
+**Catatan:** Epic 3 & 4 (Kiosk) idealnya menunggu SMB-801 (kalibrasi canvas 600×1024 portrait) selesai sebelum polish visual final — tapi logic alur (state machine, API integration) bisa dikerjakan paralel di atas canvas sementara, supaya tidak ada tim yang menganggur menunggu.

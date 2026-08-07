@@ -118,19 +118,20 @@
 --sl-sidebar-w:264px;
 --sl-sidebar-w-collapsed:76px;
 --sl-container-max:1440px;
-/* Reference kiosk (RECALIBRATED, docs/PRD-Smartbox.md §8.1/§12 poin 8 — SMB-801):
-   7" IPS panel, 1024x600 px, ~153x90mm, ~170ppi, LANDSCAPE-ONLY (fixed
-   physical mount, no portrait mode — unlike the earlier 8"/portrait-first
-   assumption this design system shipped with). Single canvas, no
-   portrait/landscape pair needed; the *-landscape tokens are kept as
-   aliases only so nothing that already reads them breaks. */
---sl-kiosk-w:1024px;
---sl-kiosk-h:600px;
---sl-kiosk-w-landscape:1024px;
---sl-kiosk-h-landscape:600px;
---sl-kiosk-pad:24px;        /* page gutter — trimmed from 32px, height is now the scarce axis (600px vs the old 800/1280) */
+/* Reference kiosk (RE-RECALIBRATED, docs/PRD-Smartbox.md §8.1/§12 poin 8 —
+   SMB-801, revisi kedua): SAME 7" IPS panel, 1024x600 px native, ~170ppi —
+   tapi dipasang PORTRAIT (panel dirotasi 90°, bukan diganti), jadi viewport
+   efektif 600x1024. Single canvas, no portrait/landscape pair needed; the
+   *-landscape tokens are kept as aliases only so nothing that already reads
+   them breaks (nilainya sekarang SAMA dengan token utama, bukan landscape
+   sungguhan lagi). */
+--sl-kiosk-w:600px;
+--sl-kiosk-h:1024px;
+--sl-kiosk-w-landscape:600px;
+--sl-kiosk-h-landscape:1024px;
+--sl-kiosk-pad:24px;        /* page gutter — width sekarang sumbu sempit (600px), tinggi 1024px longgar */
 --sl-kiosk-pad-landscape:24px;
---sl-kiosk-content-max:976px; /* 1024 - 2x24 */
+--sl-kiosk-content-max:552px; /* 600 - 2x24 */
 }
 :root{
 /* Dashboard elevation ladder. Shadows are cool navy, never black. */

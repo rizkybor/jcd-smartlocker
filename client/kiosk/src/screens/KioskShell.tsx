@@ -5,8 +5,9 @@ const SEWA_STEPS = ['Nomor HP', 'Durasi', 'Bayar', 'Ambil Barang'];
 
 /**
  * Layout bersama semua layar alur sewa selain Idle (yang full-bleed).
- * Kanvas 1024×600 — tinggi adalah sumbu sempit (§13.1 design system,
- * SMB-801), jadi step bar dibuat compact & konten tidak boleh scroll.
+ * Kanvas 600×1024 (portrait) — lebar adalah sumbu sempit (§13.1 design
+ * system, SMB-801 revisi kedua), jadi step bar dibuat compact & konten
+ * disusun vertikal, tidak lagi split kiri-kanan seperti asumsi landscape.
  */
 export function KioskShell({
   step,

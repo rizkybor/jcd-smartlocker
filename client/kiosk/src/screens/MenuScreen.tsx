@@ -16,7 +16,7 @@ export function MenuScreen({ onSewa }: { onSewa: () => void }) {
       <div style={{ fontSize: 'var(--sl-kiosk-fs-title)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)' }}>
         Mau ngapain hari ini?
       </div>
-      <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-touch-gap)' }}>
         <KioskButton tone="primary" size="xl" onClick={onSewa}>
           Sewa Loker
         </KioskButton>

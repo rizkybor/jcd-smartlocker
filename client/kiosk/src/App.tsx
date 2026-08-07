@@ -46,8 +46,8 @@ export default function App() {
     >
       <div
         style={{
-          width: 1024,
-          height: 600,
+          width: 600,
+          height: 1024,
           overflow: 'hidden',
           boxShadow: '0 0 40px rgba(0,0,0,.4)',
         }}

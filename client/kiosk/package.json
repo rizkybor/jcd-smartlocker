@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
-  "description": "Kiosk touchscreen app — alur sewa & ambil barang (docs/PRD-Smartbox.md §5.1-§5.2). Canvas: 1024x600 landscape (§8.1, §12 poin 8, SMB-801).",
+  "description": "Kiosk touchscreen app — alur sewa & ambil barang (docs/PRD-Smartbox.md §5.1-§5.2). Canvas: 600x1024 portrait (§8.1, §12 poin 8, SMB-801).",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
