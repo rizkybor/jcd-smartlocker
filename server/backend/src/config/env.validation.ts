@@ -32,9 +32,18 @@ const envSchema = z.object({
   MIDTRANS_SERVER_KEY: z.string().optional(),
   MIDTRANS_CLIENT_KEY: z.string().optional(),
 
-  // WhatsApp Business API / BSP — §8
-  WHATSAPP_BSP_API_KEY: z.string().min(1),
-  WHATSAPP_BSP_SENDER_NUMBER: z.string().min(1),
+  // Channel OTP ambil-barang (§5.2, §8, SMB-207) — default EMAIL (Brevo)
+  // sementara WhatsApp BSP belum tersedia (Epic 0 SMB-006).
+  OTP_CHANNEL_ACTIVE: z.enum(['email', 'whatsapp']).default('email'),
+  BREVO_API_KEY: z.string().optional(),
+  BREVO_SENDER_EMAIL: z.string().optional(),
+  BREVO_SENDER_NAME: z.string().optional(),
+
+  // WhatsApp Business API / BSP — §8. Optional untuk sekarang (channel
+  // belum aktif, lihat OTP_CHANNEL_ACTIVE) — wajib diisi begitu
+  // OTP_CHANNEL_ACTIVE=whatsapp.
+  WHATSAPP_BSP_API_KEY: z.string().optional(),
+  WHATSAPP_BSP_SENDER_NUMBER: z.string().optional(),
 
   // Cloudinary — §9.1, §9.2
   CLOUDINARY_CLOUD_NAME: z.string().min(1),

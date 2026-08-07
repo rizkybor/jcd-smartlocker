@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health/health.controller';
@@ -16,6 +18,7 @@ import { EmergencyUnlockModule } from './emergency-unlock/emergency-unlock.modul
 import { PurgeModule } from './purge/purge.module';
 import { PaymentModule } from './payment/payment.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { OtpModule } from './otp/otp.module';
 
 @Module({
   imports: [
@@ -24,6 +27,17 @@ import { WebhooksModule } from './webhooks/webhooks.module';
       validate: validateEnv,
     }),
     ScheduleModule.forRoot(),
+    // Rate limiting (§7.1, API-Contract-Smartbox.md §1.6). `default` jadi
+    // pagar umum semua endpoint. Named throttler `otp-send`/`otp-verify`
+    // disiapkan untuk endpoint kiosk ambil-barang (Epic 4, belum
+    // dibangun) — controller nanti tinggal pakai
+    // `@Throttle({ 'otp-send': { limit: 3, ttl: 900_000 } })` dst., tidak
+    // perlu setup ulang di sini.
+    ThrottlerModule.forRoot([
+      { name: 'default', ttl: 60_000, limit: 60 },
+      { name: 'otp-send', ttl: 900_000, limit: 3 },
+      { name: 'otp-verify', ttl: 900_000, limit: 5 },
+    ]),
     PrismaModule,
     SupabaseModule,
     AuthModule,
@@ -35,8 +49,9 @@ import { WebhooksModule } from './webhooks/webhooks.module';
     PurgeModule,
     PaymentModule,
     WebhooksModule,
+    OtpModule,
   ],
   controllers: [AppController, HealthController],
-  providers: [AppService],
+  providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

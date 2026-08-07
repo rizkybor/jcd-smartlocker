@@ -266,6 +266,11 @@ model SesiTransaksi {
   unitDurasiHargaId     String              @map("unit_durasi_harga_id") @db.Uuid
   /// Nullable — di-purge 6 bulan setelah sesi selesai (§7, §12 poin 4).
   nomorHp               String?             @map("nomor_hp")
+  /// Email penyewa — dipakai kirim OTP ambil barang SEMENTARA (channel
+  /// default = email/Resend selama WhatsApp BSP belum tersedia, Epic 0
+  /// SMB-006). Nullable, ikut di-purge bersamaan dengan nomorHp (§7, §12
+  /// poin 4) — data pribadi yang sama sensitifnya.
+  email                 String?             @map("email_penyewa")
   metodeAkses           MetodeAkses         @default(NOMOR_HP) @map("metode_akses")
   statusBayar           StatusBayar         @default(PENDING) @map("status_bayar")
   paymentProvider       PaymentProviderType @map("payment_provider")
