@@ -8,15 +8,18 @@
 // 6543) dan DIRECT_URL (koneksi langsung, port 5432, dipakai `prisma
 // migrate` — bypass pgbouncer supaya DDL migration tidak gagal). Lihat
 // docs/PRD-Smartbox.md §9.2, §14.
+//
+// Prisma 7-ready config: URL koneksi TIDAK lagi di sini (properti `url`
+// datasource dihapus di Prisma 7) — dipindah ke ../prisma.config.ts (dipakai
+// `prisma migrate`) dan PrismaService (driver adapter `@prisma/adapter-pg`,
+// dipakai PrismaClient runtime). Lihat https://pris.ly/d/config-datasource.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 // ---------------------------------------------------------------------------
@@ -272,7 +275,7 @@ model SesiTransaksi {
   /// Nullable — di-purge 6 bulan setelah sesi selesai (§7, §12 poin 4).
   nomorHp               String?             @map("nomor_hp")
   /// Email penyewa — dipakai kirim OTP ambil barang SEMENTARA (channel
-  /// default = email/Resend selama WhatsApp BSP belum tersedia, Epic 0
+  /// default = email/Brevo selama WhatsApp BSP belum tersedia, Epic 0
   /// SMB-006). Nullable, ikut di-purge bersamaan dengan nomorHp (§7, §12
   /// poin 4) — data pribadi yang sama sensitifnya.
   email                 String?             @map("email_penyewa")

@@ -61,6 +61,7 @@ export class WebhooksController {
       });
     }
 
-    return { data: result };
+    // ResponseInterceptor (global, app.module.ts) membungkus jadi { data }.
+    return result;
   }
 }

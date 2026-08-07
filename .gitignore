@@ -14,6 +14,11 @@ prisma/*.js
 prisma/*.js.map
 prisma/*.d.ts
 
+# `tsc -b` composite build juga bisa emit vite.config.js/.d.ts di sebelah
+# vite.config.ts (tsconfig.node.json referenced project) — bukan sumber.
+client/*/vite.config.js
+client/*/vite.config.d.ts
+
 # Env — never commit real secrets (lihat docs/PRD-Smartbox.md §7.1)
 .env
 .env.local
@@ -36,3 +41,7 @@ coverage/
 
 # Supabase local
 .supabase/
+
+# Catatan lokal cara menjalankan server/client — bukan dokumentasi resmi,
+# jangan ikut ter-commit.
+run-app.md

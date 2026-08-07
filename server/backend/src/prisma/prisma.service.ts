@@ -4,6 +4,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
 import { softDeleteExtension } from './soft-delete.extension';
 
@@ -28,7 +29,16 @@ type SoftDeleteModelKey =
 @Injectable()
 export class PrismaService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(PrismaService.name);
-  private readonly client = new PrismaClient();
+  // Driver adapter (Prisma 7-ready — lihat prisma/schema.prisma). Konstruksi
+  // di sini (bukan top-level module), supaya process.env.DATABASE_URL sudah
+  // ke-load ConfigModule.forRoot() saat Nest resolve provider ini — bukan
+  // saat file di-import (lebih awal dari itu). Query lewat pooler pgbouncer
+  // (DATABASE_URL, port 6543); hanya `prisma migrate` (prisma.config.ts)
+  // yang pakai DIRECT_URL.
+  private readonly adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+  });
+  private readonly client = new PrismaClient({ adapter: this.adapter });
 
   readonly db = this.client.$extends(softDeleteExtension);
 

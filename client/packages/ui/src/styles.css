@@ -1,0 +1,186 @@
+/* @smartbox/ui — token bundle, diturunkan dari docs/design_reference/tokens/*.css
+ * (SMB-002). Font & icon file fisik di-serve dari public/ tiap app yang
+ * consume package ini (lihat README package ini) — CSS ini cuma referensi
+ * path absolut /fonts, /icons.
+ */
+@font-face{font-family:"Lexend";src:url("/fonts/Lexend-Variable.ttf") format("truetype-variations"),url("/fonts/Lexend-Variable.ttf") format("truetype");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Manrope";src:url("/fonts/Manrope-Variable.ttf") format("truetype-variations"),url("/fonts/Manrope-Variable.ttf") format("truetype");font-weight:200 800;font-style:normal;font-display:swap}
+
+:root{
+/* ---------- Brand ---------- */
+--sl-primary:#1E3A8A;
+--sl-primary-hover:#1B3479;
+--sl-primary-press:#152A63;
+--sl-primary-tint:#E8EDFA;
+--sl-secondary:#2563EB;
+--sl-secondary-hover:#1D4FD0;
+--sl-secondary-press:#1943B4;
+--sl-secondary-tint:#E4EDFE;
+--sl-accent:#7C3AED;
+--sl-accent-hover:#6D2FD6;
+--sl-accent-tint:#F0E9FE;
+--sl-ink-navy:#0B1B45; /* logo outline navy, deepest brand ink */
+--sl-spark:#F26419;    /* the orange spark in the mark: use ONLY as a micro accent */
+
+/* ---------- Neutrals ---------- */
+--sl-n-0:#FFFFFF;
+--sl-n-25:#FAFBFD;
+--sl-n-50:#F4F6FB;
+--sl-n-100:#E9EDF5;
+--sl-n-200:#D6DCE8;
+--sl-n-300:#B4BDCE;
+--sl-n-400:#8A94A9;
+--sl-n-500:#5F6981;
+--sl-n-600:#454E63;
+--sl-n-700:#2E3648;
+--sl-n-800:#1C2333;
+--sl-n-900:#101625;
+
+/* ---------- Status (LOCKED — identical across all palettes) ---------- */
+--sl-status-available:#16A34A;
+--sl-status-available-strong:#15803D; /* text-on-white / outdoor contrast */
+--sl-status-available-tint:#E7F6EC;
+--sl-status-occupied:#EAB308;
+--sl-status-occupied-strong:#A16207; /* required for text on light bg */
+--sl-status-occupied-tint:#FEF7DE;
+--sl-status-offline:#DC2626;
+--sl-status-offline-strong:#B91C1C;
+--sl-status-offline-tint:#FDEAEA;
+--sl-status-neutral:#8A94A9;         /* compartment out of service / unassigned */
+--sl-status-neutral-tint:#EEF1F6;
+
+/* ---------- Semantic surfaces ---------- */
+--sl-surface-page:var(--sl-n-50);
+--sl-surface-card:var(--sl-n-0);
+--sl-surface-sunken:var(--sl-n-100);
+--sl-surface-inverse:var(--sl-ink-navy);
+--sl-surface-brand:var(--sl-primary);
+--sl-surface-kiosk:#F7F9FC;      /* kiosk chrome: near-white, max legibility */
+--sl-surface-kiosk-idle:var(--sl-ink-navy);
+
+/* ---------- Semantic text ---------- */
+--sl-text-strong:var(--sl-n-900);
+--sl-text-body:var(--sl-n-700);
+--sl-text-muted:var(--sl-n-500);
+--sl-text-faint:var(--sl-n-400);
+--sl-text-on-brand:#FFFFFF;
+--sl-text-on-dark:#EAF0FF;
+--sl-text-link:var(--sl-secondary);
+--sl-text-link-hover:var(--sl-primary);
+
+/* ---------- Borders ---------- */
+--sl-border:var(--sl-n-200);
+--sl-border-strong:var(--sl-n-300);
+--sl-border-brand:var(--sl-secondary);
+--sl-border-kiosk:#C9D3E6;       /* 2px minimum on kiosk */
+--sl-focus-ring:#7C3AED;
+}
+:root{
+--sl-font-display:"Lexend","Segoe UI",system-ui,sans-serif;   /* headings, kiosk, numerals */
+--sl-font-body:"Manrope","Segoe UI",system-ui,sans-serif;     /* running text, dashboard UI */
+--sl-font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace; /* locker IDs, PIN echo, logs */
+
+--sl-fw-light:300; /* @kind font */--sl-fw-regular:400; /* @kind font */--sl-fw-medium:500; /* @kind font */--sl-fw-semibold:600; /* @kind font */--sl-fw-bold:700; /* @kind font */--sl-fw-extrabold:800; /* @kind font */
+
+/* Dashboard / screen scale (1.25) */
+--sl-fs-11:11px;--sl-fs-12:12px;--sl-fs-13:13px;--sl-fs-14:14px;--sl-fs-16:16px;
+--sl-fs-18:18px;--sl-fs-20:20px;--sl-fs-24:24px;--sl-fs-30:30px;--sl-fs-38:38px;--sl-fs-48:48px;
+
+/* Kiosk scale — read while standing 50-90cm away. 24px is the FLOOR. */
+--sl-kiosk-fs-min:24px;      /* legal minimum for any kiosk text */
+--sl-kiosk-fs-caption:24px;  /* helper text, fine print */
+--sl-kiosk-fs-body:28px;     /* instructions, list rows */
+--sl-kiosk-fs-label:32px;    /* button labels, field labels */
+--sl-kiosk-fs-title:40px;    /* step titles */
+--sl-kiosk-fs-hero:56px;     /* prices, locker numbers, idle headline */
+--sl-kiosk-fs-mega:80px;     /* countdown, single big number */
+
+--sl-lh-tight:1.1; /* @kind font */--sl-lh-snug:1.25; /* @kind font */--sl-lh-normal:1.5; /* @kind font */--sl-lh-loose:1.65; /* @kind font */
+--sl-ls-tight:-0.02em; /* @kind font */--sl-ls-normal:0; /* @kind font */--sl-ls-wide:0.02em; /* @kind font */--sl-ls-caps:0.08em; /* @kind font */
+}
+:root{
+--sl-space-1:4px;--sl-space-2:8px;--sl-space-3:12px;--sl-space-4:16px;--sl-space-5:20px;
+--sl-space-6:24px;--sl-space-8:32px;--sl-space-10:40px;--sl-space-12:48px;--sl-space-16:64px;--sl-space-20:80px;
+
+--sl-radius-xs:4px;--sl-radius-sm:8px;--sl-radius-md:12px;--sl-radius-lg:16px;
+--sl-radius-xl:24px;--sl-radius-2xl:32px;--sl-radius-pill:999px;
+
+/* Touch: kiosk minimum 88px, comfortable 112px, primary CTA 128px */
+--sl-touch-min:88px;
+--sl-touch-comfort:112px;
+--sl-touch-cta:128px;
+--sl-touch-gap:20px;      /* never less between two kiosk targets */
+
+--sl-border-w:1px; /* @kind spacing */
+--sl-border-w-kiosk:2px; /* @kind spacing */
+--sl-border-w-selected:4px; /* @kind spacing */
+
+--sl-sidebar-w:264px;
+--sl-sidebar-w-collapsed:76px;
+--sl-container-max:1440px;
+/* Reference kiosk (RECALIBRATED, docs/PRD-Smartbox.md §8.1/§12 poin 8 — SMB-801):
+   7" IPS panel, 1024x600 px, ~153x90mm, ~170ppi, LANDSCAPE-ONLY (fixed
+   physical mount, no portrait mode — unlike the earlier 8"/portrait-first
+   assumption this design system shipped with). Single canvas, no
+   portrait/landscape pair needed; the *-landscape tokens are kept as
+   aliases only so nothing that already reads them breaks. */
+--sl-kiosk-w:1024px;
+--sl-kiosk-h:600px;
+--sl-kiosk-w-landscape:1024px;
+--sl-kiosk-h-landscape:600px;
+--sl-kiosk-pad:24px;        /* page gutter — trimmed from 32px, height is now the scarce axis (600px vs the old 800/1280) */
+--sl-kiosk-pad-landscape:24px;
+--sl-kiosk-content-max:976px; /* 1024 - 2x24 */
+}
+:root{
+/* Dashboard elevation ladder. Shadows are cool navy, never black. */
+--sl-elev-0:none;
+--sl-elev-1:0 1px 2px rgba(11,27,69,.06),0 1px 1px rgba(11,27,69,.04);
+--sl-elev-2:0 2px 6px rgba(11,27,69,.08),0 1px 2px rgba(11,27,69,.05);
+--sl-elev-3:0 6px 16px rgba(11,27,69,.10),0 2px 4px rgba(11,27,69,.06);
+--sl-elev-4:0 14px 32px rgba(11,27,69,.14),0 4px 8px rgba(11,27,69,.06);
+--sl-elev-5:0 28px 64px rgba(11,27,69,.20),0 8px 16px rgba(11,27,69,.08);
+--sl-elev-inset:inset 0 1px 0 rgba(255,255,255,.6),inset 0 -1px 0 rgba(11,27,69,.04);
+/* Kiosk uses borders + fills, not shadows. One exception: the lifted CTA. */
+--sl-elev-kiosk-cta:0 10px 0 var(--sl-primary-press);
+--sl-focus:0 0 0 4px rgba(124,58,237,.35);
+--sl-focus-inverse:0 0 0 4px rgba(255,255,255,.55);
+}
+:root{
+--sl-dur-instant:80ms; /* @kind other */
+--sl-dur-fast:140ms; /* @kind other */
+--sl-dur-base:220ms; /* @kind other */
+--sl-dur-slow:400ms; /* @kind other */
+--sl-dur-door:700ms; /* @kind other */      /* compartment door swing */
+--sl-dur-celebrate:900ms; /* @kind other */ /* payment success */
+--sl-dur-idle:1200ms; /* @kind other */     /* screensaver crossfade */
+
+--sl-ease-standard:cubic-bezier(.2,.8,.2,1); /* @kind other */
+--sl-ease-out:cubic-bezier(.16,1,.3,1); /* @kind other */
+--sl-ease-in:cubic-bezier(.5,0,.75,0); /* @kind other */
+--sl-ease-door:cubic-bezier(.34,1.28,.64,1); /* @kind other */ /* slight overshoot: physical latch */
+--sl-ease-linear:linear; /* @kind other */
+}
+/* Named motion primitives. Components reference these; never re-declare keyframes locally. */
+@keyframes sl-door-open{0%{transform:perspective(900px) rotateY(0deg)}100%{transform:perspective(900px) rotateY(-72deg)}}
+@keyframes sl-door-close{0%{transform:perspective(900px) rotateY(-72deg)}100%{transform:perspective(900px) rotateY(0deg)}}
+@keyframes sl-latch-nudge{0%,100%{transform:translateX(0)}30%{transform:translateX(-3px)}60%{transform:translateX(3px)}}
+@keyframes sl-success-pop{0%{transform:scale(.4);opacity:0}55%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes sl-check-draw{0%{stroke-dashoffset:64}100%{stroke-dashoffset:0}}
+@keyframes sl-ring-out{0%{transform:scale(.6);opacity:.55}100%{transform:scale(2.1);opacity:0}}
+@keyframes sl-pulse{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes sl-live-halo{0%{box-shadow:0 0 0 0 rgba(22,163,74,.45)}100%{box-shadow:0 0 0 14px rgba(22,163,74,0)}}
+@keyframes sl-fade-up{0%{opacity:0;transform:translateY(16px)}100%{opacity:1;transform:translateY(0)}}
+@keyframes sl-shimmer{0%{background-position:-360px 0}100%{background-position:360px 0}}
+@keyframes sl-idle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes sl-status-flip{0%{background-color:var(--sl-status-occupied);}100%{background-color:var(--sl-status-available);}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;font-family:var(--sl-font-body);font-size:var(--sl-fs-14);color:var(--sl-text-body);background:var(--sl-surface-page);-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4,h5{font-family:var(--sl-font-display);color:var(--sl-text-strong);letter-spacing:var(--sl-ls-tight);line-height:var(--sl-lh-snug);margin:0}
+a{color:var(--sl-text-link);text-decoration:none}
+a:hover{color:var(--sl-text-link-hover);text-decoration:underline}
+:focus-visible{outline:none;box-shadow:var(--sl-focus)}
+.sl-mono{font-family:var(--sl-font-mono);font-variant-numeric:tabular-nums}
+.sl-num{font-family:var(--sl-font-display);font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+.sl-kiosk{font-family:var(--sl-font-display);font-size:var(--sl-kiosk-fs-body);color:var(--sl-text-strong)}

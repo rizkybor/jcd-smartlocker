@@ -12,6 +12,7 @@
  *
  * Pakai: pnpm run seed:super-admin -- --email=you@example.com --nama="Nama Anda"
  */
+import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, AkunInternalRole } from '@prisma/client';
 import { createClient } from '@supabase/supabase-js';
 
@@ -46,7 +47,8 @@ async function main() {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const prisma = new PrismaClient();
+  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const prisma = new PrismaClient({ adapter });
 
   try {
     const existing = await prisma.akunInternal.findFirst({ where: { email } });
