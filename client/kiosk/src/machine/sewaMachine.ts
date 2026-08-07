@@ -98,8 +98,11 @@ export const sewaMachine = setup({
   },
   states: {
     idle: {
-      entry: assign(() => initialContext),
-      on: { SENTUH: 'muatUnit' },
+      // Reset semua field KECUALI errorMessage — supaya pesan error dari
+      // muatUnit.onError (mis. unit key salah/belum dibuat) tetap terlihat
+      // di IdleScreen, bukan langsung hilang begitu masuk state ini.
+      entry: assign(({ context }) => ({ ...initialContext, errorMessage: context.errorMessage })),
+      on: { SENTUH: { target: 'muatUnit', actions: assign({ errorMessage: null }) } },
     },
 
     muatUnit: {

@@ -1,11 +1,40 @@
 import { IdleScreen } from '@smartbox/ui';
 
-export function IdleScreenView({ onWake }: { onWake: () => void }) {
+export function IdleScreenView({
+  onWake,
+  errorMessage,
+}: {
+  onWake: () => void;
+  errorMessage?: string | null;
+}) {
   return (
-    <IdleScreen
-      headline="Sentuh untuk Sewa Loker"
-      subline="Tanpa aplikasi. Tanpa kunci. Bayar dengan QRIS."
-      onWake={onWake}
-    />
+    <div style={{ position: 'relative', height: '100%' }}>
+      <IdleScreen
+        headline="Sentuh untuk Sewa Loker"
+        subline="Tanpa aplikasi. Tanpa kunci. Bayar dengan QRIS."
+        onWake={onWake}
+      />
+      {errorMessage ? (
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: 'var(--sl-kiosk-pad)',
+            transform: 'translateX(-50%)',
+            maxWidth: '80%',
+            padding: 'var(--sl-space-3) var(--sl-space-5)',
+            borderRadius: 'var(--sl-radius-lg)',
+            background: 'rgba(220,38,38,.92)',
+            color: '#fff',
+            fontFamily: 'var(--sl-font-body)',
+            fontSize: 'var(--sl-kiosk-fs-caption)',
+            textAlign: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          {errorMessage}
+        </div>
+      ) : null}
+    </div>
   );
 }

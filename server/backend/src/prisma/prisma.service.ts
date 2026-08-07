@@ -35,8 +35,12 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   // saat file di-import (lebih awal dari itu). Query lewat pooler pgbouncer
   // (DATABASE_URL, port 6543); hanya `prisma migrate` (prisma.config.ts)
   // yang pakai DIRECT_URL.
+  // connectionTimeoutMillis: tanpa ini, request yang query DB saat
+  // koneksi terputus/tidak sampai akan hang tanpa batas (client HTTP
+  // tidak pernah dapat respons) alih-alih gagal cepat dengan error jelas.
   private readonly adapter = new PrismaPg({
     connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 10_000,
   });
   private readonly client = new PrismaClient({ adapter: this.adapter });
 

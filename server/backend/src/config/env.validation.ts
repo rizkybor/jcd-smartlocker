@@ -13,6 +13,14 @@ const envSchema = z.object({
     .default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
 
+  // CORS ketat (§7.1) — daftar origin diizinkan, BUKAN wildcard `*`, supaya
+  // Dashboard Mitra benar-benar terisolasi. Comma-separated. Default kalau
+  // kosong: port dev Vite lokal (kiosk/dashboard-company/dashboard-mitra).
+  CORS_ORIGIN: z
+    .string()
+    .optional()
+    .default('http://localhost:5173,http://localhost:5174,http://localhost:5175'),
+
   // Supabase — §9.2
   SUPABASE_URL: z.string().url(),
   SUPABASE_ANON_KEY: z.string().min(1),

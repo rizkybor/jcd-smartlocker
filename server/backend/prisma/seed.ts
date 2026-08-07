@@ -47,7 +47,10 @@ async function main() {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    connectionTimeoutMillis: 10_000,
+  });
   const prisma = new PrismaClient({ adapter });
 
   try {

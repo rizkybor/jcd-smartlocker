@@ -59,7 +59,12 @@ export default function App() {
 
   function renderScreen() {
     if (state.matches('idle')) {
-      return <IdleScreenView onWake={() => send({ type: 'SENTUH' })} />;
+      return (
+        <IdleScreenView
+          onWake={() => send({ type: 'SENTUH' })}
+          errorMessage={state.context.errorMessage}
+        />
+      );
     }
     if (state.matches('muatUnit')) {
       return <IdleScreenView onWake={() => {}} />;
