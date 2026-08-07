@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
 import { formatUtcInLokasiTimezone } from '../common/timezone.util';
+import { MqttClientService } from '../gateway/mqtt-client.service';
 import type { MulaiSewaDto } from './dto/mulai-sewa.dto';
 
 function generateIdTransaksi(): string {
@@ -26,6 +27,7 @@ export class KioskSewaService {
   constructor(
     private readonly prisma: PrismaService,
     @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
+    private readonly mqttClient: MqttClientService,
   ) {}
 
   async statusUnit(unit: Unit) {
@@ -149,18 +151,19 @@ export class KioskSewaService {
   }
 
   /**
-   * TODO (Epic 5, Gateway Hardware/MQTT — belum dibangun): endpoint ini
-   * seharusnya publish perintah `buka_pintu` ke topik MQTT
-   * `unit/{kodeUnit}/perintah` (docs/API-Contract-Smartbox.md §4.1) dan
-   * menunggu ack sebelum sesi dianggap aktif. Broker MQTT/gateway service
-   * belum ada, jadi untuk sekarang statusnya langsung ditandai aktif di
-   * database tanpa konfirmasi hardware sungguhan — JANGAN dianggap
-   * "pintu benar-benar terbuka" sampai Epic 5 selesai.
+   * TODO (Epic 5 sebagian — SMB-502-505/510 masih blocked hardware, PRD
+   * §12 poin 1): perintah `buka_pintu` sudah di-publish ke MQTT
+   * (docs/API-Contract-Smartbox.md §4.1), TAPI fire-and-forget, TIDAK
+   * menunggu ack — belum ada gateway service fisik yang benar-benar
+   * mengonsumsi topik ini & membalas ack. Status sesi masih langsung
+   * ditandai aktif di database begitu API ini sukses, tanpa konfirmasi
+   * hardware sungguhan — JANGAN dianggap "pintu benar-benar terbuka"
+   * sampai SMB-502-505 selesai.
    */
   async bukaPintu(sesiId: string) {
     const sesi = await this.prisma.db.sesiTransaksi.findUnique({
       where: { id: sesiId },
-      include: { unitDurasiHarga: true },
+      include: { unitDurasiHarga: true, loker: { include: { unit: true } } },
     });
     if (!sesi) throw this.sesiTidakDitemukan();
 
@@ -177,6 +180,8 @@ export class KioskSewaService {
       // Idempotent — sudah pernah dibuka sebelumnya.
       return sesi;
     }
+
+    this.mqttClient.publishPerintahBukaPintu(sesi.loker.unit.kodeUnit, sesi.loker.nomorLoker, sesi.id);
 
     const waktuMulai = new Date();
     const waktuSelesai = new Date(

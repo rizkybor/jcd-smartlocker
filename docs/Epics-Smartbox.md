@@ -113,16 +113,18 @@ Epic 0–2 adalah fondasi — hampir semua epic lain bergantung padanya. Epic 3�
 
 *Referensi: PRD §8.1–§8.3, §9.1; API Contract §4, §7*
 
-- **SMB-501** — Setup MQTT broker (EMQX) per environment. *(PRD §9.1, §14.1)*
-- **SMB-502** — Gateway hardware service (Node.js/Python) di Mini PC: publish heartbeat + last-will. *(PRD §8.1, §9.1; API Contract §4.1)*
-- **SMB-503** — Publish status loker (5 enum resmi) & event pintu (terbuka/tertutup/macet) ke MQTT. *(API Contract §4.1)*
-- **SMB-504** — Terima & eksekusi perintah `buka_pintu` dari backend + kirim ack. *(API Contract §4.1)*
-- **SMB-505** — Komunikasi serial/RS485 gateway ↔ Main Controller Board (protokol tergantung vendor final, PRD §12 poin 1). *(PRD §8.2)*
-- **SMB-506** — Backend subscriber MQTT: sinkronkan status ke `LOKER`, deteksi unit offline dari heartbeat/last-will. *(API Contract §4.1, §7)*
-- **SMB-507** — Fallback HTTP untuk heartbeat/status saat broker MQTT down. *(API Contract §4.2)*
-- **SMB-508** — Supabase Realtime subscription di Dashboard Company/Mitra untuk update `LOKER`/`SESI_TRANSAKSI` live. *(PRD §9.2; API Contract §7)*
-- **SMB-509** — Integrasi Emergency Unlock fisik: dokumentasi SOP + hook pencatatan manual ke `EMERGENCY_UNLOCK_LOG` (SMB-110). *(PRD §5.3, §8.1)*
+- **SMB-501** ✅ **Selesai (bagian yang bisa dikerjakan)** — Broker MQTT: `docker-compose.yml` (EMQX) untuk dev lokal; staging/produksi masih perlu provisioning terpisah per environment (§14) begitu ada. *(PRD §9.1, §14.1)*
+- **SMB-502** *(blocked — belum ada unit fisik, PRD §12 poin 1)* — Gateway hardware service (Node.js/Python) di Mini PC: publish heartbeat + last-will.
+- **SMB-503** *(blocked — sama seperti SMB-502)* — Publish status loker & event pintu dari sisi gateway fisik.
+- **SMB-504** *(blocked — sama seperti SMB-502)* — Terima & eksekusi perintah `buka_pintu` dari sisi gateway fisik + kirim ack.
+- **SMB-505** *(blocked sampai vendor dikontrak, PRD §12 poin 1)* — Komunikasi serial/RS485 gateway ↔ Main Controller Board.
+- **SMB-506** ✅ **Selesai** — Backend subscriber MQTT (`server/backend/src/gateway/mqtt-client.service.ts`): sinkronkan status ke `LOKER`, deteksi unit offline dari heartbeat (in-memory, ambang 90 detik). Diverifikasi langsung terhadap broker publik (`broker.emqx.io`) — heartbeat, update status loker, event pintu macet, dan ack perintah semua terkonfirmasi terproses & tersimpan benar. *(API Contract §4.1, §7)*
+- **SMB-507** ✅ **Selesai** — Fallback HTTP `POST /gateway/:kodeUnit/heartbeat` & `POST /gateway/:kodeUnit/status-loker` (auth `X-Unit-Key`, sama seperti Kiosk API), diverifikasi lewat curl. *(API Contract §4.2)*
+- **SMB-508** *(ditunda — Dashboard Company/Mitra, Epic 6/7, belum dibangun)* — Supabase Realtime subscription untuk update `LOKER`/`SESI_TRANSAKSI` live. *(PRD §9.2; API Contract §7)*
+- **SMB-509** — Integrasi Emergency Unlock fisik: dokumentasi SOP + hook pencatatan manual ke `EMERGENCY_UNLOCK_LOG` (SMB-110, endpoint backend-nya sudah ada dari Epic 1). *(PRD §5.3, §8.1)*
 - **SMB-510** *(blocked sampai vendor dikontrak, PRD §12 poin 1)* — Validasi & sesuaikan SMB-505 dengan protokol controller board vendor final.
+
+**Catatan implementasi (SMB-506/507):** `KioskSewaService.bukaPintu()`/`KioskAmbilService.bukaPintu()` sekarang publish perintah `buka_pintu` ke MQTT (fire-and-forget), tapi TIDAK menunggu ack — belum ada gateway fisik (SMB-502-505) yang benar-benar mengonsumsi & membalas. Status sesi/loker di database masih jadi sumber kebenaran sampai SMB-502-505 selesai.
 
 ---
 

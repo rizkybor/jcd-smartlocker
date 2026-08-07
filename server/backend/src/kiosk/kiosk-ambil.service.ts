@@ -9,6 +9,7 @@ import type { Unit } from '@prisma/client';
 import { LokerStatus, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OtpService } from '../otp/otp.service';
+import { MqttClientService } from '../gateway/mqtt-client.service';
 import type { EnvConfig } from '../config/env.validation';
 import type { AmbilMulaiDto } from './dto/ambil-mulai.dto';
 import type { VerifikasiOtpDto } from './dto/verifikasi-otp.dto';
@@ -28,6 +29,7 @@ export class KioskAmbilService {
     private readonly prisma: PrismaService,
     private readonly otpService: OtpService,
     private readonly config: ConfigService<EnvConfig, true>,
+    private readonly mqttClient: MqttClientService,
   ) {}
 
   /**
@@ -117,16 +119,15 @@ export class KioskAmbilService {
   }
 
   /**
-   * TODO (Epic 5, Gateway Hardware/MQTT — belum dibangun): sama seperti
-   * KioskSewaService.bukaPintu(), endpoint ini seharusnya publish perintah
-   * `buka_pintu` ke MQTT dan menunggu ack sensor sebelum loker ditandai
-   * TERSEDIA lagi. Untuk sekarang langsung ditandai selesai di database
-   * tanpa konfirmasi hardware sungguhan.
+   * TODO (Epic 5 sebagian — SMB-502-505/510 masih blocked hardware, PRD
+   * §12 poin 1): sama seperti KioskSewaService.bukaPintu(), perintah
+   * sudah di-publish ke MQTT tapi fire-and-forget, TIDAK menunggu ack
+   * sensor sebelum loker ditandai TERSEDIA lagi.
    */
   async bukaPintu(sesiId: string) {
     const sesi = await this.prisma.db.sesiTransaksi.findUnique({
       where: { id: sesiId },
-      include: { loker: true },
+      include: { loker: { include: { unit: true } } },
     });
     if (!sesi) throw this.sesiTidakDitemukan();
 
@@ -143,6 +144,8 @@ export class KioskAmbilService {
       // Idempotent — sudah pernah dibuka/selesai sebelumnya.
       return sesi;
     }
+
+    this.mqttClient.publishPerintahBukaPintu(sesi.loker.unit.kodeUnit, sesi.loker.nomorLoker, sesi.id);
 
     await this.prisma.db.loker.update({
       where: { id: sesi.lokerId },

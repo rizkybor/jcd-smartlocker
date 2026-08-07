@@ -1,0 +1,16 @@
+# Broker MQTT lokal untuk dev (SMB-501, docs/PRD-Smartbox.md §9.1).
+# Staging/produksi: EMQX terkelola/self-hosted terpisah per environment
+# (§14) — bukan compose ini. Jalankan: docker compose up -d
+services:
+  emqx:
+    image: emqx/emqx:5
+    ports:
+      - "1883:1883"   # MQTT
+      - "8083:8083"   # MQTT over WebSocket
+      - "8883:8883"   # MQTT over TLS
+      - "18083:18083" # Dashboard admin (http://localhost:18083, default admin/public)
+    volumes:
+      - emqx-data:/opt/emqx/data
+
+volumes:
+  emqx-data:

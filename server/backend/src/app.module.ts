@@ -22,6 +22,7 @@ import { WebhooksModule } from './webhooks/webhooks.module';
 import { OtpModule } from './otp/otp.module';
 import { UnitModule } from './unit/unit.module';
 import { KioskModule } from './kiosk/kiosk.module';
+import { GatewayModule } from './gateway/gateway.module';
 
 @Module({
   imports: [
@@ -32,10 +33,8 @@ import { KioskModule } from './kiosk/kiosk.module';
     ScheduleModule.forRoot(),
     // Rate limiting (§7.1, API-Contract-Smartbox.md §1.6). `default` jadi
     // pagar umum semua endpoint. Named throttler `otp-send`/`otp-verify`
-    // disiapkan untuk endpoint kiosk ambil-barang (Epic 4, belum
-    // dibangun) — controller nanti tinggal pakai
-    // `@Throttle({ 'otp-send': { limit: 3, ttl: 900_000 } })` dst., tidak
-    // perlu setup ulang di sini.
+    // dipakai KioskAmbilController (Epic 4, §2) lewat
+    // `@Throttle({ 'otp-send': { limit: 3, ttl: 900_000 } })` dst.
     ThrottlerModule.forRoot([
       { name: 'default', ttl: 60_000, limit: 60 },
       { name: 'otp-send', ttl: 900_000, limit: 3 },
@@ -55,6 +54,7 @@ import { KioskModule } from './kiosk/kiosk.module';
     OtpModule,
     UnitModule,
     KioskModule,
+    GatewayModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
