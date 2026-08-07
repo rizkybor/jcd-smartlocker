@@ -94,14 +94,14 @@ Semua endpoint di bawah diawali `/kiosk` dan mengirim `X-Unit-Key` (§1.2). Alur
 |---|---|---|---|
 | `GET` | `/kiosk/unit/status` | Status unit saat ini: okupansi, apakah unit penuh, daftar durasi & harga (§5.1 langkah 2, 4) | `X-Unit-Key` |
 | `POST` | `/kiosk/sewa/validasi-hp` | Validasi format nomor HP Indonesia (§5.1 langkah 3) — validasi ringan, tidak membuat data | `X-Unit-Key` |
-| `POST` | `/kiosk/sewa/mulai` | Buat `SESI_TRANSAKSI` baru berstatus `pending`: input nomor HP + `unit_durasi_harga_id` → backend assign `loker_id` otomatis (loker `tersedia` pertama) | `X-Unit-Key` |
+| `POST` | `/kiosk/sewa/mulai` | Buat `SESI_TRANSAKSI` baru berstatus `pending`: input nomor HP + **email** (wajib SEMENTARA — tujuan OTP ambil-barang selama channel aktif = email/Brevo, §8) + `unit_durasi_harga_id` → backend assign `loker_id` otomatis (loker `tersedia` pertama) | `X-Unit-Key` |
 | `POST` | `/kiosk/sewa/:sesiId/bayar` | Buat charge QRIS via `PaymentProvider` aktif (§8) → return `qr_image_url` + `expired_at` (5 menit, §5.1) | `X-Unit-Key` |
 | `GET` | `/kiosk/sewa/:sesiId/status` | Poll status bayar (`pending`/`paid`/`failed`/`expired`) — dipakai kiosk sambil menunggu webhook; realtime lewat Supabase Realtime jadi opsi lebih responsif (§9.2) | `X-Unit-Key` |
 | `POST` | `/kiosk/sewa/:sesiId/buka-pintu` | Hanya berhasil jika `status_bayar = paid` — trigger perintah buka pintu ke gateway hardware (§8.2), lalu tunggu konfirmasi sensor pintu tertutup sebelum sesi jadi `aktif` | `X-Unit-Key` |
 | `GET` | `/kiosk/sewa/:sesiId/struk` | Data struk digital: no. loker, durasi, berlaku sampai (dikonversi ke timezone lokasi, §7.2), ID transaksi (§5.1 langkah 6) | `X-Unit-Key` |
 | `POST` | `/kiosk/ambil/mulai` | Input nomor HP untuk ambil barang → cari `SESI_TRANSAKSI` aktif dengan nomor HP cocok (§5.2 langkah 2) | `X-Unit-Key` |
-| `POST` | `/kiosk/ambil/kirim-otp` | Kirim OTP 6 digit via WhatsApp (§8) ke nomor HP terkait, berlaku 5 menit | `X-Unit-Key`, rate-limited (§1.6) |
-| `POST` | `/kiosk/ambil/verifikasi-otp` | Verifikasi OTP → jika cocok, izinkan buka pintu | `X-Unit-Key`, rate-limited |
+| `POST` | `/kiosk/ambil/kirim-otp` | Kirim OTP 6 digit lewat `OtpChannel` aktif (§8, SMB-207 — saat ini email/Brevo, rencana WhatsApp) ke tujuan terkait sesi, berlaku 5 menit | `X-Unit-Key`, rate-limited (§1.6) |
+| `POST` | `/kiosk/ambil/verifikasi-otp` | Verifikasi OTP → kalau cocok, tandai `otp_verified_at` (dicek endpoint buka-pintu di bawah, pintu tidak bisa dibuka tanpa ini) | `X-Unit-Key`, rate-limited |
 | `POST` | `/kiosk/ambil/:sesiId/buka-pintu` | Trigger buka pintu loker terkait, sesi jadi `selesai` setelah sensor konfirmasi tertutup (§5.2 langkah 4) | `X-Unit-Key` |
 
 **Catatan alur kritis — assign loker otomatis (`POST /kiosk/sewa/mulai`):**

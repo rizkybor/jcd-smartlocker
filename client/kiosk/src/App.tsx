@@ -1,15 +1,19 @@
 import { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
+import { KioskButton } from '@smartbox/ui';
 import { sewaMachine } from './machine/sewaMachine';
 import { IdleScreenView } from './screens/IdleScreenView';
 import { MenuScreen } from './screens/MenuScreen';
 import { UnitPenuhScreen } from './screens/UnitPenuhScreen';
 import { NomorHpScreen } from './screens/NomorHpScreen';
+import { EmailScreen } from './screens/EmailScreen';
 import { DurasiScreen } from './screens/DurasiScreen';
 import { BayarScreen } from './screens/BayarScreen';
 import { BayarGagalScreen } from './screens/BayarGagalScreen';
 import { BukaPintuScreen } from './screens/BukaPintuScreen';
 import { StrukScreen } from './screens/StrukScreen';
+import { OtpScreen } from './screens/OtpScreen';
+import { AMBIL_STEPS } from './screens/KioskShell';
 
 // Session timeout (PRD §5.3, SMB-307) — reset ke idle setelah tidak ada
 // interaksi. Idle sendiri dikecualikan (tidak ada apa-apa untuk di-timeout).
@@ -73,7 +77,12 @@ export default function App() {
       return <UnitPenuhScreen onKembali={() => send({ type: 'KEMBALI' })} />;
     }
     if (state.matches('menu')) {
-      return <MenuScreen onSewa={() => send({ type: 'PILIH_SEWA' })} />;
+      return (
+        <MenuScreen
+          onSewa={() => send({ type: 'PILIH_SEWA' })}
+          onAmbil={() => send({ type: 'PILIH_AMBIL' })}
+        />
+      );
     }
     if (state.matches('nomorHp')) {
       return (
@@ -83,6 +92,17 @@ export default function App() {
           onLanjut={() => send({ type: 'LANJUT_NOMOR_HP' })}
           onKembali={() => send({ type: 'KEMBALI' })}
           valid={/^08\d{8,13}$/.test(state.context.nomorHp)}
+        />
+      );
+    }
+    if (state.matches('email')) {
+      return (
+        <EmailScreen
+          email={state.context.email}
+          onChange={(value) => send({ type: 'SET_EMAIL', value })}
+          onLanjut={() => send({ type: 'LANJUT_EMAIL' })}
+          onKembali={() => send({ type: 'KEMBALI' })}
+          valid={/^\S+@\S+\.\S+$/.test(state.context.email)}
         />
       );
     }
@@ -114,6 +134,51 @@ export default function App() {
     }
     if (state.matches('struk')) {
       return <StrukScreen struk={state.context.struk} onSelesai={() => send({ type: 'SELESAI' })} />;
+    }
+
+    if (state.matches('ambilNomorHp') || state.matches('mulaiAmbil')) {
+      return (
+        <NomorHpScreen
+          nomorHp={state.context.ambilNomorHp}
+          onChange={(value) => send({ type: 'SET_AMBIL_NOMOR_HP', value })}
+          onLanjut={() => send({ type: 'LANJUT_AMBIL_NOMOR_HP' })}
+          onKembali={() => send({ type: 'KEMBALI' })}
+          valid={/^08\d{8,13}$/.test(state.context.ambilNomorHp)}
+          steps={AMBIL_STEPS}
+          title="Masukkan Nomor HP Anda"
+          subtitle="Nomor HP yang sama saat menyewa loker."
+        />
+      );
+    }
+    if (state.matches('ambilKirimOtp') || state.matches('ambilOtp') || state.matches('ambilVerifikasi')) {
+      return (
+        <OtpScreen
+          kode={state.context.kodeOtp}
+          onChange={(value) => send({ type: 'SET_KODE_OTP', value })}
+          onVerifikasi={() => send({ type: 'VERIFIKASI_OTP' })}
+          onKirimUlang={() => send({ type: 'KIRIM_ULANG_OTP' })}
+          onKembali={() => send({ type: 'KEMBALI' })}
+          valid={/^\d{6}$/.test(state.context.kodeOtp)}
+          errorMessage={state.context.errorMessage}
+        />
+      );
+    }
+    if (state.matches('ambilBukaPintu')) {
+      return <BukaPintuScreen label="Membuka pintu..." />;
+    }
+    if (state.matches('ambilSelesai')) {
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <BukaPintuScreen label="Silakan ambil barang Anda" />
+          </div>
+          <div style={{ padding: 'var(--sl-kiosk-pad)', display: 'flex', justifyContent: 'center' }}>
+            <KioskButton tone="primary" size="lg" onClick={() => send({ type: 'SELESAI' })}>
+              Selesai
+            </KioskButton>
+          </div>
+        </div>
+      );
     }
     return null;
   }

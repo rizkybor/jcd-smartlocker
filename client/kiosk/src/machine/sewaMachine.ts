@@ -2,6 +2,7 @@ import { assign, fromPromise, setup } from 'xstate';
 import {
   ApiError,
   kioskApi,
+  type AmbilSesi,
   type BuatPembayaranResult,
   type SesiTransaksi,
   type StrukResult,
@@ -15,23 +16,32 @@ const POLL_INTERVAL_MS = 2000;
 export type SewaContext = {
   unit: UnitStatus | null;
   nomorHp: string;
+  email: string;
   pilihanDurasi: UnitDurasiHarga | null;
   sesi: SesiTransaksi | null;
   pembayaran: BuatPembayaranResult | null;
   secondsLeft: number;
   struk: StrukResult | null;
   errorMessage: string | null;
+  // --- Ambil Barang (§5.2) ---
+  ambilNomorHp: string;
+  ambilSesi: AmbilSesi | null;
+  kodeOtp: string;
 };
 
 const initialContext: SewaContext = {
   unit: null,
   nomorHp: '',
+  email: '',
   pilihanDurasi: null,
   sesi: null,
   pembayaran: null,
   secondsLeft: QR_EXPIRY_SECONDS,
   struk: null,
   errorMessage: null,
+  ambilNomorHp: '',
+  ambilSesi: null,
+  kodeOtp: '',
 };
 
 function errorMessageOf(err: unknown): string {
@@ -45,22 +55,30 @@ export const sewaMachine = setup({
     events:
       | { type: 'SENTUH' }
       | { type: 'PILIH_SEWA' }
+      | { type: 'PILIH_AMBIL' }
       | { type: 'KEMBALI' }
-      | { type: 'SET_NOMOR_HP'; value: string }
-      | { type: 'LANJUT_NOMOR_HP' }
-      | { type: 'PILIH_DURASI'; durasi: UnitDurasiHarga }
       | { type: 'BATAL' }
       | { type: 'ULANGI' }
       | { type: 'SELESAI' }
-      | { type: 'TIMEOUT_SESI' };
+      | { type: 'TIMEOUT_SESI' }
+      | { type: 'SET_NOMOR_HP'; value: string }
+      | { type: 'LANJUT_NOMOR_HP' }
+      | { type: 'SET_EMAIL'; value: string }
+      | { type: 'LANJUT_EMAIL' }
+      | { type: 'PILIH_DURASI'; durasi: UnitDurasiHarga }
+      | { type: 'SET_AMBIL_NOMOR_HP'; value: string }
+      | { type: 'LANJUT_AMBIL_NOMOR_HP' }
+      | { type: 'SET_KODE_OTP'; value: string }
+      | { type: 'VERIFIKASI_OTP' }
+      | { type: 'KIRIM_ULANG_OTP' };
   },
   actors: {
     muatStatusUnit: fromPromise(async () => {
       const res = await kioskApi.statusUnit();
       return res.data;
     }),
-    mulaiSewa: fromPromise(async ({ input }: { input: { nomorHp: string; unitDurasiHargaId: string } }) => {
-      const res = await kioskApi.mulaiSewa(input.nomorHp, input.unitDurasiHargaId);
+    mulaiSewa: fromPromise(async ({ input }: { input: { nomorHp: string; email: string; unitDurasiHargaId: string } }) => {
+      const res = await kioskApi.mulaiSewa(input.nomorHp, input.email, input.unitDurasiHargaId);
       return res.data;
     }),
     buatPembayaran: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
@@ -84,6 +102,22 @@ export const sewaMachine = setup({
     }),
     muatStruk: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
       const res = await kioskApi.struk(input.sesiId);
+      return res.data;
+    }),
+    mulaiAmbil: fromPromise(async ({ input }: { input: { nomorHp: string } }) => {
+      const res = await kioskApi.mulaiAmbil(input.nomorHp);
+      return res.data;
+    }),
+    kirimOtpAmbil: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
+      const res = await kioskApi.kirimOtpAmbil(input.sesiId);
+      return res.data;
+    }),
+    verifikasiOtpAmbil: fromPromise(async ({ input }: { input: { sesiId: string; kode: string } }) => {
+      const res = await kioskApi.verifikasiOtpAmbil(input.sesiId, input.kode);
+      return res.data;
+    }),
+    bukaPintuAmbil: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
+      const res = await kioskApi.bukaPintuAmbil(input.sesiId);
       return res.data;
     }),
   },
@@ -123,25 +157,39 @@ export const sewaMachine = setup({
     menu: {
       on: {
         PILIH_SEWA: 'nomorHp',
+        PILIH_AMBIL: 'ambilNomorHp',
         KEMBALI: 'idle',
       },
     },
+
+    // === Alur Sewa (§5.1) ===
 
     nomorHp: {
       on: {
         SET_NOMOR_HP: { actions: assign({ nomorHp: ({ event }) => event.value }) },
         LANJUT_NOMOR_HP: {
           guard: ({ context }) => /^08\d{8,13}$/.test(context.nomorHp),
-          target: 'durasi',
+          target: 'email',
         },
         KEMBALI: 'menu',
+      },
+    },
+
+    email: {
+      on: {
+        SET_EMAIL: { actions: assign({ email: ({ event }) => event.value }) },
+        LANJUT_EMAIL: {
+          guard: ({ context }) => /^\S+@\S+\.\S+$/.test(context.email),
+          target: 'durasi',
+        },
+        KEMBALI: 'nomorHp',
       },
     },
 
     durasi: {
       on: {
         PILIH_DURASI: 'memulaiSewa',
-        KEMBALI: 'nomorHp',
+        KEMBALI: 'email',
       },
       exit: assign({ pilihanDurasi: ({ event }) => (event.type === 'PILIH_DURASI' ? event.durasi : null) }),
     },
@@ -151,6 +199,7 @@ export const sewaMachine = setup({
         src: 'mulaiSewa',
         input: ({ context }) => ({
           nomorHp: context.nomorHp,
+          email: context.email,
           unitDurasiHargaId: context.pilihanDurasi!.id,
         }),
         onDone: { target: 'bayar', actions: assign({ sesi: ({ event }) => event.output }) },
@@ -216,6 +265,83 @@ export const sewaMachine = setup({
         input: ({ context }) => ({ sesiId: context.sesi!.id }),
         onDone: { actions: assign({ struk: ({ event }) => event.output }) },
       },
+      on: { SELESAI: 'idle' },
+    },
+
+    // === Alur Ambil Barang (§5.2) ===
+
+    ambilNomorHp: {
+      on: {
+        SET_AMBIL_NOMOR_HP: { actions: assign({ ambilNomorHp: ({ event }) => event.value }) },
+        LANJUT_AMBIL_NOMOR_HP: {
+          guard: ({ context }) => /^08\d{8,13}$/.test(context.ambilNomorHp),
+          target: 'mulaiAmbil',
+        },
+        KEMBALI: 'menu',
+      },
+    },
+
+    mulaiAmbil: {
+      invoke: {
+        src: 'mulaiAmbil',
+        input: ({ context }) => ({ nomorHp: context.ambilNomorHp }),
+        onDone: { target: 'ambilKirimOtp', actions: assign({ ambilSesi: ({ event }) => event.output }) },
+        onError: {
+          target: 'ambilNomorHp',
+          actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
+        },
+      },
+    },
+
+    ambilKirimOtp: {
+      invoke: {
+        src: 'kirimOtpAmbil',
+        input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
+        onDone: { target: 'ambilOtp', actions: assign({ errorMessage: null }) },
+        onError: {
+          target: 'ambilNomorHp',
+          actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
+        },
+      },
+    },
+
+    ambilOtp: {
+      on: {
+        SET_KODE_OTP: { actions: assign({ kodeOtp: ({ event }) => event.value }) },
+        VERIFIKASI_OTP: {
+          guard: ({ context }) => /^\d{6}$/.test(context.kodeOtp),
+          target: 'ambilVerifikasi',
+        },
+        KIRIM_ULANG_OTP: { target: 'ambilKirimOtp', actions: assign({ kodeOtp: '' }) },
+        KEMBALI: 'ambilNomorHp',
+      },
+    },
+
+    ambilVerifikasi: {
+      invoke: {
+        src: 'verifikasiOtpAmbil',
+        input: ({ context }) => ({ sesiId: context.ambilSesi!.id, kode: context.kodeOtp }),
+        onDone: { target: 'ambilBukaPintu', actions: assign({ errorMessage: null }) },
+        onError: {
+          target: 'ambilOtp',
+          actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error), kodeOtp: '' }),
+        },
+      },
+    },
+
+    ambilBukaPintu: {
+      invoke: {
+        src: 'bukaPintuAmbil',
+        input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
+        onDone: 'ambilSelesai',
+        onError: {
+          target: 'ambilBukaPintu',
+          actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
+        },
+      },
+    },
+
+    ambilSelesai: {
       on: { SELESAI: 'idle' },
     },
   },

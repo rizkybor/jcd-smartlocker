@@ -15,7 +15,7 @@ export function DurasiScreen({
   errorMessage: string | null;
 }) {
   return (
-    <KioskShell step={1} title="Pilih Durasi Sewa">
+    <KioskShell step={2} title="Pilih Durasi Sewa">
       <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)', flexWrap: 'wrap', justifyContent: 'center' }}>
         {pilihan.map((d) => (
           <KioskButton key={d.id} tone="secondary" size="xl" onClick={() => onPilih(d)}>

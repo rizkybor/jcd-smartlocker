@@ -70,6 +70,8 @@ export type StrukResult = {
   berlakuSampai: string | null;
 };
 
+export type AmbilSesi = { id: string };
+
 export const kioskApi = {
   statusUnit: () => request<{ data: UnitStatus }>('/kiosk/unit/status'),
 
@@ -79,10 +81,10 @@ export const kioskApi = {
       body: JSON.stringify({ nomorHp }),
     }),
 
-  mulaiSewa: (nomorHp: string, unitDurasiHargaId: string) =>
+  mulaiSewa: (nomorHp: string, email: string, unitDurasiHargaId: string) =>
     request<{ data: SesiTransaksi }>('/kiosk/sewa/mulai', {
       method: 'POST',
-      body: JSON.stringify({ nomorHp, unitDurasiHargaId }),
+      body: JSON.stringify({ nomorHp, email, unitDurasiHargaId }),
     }),
 
   buatPembayaran: (sesiId: string) =>
@@ -94,4 +96,27 @@ export const kioskApi = {
     request<{ data: SesiTransaksi }>(`/kiosk/sewa/${sesiId}/buka-pintu`, { method: 'POST' }),
 
   struk: (sesiId: string) => request<{ data: StrukResult }>(`/kiosk/sewa/${sesiId}/struk`),
+
+  // --- Ambil Barang (PRD §5.2) ---
+
+  mulaiAmbil: (nomorHp: string) =>
+    request<{ data: AmbilSesi }>('/kiosk/ambil/mulai', {
+      method: 'POST',
+      body: JSON.stringify({ nomorHp }),
+    }),
+
+  kirimOtpAmbil: (sesiId: string) =>
+    request<{ data: { terkirim: true } }>('/kiosk/ambil/kirim-otp', {
+      method: 'POST',
+      body: JSON.stringify({ sesiId }),
+    }),
+
+  verifikasiOtpAmbil: (sesiId: string, kode: string) =>
+    request<{ data: { valid: true } }>('/kiosk/ambil/verifikasi-otp', {
+      method: 'POST',
+      body: JSON.stringify({ sesiId, kode }),
+    }),
+
+  bukaPintuAmbil: (sesiId: string) =>
+    request<{ data: SesiTransaksi }>(`/kiosk/ambil/${sesiId}/buka-pintu`, { method: 'POST' }),
 };

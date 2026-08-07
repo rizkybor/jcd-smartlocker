@@ -1,6 +1,6 @@
 import { KioskButton } from '@smartbox/ui';
 
-export function MenuScreen({ onSewa }: { onSewa: () => void }) {
+export function MenuScreen({ onSewa, onAmbil }: { onSewa: () => void; onAmbil: () => void }) {
   return (
     <div
       style={{
@@ -20,8 +20,7 @@ export function MenuScreen({ onSewa }: { onSewa: () => void }) {
         <KioskButton tone="primary" size="xl" onClick={onSewa}>
           Sewa Loker
         </KioskButton>
-        {/* Ambil Barang — Epic 4, belum dibangun. */}
-        <KioskButton tone="neutral" size="xl" disabled>
+        <KioskButton tone="neutral" size="xl" onClick={onAmbil}>
           Ambil Barang
         </KioskButton>
       </div>
