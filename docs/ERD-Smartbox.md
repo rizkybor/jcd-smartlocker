@@ -73,6 +73,7 @@ erDiagram
         uuid id PK
         uuid lokasi_id FK
         text kode_unit "mis. JCD-KLP-002"
+        text unit_key "kredensial X-Unit-Key kiosk, API-Contract §1.2 - hanya tampil sekali saat create"
         text varian_kompartemen "referensi A-E company profile, atau custom"
         int jumlah_loker
         enum mode_pemakaian "berbayar | gratis"
@@ -109,6 +110,7 @@ erDiagram
         uuid loker_id FK
         uuid unit_durasi_harga_id FK
         text nomor_hp "nullable, di-purge 6 bulan setelah selesai"
+        text email_penyewa "nullable, channel OTP sementara (Brevo) selagi WhatsApp BSP belum ada - ikut di-purge 6 bulan"
         enum metode_akses "nomor_hp | rfid | pin | face_recognition (Fase 2)"
         enum status_bayar "pending | paid | failed | expired"
         enum payment_provider "xendit | midtrans"

@@ -19,6 +19,8 @@ import { PurgeModule } from './purge/purge.module';
 import { PaymentModule } from './payment/payment.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { OtpModule } from './otp/otp.module';
+import { UnitModule } from './unit/unit.module';
+import { KioskModule } from './kiosk/kiosk.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { OtpModule } from './otp/otp.module';
     PaymentModule,
     WebhooksModule,
     OtpModule,
+    UnitModule,
+    KioskModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

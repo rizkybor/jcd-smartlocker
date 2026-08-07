@@ -201,6 +201,11 @@ model Unit {
   id                String        @id @default(uuid()) @db.Uuid
   lokasiId          String        @map("lokasi_id") @db.Uuid
   kodeUnit          String        @unique @map("kode_unit")
+  /// Kredensial kiosk/gateway hardware — dikirim via header `X-Unit-Key`
+  /// (docs/API-Contract-Smartbox.md §1.2), BUKAN token Supabase Auth.
+  /// Di-generate random saat unit dibuat, cuma ditampilkan sekali di
+  /// response create (§7.1 — perlakukan seperti secret).
+  unitKey           String        @unique @map("unit_key")
   /// Teks bebas, bukan enum tertutup — dimensi bisa custom per proyek
   /// (§8.3).
   varianKompartemen String?       @map("varian_kompartemen")
