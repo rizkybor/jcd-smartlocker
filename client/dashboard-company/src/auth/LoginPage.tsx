@@ -7,16 +7,19 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
-    setLocalError(null);
     try {
+      // Pesan error asli (dari Supabase, lewat AuthContext.signIn) sudah
+      // ke-set ke `error` di context SEBELUM signIn() throw — cukup
+      // biarkan render itu, jangan ditimpa teks generik yang menyamarkan
+      // penyebab sungguhan (ditemukan langsung: dulu di sini selalu
+      // menampilkan "periksa kembali email/password" apa pun error-nya).
       await signIn(email, password);
     } catch {
-      setLocalError('Login gagal. Periksa kembali email/password Anda.');
+      // Ditangani via `error` dari context, lihat komentar di atas.
     } finally {
       setSubmitting(false);
     }
@@ -44,9 +47,7 @@ export function LoginPage() {
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
             <Field label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             <Field label="Password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-            {localError || error ? (
-              <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{localError ?? error}</div>
-            ) : null}
+            {error ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{error}</div> : null}
             <Button type="submit" tone="primary" fullWidth disabled={submitting || !email || !password}>
               {submitting ? 'Masuk...' : 'Masuk'}
             </Button>
