@@ -11,6 +11,7 @@ export type AuthenticatedInternalUser = {
   id: string;
   supabaseAuthUid: string;
   email: string;
+  nama: string;
   role: AkunInternalRole;
 };
 

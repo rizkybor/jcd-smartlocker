@@ -25,4 +25,25 @@ export type { DoorTransitionProps } from './components/motion/DoorTransition';
 export { SuccessBurst } from './components/motion/SuccessBurst';
 export type { SuccessBurstProps } from './components/motion/SuccessBurst';
 
+export { Button } from './components/dashboard/Button';
+export type { ButtonProps, ButtonTone, ButtonSize } from './components/dashboard/Button';
+
+export { Field } from './components/dashboard/Field';
+export type { FieldProps, FieldOption } from './components/dashboard/Field';
+
+export { Panel } from './components/dashboard/Panel';
+export type { PanelProps } from './components/dashboard/Panel';
+
+export { StatCard } from './components/dashboard/StatCard';
+export type { StatCardProps, StatCardAccent } from './components/dashboard/StatCard';
+
+export { StatusBadge } from './components/dashboard/StatusBadge';
+export type { StatusBadgeProps, StatusBadgeStatus } from './components/dashboard/StatusBadge';
+
+export { DataTable } from './components/dashboard/DataTable';
+export type { DataTableProps, DataTableColumn } from './components/dashboard/DataTable';
+
+export { Sidebar } from './components/dashboard/Sidebar';
+export type { SidebarProps, SidebarItem } from './components/dashboard/Sidebar';
+
 import './styles.css';

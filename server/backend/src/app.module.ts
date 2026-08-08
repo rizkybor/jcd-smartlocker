@@ -11,6 +11,7 @@ import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { SupabaseModule } from './supabase/supabase.module';
 import { AuthModule } from './auth/auth.module';
+import { ProfileModule } from './profile/profile.module';
 import { ActivityLogModule } from './activity-log/activity-log.module';
 import { UsersModule } from './users/users.module';
 import { LokasiModule } from './lokasi/lokasi.module';
@@ -23,6 +24,7 @@ import { OtpModule } from './otp/otp.module';
 import { UnitModule } from './unit/unit.module';
 import { KioskModule } from './kiosk/kiosk.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { OverviewModule } from './overview/overview.module';
 
 @Module({
   imports: [
@@ -43,6 +45,7 @@ import { GatewayModule } from './gateway/gateway.module';
     PrismaModule,
     SupabaseModule,
     AuthModule,
+    ProfileModule,
     ActivityLogModule,
     UsersModule,
     LokasiModule,
@@ -55,6 +58,7 @@ import { GatewayModule } from './gateway/gateway.module';
     UnitModule,
     KioskModule,
     GatewayModule,
+    OverviewModule,
   ],
   controllers: [AppController, HealthController],
   providers: [

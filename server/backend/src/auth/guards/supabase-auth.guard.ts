@@ -54,6 +54,7 @@ export class SupabaseAuthGuard implements CanActivate {
         id: internal.id,
         supabaseAuthUid: internal.supabaseAuthUid,
         email: internal.email,
+        nama: internal.nama,
         role: internal.role,
       };
       return true;
