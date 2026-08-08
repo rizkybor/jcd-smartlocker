@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
-import { companyApi, type Me } from '../api/client';
+import { companyApi, ApiError, type Me } from '../api/client';
 
 type AuthState = {
   session: Session | null;
@@ -48,9 +48,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     companyApi
       .me()
       .then((res) => setProfile(res.data))
-      .catch(() => {
+      .catch((err) => {
         setProfile(null);
-        setError('Akun ini belum terdaftar sebagai akun internal Dashboard Company.');
+        // 401/403 dari backend berarti akun ini sungguh belum terdaftar/tidak
+        // diizinkan (SupabaseAuthGuard/ProfileController) — selain itu (500,
+        // network error, dst.) jangan salah tuduh, itu kegagalan server/
+        // jaringan, bukan masalah akun.
+        if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
+          setError('Akun ini belum terdaftar sebagai akun internal Dashboard Company.');
+        } else {
+          setError('Gagal memuat profil akun — server atau jaringan bermasalah. Coba muat ulang halaman.');
+        }
       })
       .finally(() => setLoading(false));
   }, [session]);

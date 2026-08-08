@@ -34,14 +34,18 @@ export class SupabaseAuthGuard implements CanActivate {
     const authHeader = request.headers.authorization;
 
     if (!authHeader?.startsWith('Bearer ')) {
-      throw new UnauthorizedException('Header Authorization tidak ada atau salah format.');
+      throw new UnauthorizedException({
+        error: { code: 'AUTH_HEADER_TIDAK_ADA', message: 'Header Authorization tidak ada atau salah format.' },
+      });
     }
 
     const token = authHeader.slice('Bearer '.length);
     const supabaseUser = await this.supabase.getUserFromToken(token);
 
     if (!supabaseUser) {
-      throw new UnauthorizedException('Token tidak valid atau sudah kedaluwarsa.');
+      throw new UnauthorizedException({
+        error: { code: 'TOKEN_TIDAK_VALID', message: 'Token tidak valid atau sudah kedaluwarsa.' },
+      });
     }
 
     const internal = await this.prisma.db.akunInternal.findFirst({
@@ -75,8 +79,11 @@ export class SupabaseAuthGuard implements CanActivate {
       return true;
     }
 
-    throw new UnauthorizedException(
-      'Akun terautentikasi di Supabase tapi belum terdaftar sebagai akun internal maupun akun mitra.',
-    );
+    throw new UnauthorizedException({
+      error: {
+        code: 'AKUN_TIDAK_TERDAFTAR',
+        message: 'Akun terautentikasi di Supabase tapi belum terdaftar sebagai akun internal maupun akun mitra.',
+      },
+    });
   }
 }
