@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { companyApi, ApiError, type Me } from '../api/client';
@@ -39,17 +39,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Supabase mengirim OBJECT session BARU di setiap event onAuthStateChange
+  // (termasuk TOKEN_REFRESHED berkala & INITIAL_SESSION dobel akibat React
+  // StrictMode double-invoke effect di dev) — walau user-nya sama persis.
+  // Tanpa dedupe ini, tiap event itu memicu GET /company/me lagi, dan cepat
+  // kena limit throttler `default` (60/60s) cuma dari reload berulang saat
+  // debugging. Cukup fetch ulang kalau user-nya benar-benar berbeda.
+  const fetchedForUserId = useRef<string | null>(null);
+
   useEffect(() => {
     if (!session) {
       setProfile(null);
+      fetchedForUserId.current = null;
       return;
     }
+    if (fetchedForUserId.current === session.user.id) {
+      setLoading(false);
+      return;
+    }
+    fetchedForUserId.current = session.user.id;
     setLoading(true);
     companyApi
       .me()
       .then((res) => setProfile(res.data))
       .catch((err) => {
         setProfile(null);
+        fetchedForUserId.current = null;
         // 401/403 dari backend berarti akun ini sungguh belum terdaftar/tidak
         // diizinkan (SupabaseAuthGuard/ProfileController) — selain itu (500,
         // network error, dst.) jangan salah tuduh, itu kegagalan server/
