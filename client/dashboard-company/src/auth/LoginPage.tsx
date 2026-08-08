@@ -1,12 +1,19 @@
 import { useState, type FormEvent } from 'react';
+import { Navigate } from 'react-router-dom';
 import { Field, Button, Panel } from '@smartbox/ui';
 import { useAuth } from './AuthContext';
 
 export function LoginPage() {
-  const { signIn, error } = useAuth();
+  const { session, profile, signIn, error } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // AuthProvider membungkus semua route termasuk /login, jadi selalu cek
+  // session tersimpan di localStorage begitu app dimuat — kalau ternyata
+  // masih login (session+profile valid), jangan tampilkan form login lagi,
+  // langsung ke dashboard.
+  if (session && profile) return <Navigate to="/" replace />;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
