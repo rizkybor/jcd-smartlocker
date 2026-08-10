@@ -38,6 +38,10 @@ pnpm-debug.log*
 # Test/coverage
 coverage/
 .turbo/
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
 
 # Supabase local
 .supabase/
