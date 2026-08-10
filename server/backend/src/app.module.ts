@@ -25,6 +25,7 @@ import { UnitModule } from './unit/unit.module';
 import { KioskModule } from './kiosk/kiosk.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { OverviewModule } from './overview/overview.module';
+import { LaporanModule } from './laporan/laporan.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { OverviewModule } from './overview/overview.module';
     KioskModule,
     GatewayModule,
     OverviewModule,
+    LaporanModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
