@@ -7,6 +7,8 @@ import { UnitsPage } from './pages/UnitsPage';
 import { UnitDetailPage } from './pages/UnitDetailPage';
 import { PartnerPage } from './pages/PartnerPage';
 import { MitraDetailPage } from './pages/MitraDetailPage';
+import { LaporanTransaksiPage } from './pages/LaporanTransaksiPage';
+import { LaporanBagiHasilPage } from './pages/LaporanBagiHasilPage';
 import { ComingSoonPage } from './pages/ComingSoonPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -44,8 +46,8 @@ export default function App() {
           <Route path="/units/:id" element={<UnitDetailPage />} />
           <Route path="/partner" element={<PartnerPage />} />
           <Route path="/partner/:id" element={<MitraDetailPage />} />
-          <Route path="/laporan/transaksi" element={<ComingSoonPage title="Laporan Transaksi" />} />
-          <Route path="/laporan/bagi-hasil" element={<ComingSoonPage title="Laporan Bagi Hasil" />} />
+          <Route path="/laporan/transaksi" element={<LaporanTransaksiPage />} />
+          <Route path="/laporan/bagi-hasil" element={<LaporanBagiHasilPage />} />
           <Route path="/users" element={<ComingSoonPage title="Manajemen User" />} />
           <Route path="/emergency-unlock" element={<ComingSoonPage title="Emergency Unlock" />} />
           <Route path="/aktivitas" element={<ComingSoonPage title="Aktivitas" />} />

@@ -150,6 +150,42 @@ export type SkemaHistoriRow = {
 
 export type CreateMitraInput = { nama: string; kontak?: string; lokasiId: string; tipeSkema: TipeSkema };
 
+export type LaporanFilter = { tanggalMulai?: string; tanggalSelesai?: string; lokasiId?: string; mitraId?: string };
+
+export type LaporanTransaksiRow = {
+  id: string;
+  idTransaksi: string;
+  tanggal: string;
+  lokasiNama: string;
+  mitraNama: string;
+  nomorLoker: string;
+  nominal: number;
+  statusBayar: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
+};
+
+export type LaporanBagiHasilRow = {
+  mitraId: string;
+  mitraNama: string;
+  lokasiId: string;
+  lokasiNama: string;
+  persentaseAktif: number | null;
+  jumlahTransaksi: number;
+  totalNominal: number;
+  totalBagiHasilMitra: number;
+  totalBagiHasilSmartbox: number;
+};
+
+function laporanQuery(filter: LaporanFilter, page?: number, pageSize?: number): string {
+  const params = new URLSearchParams();
+  if (filter.tanggalMulai) params.set('tanggalMulai', filter.tanggalMulai);
+  if (filter.tanggalSelesai) params.set('tanggalSelesai', filter.tanggalSelesai);
+  if (filter.lokasiId) params.set('lokasiId', filter.lokasiId);
+  if (filter.mitraId) params.set('mitraId', filter.mitraId);
+  if (page) params.set('page', String(page));
+  if (pageSize) params.set('pageSize', String(pageSize));
+  return params.toString();
+}
+
 export const companyApi = {
   me: () => request<{ data: Me }>('/company/me'),
   overview: () => request<{ data: OverviewRingkasan }>('/company/overview'),
@@ -205,5 +241,17 @@ export const companyApi = {
       request<{ data: SkemaHistoriRow }>(`/company/skema-histori/${historiId}/approve`, { method: 'POST' }),
     reject: (historiId: string) =>
       request<{ data: SkemaHistoriRow }>(`/company/skema-histori/${historiId}/reject`, { method: 'POST' }),
+  },
+
+  laporan: {
+    transaksi: (filter: LaporanFilter, page: number, pageSize = 25) =>
+      request<Paginated<LaporanTransaksiRow>>(`/company/laporan/transaksi?${laporanQuery(filter, page, pageSize)}`),
+    bagiHasil: (filter: LaporanFilter) =>
+      request<{ data: LaporanBagiHasilRow[] }>(`/company/laporan/bagi-hasil?${laporanQuery(filter)}`),
+    export: (jenis: 'transaksi' | 'bagi-hasil', filter: LaporanFilter) =>
+      request<{ data: { url: string } }>('/company/laporan/export', {
+        method: 'POST',
+        body: JSON.stringify({ jenis, ...filter }),
+      }),
   },
 };
