@@ -45,3 +45,9 @@ coverage/
 # Catatan lokal cara menjalankan server/client — bukan dokumentasi resmi,
 # jangan ikut ter-commit.
 run-app.md
+
+# Caveman Packages
+.agents
+.claude
+agent
+skills-lock.json

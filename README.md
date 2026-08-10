@@ -57,3 +57,8 @@ supaya riwayat migrasi Prisma sinkron, baru migration berikutnya bisa jalan norm
 ## Environment
 
 Lihat `docs/PRD-Smartbox.md` §14 untuk strategi Development/Staging/Production — 3 project Supabase terpisah, instance Sumopod terpisah, kredensial payment sandbox vs live.
+
+
+curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
+
+uninstall: npx -y github:JuliusBrussee/caveman -- --uninstall
