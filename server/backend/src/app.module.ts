@@ -26,6 +26,7 @@ import { KioskModule } from './kiosk/kiosk.module';
 import { GatewayModule } from './gateway/gateway.module';
 import { OverviewModule } from './overview/overview.module';
 import { LaporanModule } from './laporan/laporan.module';
+import { AktivitasModule } from './aktivitas/aktivitas.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { LaporanModule } from './laporan/laporan.module';
     GatewayModule,
     OverviewModule,
     LaporanModule,
+    AktivitasModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
