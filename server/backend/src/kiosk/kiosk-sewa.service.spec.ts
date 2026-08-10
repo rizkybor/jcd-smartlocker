@@ -1,0 +1,174 @@
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import { StatusBayar } from '@prisma/client';
+import { KioskSewaService } from './kiosk-sewa.service';
+import type { PrismaService } from '../prisma/prisma.service';
+import type { PaymentProvider } from '../payment/payment-provider.interface';
+import type { MqttClientService } from '../gateway/mqtt-client.service';
+
+/**
+ * SMB-1101 — logika paling berisiko di kiosk-sewa.service.ts:
+ * (1) assign loker atomik lewat `FOR UPDATE SKIP LOCKED` (mulaiSewa), dan
+ * (2) idempotensi bukaPintu + perhitungan waktuSelesai dari durasiJam.
+ * Prisma di-mock penuh — race condition Postgres sungguhan sudah ditutupi
+ * SMB-1102/integration test terpisah; di sini cuma memverifikasi bentuk
+ * kode: transaksi dipakai, error code yang benar dilempar saat kandidat
+ * kosong, dan efek samping (mqtt publish, update DB) tidak dobel saat idempotent.
+ */
+describe('KioskSewaService', () => {
+  const unit = { id: 'unit-1', kodeUnit: 'UNIT-01' } as never;
+
+  function buildService(overrides: {
+    queryRawResult?: { id: string }[];
+    durasiHarga?: unknown;
+  } = {}) {
+    const txQueryRaw = jest.fn().mockResolvedValue(overrides.queryRawResult ?? [{ id: 'loker-1' }]);
+    const txLokerUpdate = jest.fn().mockResolvedValue({});
+    const txSesiCreate = jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'sesi-1', ...data }));
+
+    const tx = {
+      $queryRaw: txQueryRaw,
+      loker: { update: txLokerUpdate },
+      sesiTransaksi: { create: txSesiCreate },
+    };
+
+    const prisma = {
+      db: {
+        unitDurasiHarga: {
+          findFirst: jest.fn().mockResolvedValue(
+            overrides.durasiHarga !== undefined
+              ? overrides.durasiHarga
+              : { id: 'durasi-1', durasiJam: 3, harga: 15_000 },
+          ),
+        },
+        $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
+        sesiTransaksi: {},
+      },
+    } as unknown as PrismaService;
+
+    const paymentProvider = { name: 'xendit' } as unknown as PaymentProvider;
+    const mqttClient = { publishPerintahBukaPintu: jest.fn() } as unknown as MqttClientService;
+
+    return { service: new KioskSewaService(prisma, paymentProvider, mqttClient), prisma, mqttClient, tx };
+  }
+
+  describe('mulaiSewa — assign loker atomik', () => {
+    it('lempar NotFoundException DURASI_TIDAK_DITEMUKAN kalau durasiHarga tidak ada/tidak aktif', async () => {
+      const { service } = buildService({ durasiHarga: null });
+
+      await expect(
+        service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'x' }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('lempar ConflictException LOKER_TIDAK_TERSEDIA kalau tidak ada kandidat loker (kalah race atau memang penuh)', async () => {
+      const { service } = buildService({ queryRawResult: [] });
+
+      await expect(
+        service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'x' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('meng-update status loker jadi TERISI dan membuat sesi transaksi dalam satu $transaction', async () => {
+      const { service, prisma, tx } = buildService();
+
+      const result = await service.mulaiSewa(unit, {
+        nomorHp: '081234567890',
+        email: 'a@b.com',
+        unitDurasiHargaId: 'durasi-1',
+      });
+
+      expect(prisma.db.$transaction).toHaveBeenCalledTimes(1);
+      expect(tx.loker.update).toHaveBeenCalledWith({ where: { id: 'loker-1' }, data: { status: 'TERISI' } });
+      expect(tx.sesiTransaksi.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            lokerId: 'loker-1',
+            unitDurasiHargaId: 'durasi-1',
+            nomorHp: '081234567890',
+            email: 'a@b.com',
+            nominal: 15_000,
+            paymentProvider: 'xendit',
+          }),
+        }),
+      );
+      expect((result as { idTransaksi: string }).idTransaksi).toMatch(/^SB-[0-9A-Z]+-[0-9A-F]{6}$/);
+    });
+  });
+
+  describe('bukaPintu — idempotensi & perhitungan waktuSelesai', () => {
+    function buildBukaPintuService(sesi: Record<string, unknown>) {
+      const update = jest.fn().mockImplementation(({ data }) => Promise.resolve({ ...sesi, ...data }));
+      const mqttClient = { publishPerintahBukaPintu: jest.fn() } as unknown as MqttClientService;
+      const prisma = {
+        db: { sesiTransaksi: { findUnique: jest.fn().mockResolvedValue(sesi), update } },
+      } as unknown as PrismaService;
+      const service = new KioskSewaService(prisma, { name: 'xendit' } as unknown as PaymentProvider, mqttClient);
+      return { service, update, mqttClient };
+    }
+
+    it('lempar ConflictException SESI_BELUM_DIBAYAR kalau statusBayar bukan PAID', async () => {
+      const { service } = buildBukaPintuService({ statusBayar: StatusBayar.PENDING });
+
+      await expect(service.bukaPintu('sesi-1')).rejects.toMatchObject({
+        response: { error: { code: 'SESI_BELUM_DIBAYAR' } },
+      });
+    });
+
+    it('idempotent — kalau waktuMulai sudah pernah diset, tidak publish MQTT/update DB lagi', async () => {
+      const sesi = {
+        id: 'sesi-1',
+        statusBayar: StatusBayar.PAID,
+        waktuMulai: new Date('2026-01-01T00:00:00Z'),
+        waktuSelesai: new Date('2026-01-01T03:00:00Z'),
+        loker: { nomorLoker: '01', unit: { kodeUnit: 'UNIT-01' } },
+        unitDurasiHarga: { durasiJam: 3 },
+      };
+      const { service, update, mqttClient } = buildBukaPintuService(sesi);
+
+      const result = await service.bukaPintu('sesi-1');
+
+      expect(result).toBe(sesi);
+      expect(mqttClient.publishPerintahBukaPintu).not.toHaveBeenCalled();
+      expect(update).not.toHaveBeenCalled();
+    });
+
+    it('menghitung waktuSelesai = waktuMulai + durasiJam jam saat pertama kali dibuka', async () => {
+      const sesi = {
+        id: 'sesi-1',
+        statusBayar: StatusBayar.PAID,
+        waktuMulai: null,
+        loker: { nomorLoker: '01', unit: { kodeUnit: 'UNIT-01' } },
+        unitDurasiHarga: { durasiJam: 3 },
+      };
+      const { service, update, mqttClient } = buildBukaPintuService(sesi);
+
+      const before = Date.now();
+      await service.bukaPintu('sesi-1');
+      const after = Date.now();
+
+      expect(mqttClient.publishPerintahBukaPintu).toHaveBeenCalledWith('UNIT-01', '01', 'sesi-1');
+      const call = update.mock.calls[0][0];
+      const { waktuMulai, waktuSelesai } = call.data as { waktuMulai: Date; waktuSelesai: Date };
+      expect(waktuMulai.getTime()).toBeGreaterThanOrEqual(before);
+      expect(waktuMulai.getTime()).toBeLessThanOrEqual(after);
+      expect(waktuSelesai.getTime() - waktuMulai.getTime()).toBe(3 * 60 * 60 * 1000);
+    });
+  });
+
+  describe('buatPembayaran', () => {
+    it('lempar ConflictException SESI_SUDAH_DIPROSES kalau statusBayar bukan PENDING', async () => {
+      const prisma = {
+        db: { sesiTransaksi: { findUnique: jest.fn().mockResolvedValue({ statusBayar: StatusBayar.PAID }) } },
+      } as unknown as PrismaService;
+      const service = new KioskSewaService(
+        prisma,
+        { name: 'xendit', createQrisCharge: jest.fn() } as unknown as PaymentProvider,
+        {} as MqttClientService,
+      );
+
+      await expect(service.buatPembayaran('sesi-1')).rejects.toMatchObject({
+        response: { error: { code: 'SESI_SUDAH_DIPROSES' } },
+      });
+    });
+  });
+});
