@@ -23,15 +23,23 @@ export class EmergencyUnlockService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { waktuKejadian: 'desc' },
-        include: { loker: { include: { unit: { include: { lokasi: true } } } } },
+        include: {
+          loker: { include: { unit: { include: { lokasi: true } } } },
+          staff: { select: { nama: true, email: true } },
+        },
       }),
       this.prisma.db.emergencyUnlockLog.count(),
     ]);
 
     // Waktu kejadian ditampilkan sesuai timezone lokasi loker terkait
     // (§7.2) — bukan UTC mentah, dan bukan asumsi WIB untuk semua lokasi.
+    // `staff`/nomor loker/unit/lokasi disertakan mentah (bukan cuma
+    // dibuang) — dashboard butuh ini untuk tabel yang bisa dibaca.
     const data = rows.map(({ loker, ...row }) => ({
       ...row,
+      nomorLoker: loker.nomorLoker,
+      kodeUnit: loker.unit.kodeUnit,
+      lokasiNama: loker.unit.lokasi.nama,
       waktuKejadianLokal: formatUtcInLokasiTimezone(
         row.waktuKejadian,
         loker.unit.lokasi.timezone,
