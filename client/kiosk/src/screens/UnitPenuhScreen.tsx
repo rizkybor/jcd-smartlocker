@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { KioskButton } from '@smartbox/ui';
 
 export function UnitPenuhScreen({ onKembali }: { onKembali: () => void }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -16,13 +18,13 @@ export function UnitPenuhScreen({ onKembali }: { onKembali: () => void }) {
       }}
     >
       <div style={{ fontSize: 'var(--sl-kiosk-fs-title)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)' }}>
-        Unit Ini Penuh
+        {t('unitPenuh.judul')}
       </div>
       <div style={{ fontFamily: 'var(--sl-font-body)', fontSize: 'var(--sl-kiosk-fs-body)', color: 'var(--sl-text-muted)', maxWidth: 600 }}>
-        Semua loker sedang terisi. Silakan coba lagi nanti atau cari unit lain di lokasi ini.
+        {t('unitPenuh.detail')}
       </div>
       <KioskButton tone="neutral" size="lg" onClick={onKembali}>
-        Kembali
+        {t('common.kembali')}
       </KioskButton>
     </div>
   );

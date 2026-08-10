@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button, Field } from '@smartbox/ui';
 import { companyApi, ApiError, type Lokasi } from '../../api/client';
@@ -33,6 +34,7 @@ export function CreateUnitDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [lokasiList, setLokasiList] = useState<Lokasi[]>([]);
   const [lokasiId, setLokasiId] = useState('');
   const [kodeUnit, setKodeUnit] = useState('');
@@ -51,8 +53,8 @@ export function CreateUnitDialog({
         setLokasiList(res.data);
         setLokasiId((prev) => prev || res.data[0]?.id || '');
       })
-      .catch(() => setError('Gagal memuat daftar lokasi.'));
-  }, [open]);
+      .catch(() => setError(t('createUnitDialog.gagalMuatLokasi')));
+  }, [open, t]);
 
   function updateDurasi(index: number, field: keyof DurasiRow, value: string) {
     setDurasiRows((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
@@ -82,7 +84,7 @@ export function CreateUnitDialog({
       setDurasiRows([{ durasiJam: '1', harga: '5000' }]);
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal membuat unit.');
+      setError(err instanceof ApiError ? err.message : t('createUnitDialog.gagalSimpan'));
     } finally {
       setSubmitting(false);
     }
@@ -94,26 +96,26 @@ export function CreateUnitDialog({
         <Dialog.Overlay style={DIALOG_STYLE.overlay} />
         <Dialog.Content style={DIALOG_STYLE.content}>
           <Dialog.Title style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-20)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
-            Tambah Unit Baru
+            {t('createUnitDialog.judul')}
           </Dialog.Title>
 
           <div style={{ marginTop: 'var(--sl-space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
             <Field
-              label="Lokasi"
+              label={t('createUnitDialog.lokasi')}
               required
               options={lokasiList.map((l) => ({ value: l.id, label: l.nama }))}
               value={lokasiId}
               onChange={(e) => setLokasiId(e.target.value)}
             />
-            <Field label="Kode Unit" required value={kodeUnit} onChange={(e) => setKodeUnit(e.target.value)} placeholder="mis. UNIT-02" />
-            <Field label="Varian Kompartemen" value={varianKompartemen} onChange={(e) => setVarianKompartemen(e.target.value)} placeholder="opsional" />
-            <Field label="Jumlah Loker" required type="number" value={jumlahLoker} onChange={(e) => setJumlahLoker(e.target.value)} />
+            <Field label={t('createUnitDialog.kodeUnit')} required value={kodeUnit} onChange={(e) => setKodeUnit(e.target.value)} placeholder={t('createUnitDialog.kodeUnitPlaceholder')} />
+            <Field label={t('createUnitDialog.varianKompartemen')} value={varianKompartemen} onChange={(e) => setVarianKompartemen(e.target.value)} placeholder={t('common.opsional')} />
+            <Field label={t('createUnitDialog.jumlahLoker')} required type="number" value={jumlahLoker} onChange={(e) => setJumlahLoker(e.target.value)} />
             <Field
-              label="Mode Pemakaian"
+              label={t('createUnitDialog.modePemakaian')}
               required
               options={[
-                { value: 'BERBAYAR', label: 'Berbayar' },
-                { value: 'GRATIS', label: 'Gratis' },
+                { value: 'BERBAYAR', label: t('common.modePemakaian.berbayar') },
+                { value: 'GRATIS', label: t('common.modePemakaian.gratis') },
               ]}
               value={modePemakaian}
               onChange={(e) => setModePemakaian(e.target.value as 'BERBAYAR' | 'GRATIS')}
@@ -121,24 +123,24 @@ export function CreateUnitDialog({
 
             <div>
               <span style={{ display: 'block', marginBottom: 6, fontSize: 'var(--sl-fs-13)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-body)' }}>
-                Durasi & Harga
+                {t('createUnitDialog.durasiHarga')}
               </span>
               {durasiRows.map((row, i) => (
                 <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(i, 'durasiJam', e.target.value)} placeholder="Jam" />
-                  <Field type="number" value={row.harga} onChange={(e) => updateDurasi(i, 'harga', e.target.value)} placeholder="Harga (Rp)" />
+                  <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(i, 'durasiJam', e.target.value)} placeholder={t('createUnitDialog.placeholderJam')} />
+                  <Field type="number" value={row.harga} onChange={(e) => updateDurasi(i, 'harga', e.target.value)} placeholder={t('createUnitDialog.placeholderHarga')} />
                   <Button
                     tone="ghost"
                     size="sm"
                     disabled={durasiRows.length <= 1}
                     onClick={() => setDurasiRows((rows) => rows.filter((_, ri) => ri !== i))}
                   >
-                    Hapus
+                    {t('common.hapus')}
                   </Button>
                 </div>
               ))}
               <Button tone="outline" size="sm" onClick={() => setDurasiRows((rows) => [...rows, { durasiJam: '', harga: '' }])}>
-                + Tambah Durasi
+                {t('createUnitDialog.tambahDurasi')}
               </Button>
             </div>
 
@@ -148,11 +150,11 @@ export function CreateUnitDialog({
           <div style={{ marginTop: 'var(--sl-space-6)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sl-space-3)' }}>
             <Dialog.Close asChild>
               <Button tone="outline" disabled={submitting}>
-                Batal
+                {t('common.batal')}
               </Button>
             </Dialog.Close>
             <Button onClick={handleSubmit} disabled={!valid || submitting}>
-              {submitting ? 'Menyimpan...' : 'Simpan'}
+              {submitting ? t('common.menyimpan') : t('common.simpan')}
             </Button>
           </div>
         </Dialog.Content>

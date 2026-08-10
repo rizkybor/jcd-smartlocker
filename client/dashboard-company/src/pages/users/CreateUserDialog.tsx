@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button, Field } from '@smartbox/ui';
 import { companyApi, ApiError, type AkunInternalRole } from '../../api/client';
@@ -29,6 +30,7 @@ export function CreateUserDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [nama, setNama] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AkunInternalRole>('STAFF');
@@ -47,7 +49,7 @@ export function CreateUserDialog({
       setRole('STAFF');
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal membuat akun.');
+      setError(err instanceof ApiError ? err.message : t('createUserDialog.gagalSimpan'));
     } finally {
       setSubmitting(false);
     }
@@ -59,20 +61,20 @@ export function CreateUserDialog({
         <Dialog.Overlay style={DIALOG_STYLE.overlay} />
         <Dialog.Content style={DIALOG_STYLE.content}>
           <Dialog.Title style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-20)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
-            Tambah User Internal
+            {t('createUserDialog.judul')}
           </Dialog.Title>
 
           <div style={{ marginTop: 'var(--sl-space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
-            <Field label="Nama" required value={nama} onChange={(e) => setNama(e.target.value)} />
-            <Field label="Email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Field label={t('createUserDialog.nama')} required value={nama} onChange={(e) => setNama(e.target.value)} />
+            <Field label={t('createUserDialog.email')} required type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <Field
-              label="Role"
+              label={t('createUserDialog.role')}
               required
               options={[
-                { value: 'SUPER_ADMIN', label: 'Super Admin' },
-                { value: 'OPS', label: 'Ops' },
-                { value: 'MANAGER', label: 'Manager' },
-                { value: 'STAFF', label: 'Staff' },
+                { value: 'SUPER_ADMIN', label: t('createUserDialog.roleSuperAdmin') },
+                { value: 'OPS', label: t('createUserDialog.roleOps') },
+                { value: 'MANAGER', label: t('createUserDialog.roleManager') },
+                { value: 'STAFF', label: t('createUserDialog.roleStaff') },
               ]}
               value={role}
               onChange={(e) => setRole(e.target.value as AkunInternalRole)}
@@ -83,11 +85,11 @@ export function CreateUserDialog({
           <div style={{ marginTop: 'var(--sl-space-6)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sl-space-3)' }}>
             <Dialog.Close asChild>
               <Button tone="outline" disabled={submitting}>
-                Batal
+                {t('common.batal')}
               </Button>
             </Dialog.Close>
             <Button onClick={handleSubmit} disabled={!valid || submitting}>
-              {submitting ? 'Menyimpan...' : 'Simpan'}
+              {submitting ? t('common.menyimpan') : t('common.simpan')}
             </Button>
           </div>
         </Dialog.Content>

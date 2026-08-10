@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button, Field } from '@smartbox/ui';
 import { companyApi, ApiError, type Lokasi, type TipeSkema } from '../../api/client';
@@ -29,6 +30,7 @@ export function CreateMitraDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
+  const { t } = useTranslation();
   const [lokasiList, setLokasiList] = useState<Lokasi[]>([]);
   const [nama, setNama] = useState('');
   const [kontak, setKontak] = useState('');
@@ -45,8 +47,8 @@ export function CreateMitraDialog({
         setLokasiList(res.data);
         setLokasiId((prev) => prev || res.data[0]?.id || '');
       })
-      .catch(() => setError('Gagal memuat daftar lokasi.'));
-  }, [open]);
+      .catch(() => setError(t('createMitraDialog.gagalMuatLokasi')));
+  }, [open, t]);
 
   const valid = nama.trim().length > 0 && lokasiId.length > 0;
 
@@ -59,7 +61,7 @@ export function CreateMitraDialog({
       setKontak('');
       onCreated();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal membuat mitra.');
+      setError(err instanceof ApiError ? err.message : t('createMitraDialog.gagalSimpan'));
     } finally {
       setSubmitting(false);
     }
@@ -71,29 +73,29 @@ export function CreateMitraDialog({
         <Dialog.Overlay style={DIALOG_STYLE.overlay} />
         <Dialog.Content style={DIALOG_STYLE.content}>
           <Dialog.Title style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-20)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
-            Tambah Mitra Baru
+            {t('createMitraDialog.judul')}
           </Dialog.Title>
 
           <div style={{ marginTop: 'var(--sl-space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
-            <Field label="Nama Mitra" required value={nama} onChange={(e) => setNama(e.target.value)} />
-            <Field label="Kontak" value={kontak} onChange={(e) => setKontak(e.target.value)} placeholder="opsional" />
+            <Field label={t('createMitraDialog.namaMitra')} required value={nama} onChange={(e) => setNama(e.target.value)} />
+            <Field label={t('createMitraDialog.kontak')} value={kontak} onChange={(e) => setKontak(e.target.value)} placeholder={t('common.opsional')} />
             <Field
-              label="Lokasi"
+              label={t('createMitraDialog.lokasi')}
               required
               options={lokasiList.map((l) => ({ value: l.id, label: l.nama }))}
               value={lokasiId}
               onChange={(e) => setLokasiId(e.target.value)}
             />
             <Field
-              label="Tipe Skema"
+              label={t('createMitraDialog.tipeSkema')}
               required
               options={[
-                { value: 'FIXED_RENTAL', label: 'Fixed Rental (Sewa Murni)' },
-                { value: 'REVENUE_SHARING', label: 'Revenue Sharing (Bagi Hasil)' },
+                { value: 'FIXED_RENTAL', label: t('createMitraDialog.fixedRentalOption') },
+                { value: 'REVENUE_SHARING', label: t('createMitraDialog.revenueSharingOption') },
               ]}
               value={tipeSkema}
               onChange={(e) => setTipeSkema(e.target.value as TipeSkema)}
-              hint={tipeSkema === 'REVENUE_SHARING' ? 'Persentase ditentukan & di-approve terpisah setelah mitra dibuat.' : undefined}
+              hint={tipeSkema === 'REVENUE_SHARING' ? t('createMitraDialog.hintRevenueSharing') : undefined}
             />
             {error ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{error}</div> : null}
           </div>
@@ -101,11 +103,11 @@ export function CreateMitraDialog({
           <div style={{ marginTop: 'var(--sl-space-6)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sl-space-3)' }}>
             <Dialog.Close asChild>
               <Button tone="outline" disabled={submitting}>
-                Batal
+                {t('common.batal')}
               </Button>
             </Dialog.Close>
             <Button onClick={handleSubmit} disabled={!valid || submitting}>
-              {submitting ? 'Menyimpan...' : 'Simpan'}
+              {submitting ? t('common.menyimpan') : t('common.simpan')}
             </Button>
           </div>
         </Dialog.Content>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Panel, DataTable, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LaporanFilter, type LaporanBagiHasilRow } from '../api/client';
 import { LaporanFilterBar } from './laporan/LaporanFilterBar';
@@ -8,6 +9,7 @@ function formatRupiah(nominal: number): string {
 }
 
 export function LaporanBagiHasilPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [filter, setFilter] = useState<LaporanFilter>({});
   const [rows, setRows] = useState<LaporanBagiHasilRow[] | null>(null);
@@ -19,8 +21,8 @@ export function LaporanBagiHasilPage() {
     companyApi.laporan
       .bagiHasil(filter)
       .then((res) => setRows(res.data))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat laporan bagi hasil.'));
-  }, [filter]);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('laporanBagiHasilPage.gagalMuat')));
+  }, [filter, t]);
 
   async function handleExport() {
     setExporting(true);
@@ -30,42 +32,42 @@ export function LaporanBagiHasilPage() {
       const res = await companyApi.laporan.export('bagi-hasil', filter);
       setExportUrl(res.data.url);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Gagal ekspor laporan.';
+      const message = err instanceof ApiError ? err.message : t('laporan.gagalEkspor');
       setError(message);
-      toast({ title: 'Ekspor gagal', description: message, tone: 'error' });
+      toast({ title: t('laporan.eksporGagalToast'), description: message, tone: 'error' });
     } finally {
       setExporting(false);
     }
   }
 
   const columns: DataTableColumn<LaporanBagiHasilRow>[] = [
-    { header: 'Mitra', render: (r) => r.mitraNama },
-    { header: 'Lokasi', render: (r) => r.lokasiNama },
-    { header: 'Persentase', align: 'right', render: (r) => (r.persentaseAktif !== null ? `${r.persentaseAktif}%` : '—') },
-    { header: 'Jumlah Transaksi', align: 'right', numeric: true, render: (r) => r.jumlahTransaksi },
-    { header: 'Total Nominal', align: 'right', numeric: true, render: (r) => formatRupiah(r.totalNominal) },
-    { header: 'Bagi Hasil Mitra', align: 'right', numeric: true, render: (r) => formatRupiah(r.totalBagiHasilMitra) },
-    { header: 'Bagi Hasil Smartbox', align: 'right', numeric: true, render: (r) => formatRupiah(r.totalBagiHasilSmartbox) },
+    { header: t('laporanBagiHasilPage.kolomMitra'), render: (r) => r.mitraNama },
+    { header: t('laporanBagiHasilPage.kolomLokasi'), render: (r) => r.lokasiNama },
+    { header: t('laporanBagiHasilPage.kolomPersentase'), align: 'right', render: (r) => (r.persentaseAktif !== null ? `${r.persentaseAktif}%` : '—') },
+    { header: t('laporanBagiHasilPage.kolomJumlahTransaksi'), align: 'right', numeric: true, render: (r) => r.jumlahTransaksi },
+    { header: t('laporanBagiHasilPage.kolomTotalNominal'), align: 'right', numeric: true, render: (r) => formatRupiah(r.totalNominal) },
+    { header: t('laporanBagiHasilPage.kolomBagiHasilMitra'), align: 'right', numeric: true, render: (r) => formatRupiah(r.totalBagiHasilMitra) },
+    { header: t('laporanBagiHasilPage.kolomBagiHasilSmartbox'), align: 'right', numeric: true, render: (r) => formatRupiah(r.totalBagiHasilSmartbox) },
   ];
 
   return (
     <div>
       <h1 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-24)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', marginBottom: 'var(--sl-space-6)' }}>
-        Laporan Bagi Hasil
+        {t('laporanBagiHasilPage.judul')}
       </h1>
       <p style={{ color: 'var(--sl-text-muted)', marginTop: -16, marginBottom: 'var(--sl-space-6)' }}>
-        Cuma mitra tipe Revenue Sharing — pakai persentase yang berlaku saat transaksi terjadi, bukan persentase sekarang.
+        {t('laporanBagiHasilPage.deskripsi')}
       </p>
 
       <LaporanFilterBar filter={filter} onChange={setFilter} onExport={handleExport} exporting={exporting} />
 
       {exportUrl ? (
         <Panel style={{ marginBottom: 'var(--sl-space-5)' }}>
-          File siap —{' '}
+          {t('laporan.fileSiap')}{' '}
           <a href={exportUrl} target="_blank" rel="noreferrer">
-            unduh CSV
+            {t('laporan.unduhCsv')}
           </a>{' '}
-          (tautan berlaku 1 jam).
+          {t('laporan.tautanBerlaku')}
         </Panel>
       ) : null}
 
@@ -73,9 +75,9 @@ export function LaporanBagiHasilPage() {
         {error ? (
           <div style={{ color: 'var(--sl-status-offline-strong)' }}>{error}</div>
         ) : !rows ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>
         ) : rows.length === 0 ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Tidak ada mitra Revenue Sharing untuk filter ini.</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('laporanBagiHasilPage.kosong')}</div>
         ) : (
           <DataTable columns={columns} rows={rows} striped />
         )}

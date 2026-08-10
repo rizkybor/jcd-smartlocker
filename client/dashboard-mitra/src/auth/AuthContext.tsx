@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { mitraApi, ApiError, type Me } from '../api/client';
+import i18n from '../i18n';
 
 type AuthState = {
   session: Session | null;
@@ -63,9 +64,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         fetchedForUserId.current = null;
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          setError('Akun ini belum terdaftar sebagai akun mitra Dashboard Mitra.');
+          setError(i18n.t('auth.bukanAkunMitra'));
         } else {
-          setError('Gagal memuat profil akun — server atau jaringan bermasalah. Coba muat ulang halaman.');
+          setError(i18n.t('auth.gagalMuatProfil'));
         }
       })
       .finally(() => setLoading(false));

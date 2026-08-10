@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Panel, DataTable, Button, Field, StatusBadge, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type MitraLokasiFull, type SkemaHistoriRow } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
+import { formatTanggalLokasi } from '../../utils/formatTanggal';
 
 /**
  * Alur ajukan/approve persentase revenue sharing (§10, §12 poin 2) — Super
@@ -10,6 +12,7 @@ import { useAuth } from '../../auth/AuthContext';
  * menyembunyikan tombol yang bukan hak role yang sedang login (§5.6).
  */
 export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFull }) {
+  const { t } = useTranslation();
   const { profile } = useAuth();
   const [rows, setRows] = useState<SkemaHistoriRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -21,10 +24,10 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
     companyApi.skemaHistori
       .list(mitraLokasi.id)
       .then((res) => setRows(res.data))
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat riwayat skema.'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('skemaHistoriPanel.gagalMuat')));
   }
 
-  useEffect(reload, [mitraLokasi.id]);
+  useEffect(reload, [mitraLokasi.id, t]);
 
   async function handleAjukan() {
     setAjukanLoading(true);
@@ -34,7 +37,7 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
       setPersentaseBaru('');
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal menentukan persentase.');
+      setError(err instanceof ApiError ? err.message : t('skemaHistoriPanel.gagalAjukan'));
     } finally {
       setAjukanLoading(false);
     }
@@ -47,7 +50,7 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
       await companyApi.skemaHistori.approve(id);
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal approve.');
+      setError(err instanceof ApiError ? err.message : t('skemaHistoriPanel.gagalApprove'));
     } finally {
       setActionLoadingId(null);
     }
@@ -60,7 +63,7 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
       await companyApi.skemaHistori.reject(id);
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal reject.');
+      setError(err instanceof ApiError ? err.message : t('skemaHistoriPanel.gagalReject'));
     } finally {
       setActionLoadingId(null);
     }
@@ -69,17 +72,20 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
   const adaPending = rows?.some((r) => r.statusApproval === 'PENDING') ?? false;
 
   const columns: DataTableColumn<SkemaHistoriRow>[] = [
-    { header: 'Persentase', align: 'right', numeric: true, render: (r) => `${r.persentase}%` },
+    { header: t('skemaHistoriPanel.kolomPersentase'), align: 'right', numeric: true, render: (r) => `${r.persentase}%` },
     {
-      header: 'Status',
+      header: t('skemaHistoriPanel.kolomStatus'),
       render: (r) => (
         <StatusBadge status={r.statusApproval === 'APPROVED' ? 'tersedia' : r.statusApproval === 'PENDING' ? 'terisi' : 'offline'}>
           {r.statusApproval}
         </StatusBadge>
       ),
     },
-    { header: 'Diajukan', render: (r) => new Date(r.diajukanAt).toLocaleString('id-ID') },
-    { header: 'Berlaku Sampai', render: (r) => (r.berlakuSampai ? new Date(r.berlakuSampai).toLocaleDateString('id-ID') : '—') },
+    { header: t('skemaHistoriPanel.kolomDiajukan'), render: (r) => formatTanggalLokasi(r.diajukanAt, mitraLokasi.lokasi.timezone) },
+    {
+      header: t('skemaHistoriPanel.kolomBerlakuSampai'),
+      render: (r) => (r.berlakuSampai ? formatTanggalLokasi(r.berlakuSampai, mitraLokasi.lokasi.timezone, 'dd MMM yyyy') : '—'),
+    },
     {
       header: '',
       align: 'right',
@@ -87,10 +93,10 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
         r.statusApproval === 'PENDING' && profile?.role === 'MANAGER' ? (
           <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
             <Button tone="primary" size="sm" disabled={actionLoadingId === r.id} onClick={() => handleApprove(r.id)}>
-              Approve
+              {t('skemaHistoriPanel.approve')}
             </Button>
             <Button tone="danger" size="sm" disabled={actionLoadingId === r.id} onClick={() => handleReject(r.id)}>
-              Reject
+              {t('skemaHistoriPanel.reject')}
             </Button>
           </div>
         ) : null,
@@ -98,28 +104,37 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
   ];
 
   return (
-    <Panel title={`Skema Bagi Hasil — ${mitraLokasi.lokasi.nama}`} description={`Persentase aktif saat ini: ${mitraLokasi.persentaseAktif ?? 0}%`}>
+    <Panel
+      title={t('skemaHistoriPanel.panelTitle', { lokasi: mitraLokasi.lokasi.nama })}
+      description={t('skemaHistoriPanel.panelDescription', { persen: mitraLokasi.persentaseAktif ?? 0 })}
+    >
       {profile?.role === 'SUPER_ADMIN' ? (
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 'var(--sl-space-5)', maxWidth: 320 }}>
-          <Field label="Tentukan Persentase Baru" type="number" value={persentaseBaru} onChange={(e) => setPersentaseBaru(e.target.value)} placeholder="0-100" />
+          <Field
+            label={t('skemaHistoriPanel.tentukanPersentase')}
+            type="number"
+            value={persentaseBaru}
+            onChange={(e) => setPersentaseBaru(e.target.value)}
+            placeholder={t('skemaHistoriPanel.placeholderPersentase')}
+          />
           <Button
             disabled={ajukanLoading || !persentaseBaru || adaPending}
             onClick={handleAjukan}
           >
-            {ajukanLoading ? 'Mengirim...' : 'Tentukan'}
+            {ajukanLoading ? t('skemaHistoriPanel.mengirim') : t('skemaHistoriPanel.tentukan')}
           </Button>
         </div>
       ) : null}
       {adaPending && profile?.role === 'SUPER_ADMIN' ? (
         <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-text-muted)', marginBottom: 'var(--sl-space-4)' }}>
-          Masih ada pengajuan menunggu approval Manager — tunggu diproses dulu sebelum menentukan yang baru.
+          {t('skemaHistoriPanel.pendingWarning')}
         </div>
       ) : null}
       {error ? <div style={{ color: 'var(--sl-status-offline-strong)', marginBottom: 'var(--sl-space-4)' }}>{error}</div> : null}
       {!rows ? (
-        <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>
+        <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>
       ) : rows.length === 0 ? (
-        <div style={{ color: 'var(--sl-text-muted)' }}>Belum ada riwayat persentase.</div>
+        <div style={{ color: 'var(--sl-text-muted)' }}>{t('skemaHistoriPanel.kosong')}</div>
       ) : (
         <DataTable columns={columns} rows={rows} striped />
       )}

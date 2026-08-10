@@ -1,0 +1,75 @@
+{
+  "common": {
+    "kembali": "Kembali",
+    "lanjut": "Lanjut",
+    "batalkan": "Batalkan",
+    "selesai": "Selesai"
+  },
+  "steps": {
+    "sewa": ["Nomor HP", "Email", "Durasi", "Bayar", "Ambil Barang"],
+    "ambil": ["Nomor HP", "Verifikasi OTP", "Buka Pintu"]
+  },
+  "idle": {
+    "headline": "Sentuh untuk Sewa Loker",
+    "subline": "Tanpa aplikasi. Tanpa kunci. Bayar dengan QRIS."
+  },
+  "menu": {
+    "judul": "Mau ngapain hari ini?",
+    "sewa": "Sewa Loker",
+    "ambil": "Ambil Barang"
+  },
+  "nomorHp": {
+    "sewa": {
+      "title": "Masukkan Nomor HP Anda",
+      "subtitle": "Dipakai untuk ambil barang nanti — awalan 08."
+    },
+    "ambil": {
+      "title": "Masukkan Nomor HP Anda",
+      "subtitle": "Nomor HP yang sama saat menyewa loker."
+    }
+  },
+  "email": {
+    "title": "Masukkan Email Anda",
+    "subtitle": "Dipakai untuk kirim kode OTP saat ambil barang nanti.",
+    "placeholder": "nama@email.com"
+  },
+  "durasi": {
+    "title": "Pilih Durasi Sewa",
+    "jam": "{{jumlah}} jam"
+  },
+  "bayar": {
+    "title": "Scan untuk Bayar",
+    "subtitle": "Pakai aplikasi e-wallet atau m-banking dengan QRIS."
+  },
+  "bayarGagal": {
+    "iconLabel": "Pembayaran gagal",
+    "judul": "QR Sudah Kedaluwarsa",
+    "detail": "Waktu pembayaran habis atau pembayaran gagal diproses. Silakan pilih durasi lagi untuk mendapat QR baru.",
+    "cobaLagi": "Coba Lagi"
+  },
+  "bukaPintu": {
+    "simpanBarang": "Silakan simpan barang Anda",
+    "membuka": "Membuka pintu...",
+    "ambilBarang": "Silakan ambil barang Anda"
+  },
+  "struk": {
+    "judul": "Loker Siap Dipakai",
+    "loker": "Loker {{nomor}}",
+    "idTransaksi": "ID Transaksi: {{id}}",
+    "durasi": "Durasi: {{jam}} jam · {{nominal}}",
+    "berlakuSampai": "Berlaku sampai: {{waktu}}"
+  },
+  "otp": {
+    "title": "Masukkan Kode OTP",
+    "subtitle": "Kode 6 digit sudah dikirim, berlaku 5 menit.",
+    "verifikasi": "Verifikasi",
+    "kirimUlang": "Kirim Ulang Kode"
+  },
+  "unitPenuh": {
+    "judul": "Unit Ini Penuh",
+    "detail": "Semua loker sedang terisi. Silakan coba lagi nanti atau cari unit lain di lokasi ini."
+  },
+  "errors": {
+    "jaringan": "Terjadi kesalahan jaringan. Silakan coba lagi."
+  }
+}

@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './auth/LoginPage';
 import { DashboardLayout } from './layout/DashboardLayout';
@@ -7,11 +8,12 @@ import { UnitsPage } from './pages/UnitsPage';
 import { LaporanPage } from './pages/LaporanPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
+  const { t } = useTranslation();
   const { session, profile, loading, error } = useAuth();
 
-  if (loading) return <FullPageMessage text="Memuat..." />;
+  if (loading) return <FullPageMessage text={t('common.memuat')} />;
   if (!session) return <Navigate to="/login" replace />;
-  if (error || !profile) return <FullPageMessage text={error ?? 'Akun tidak dikenali.'} />;
+  if (error || !profile) return <FullPageMessage text={error ?? t('app.akunTidakDikenali')} />;
 
   return children;
 }

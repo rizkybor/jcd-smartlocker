@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { QRScreen, KioskButton } from '@smartbox/ui';
 import { useQrDataUrl } from '../utils/useQrDataUrl';
 import { formatRupiah } from '../utils/format';
@@ -18,6 +19,7 @@ export function BayarScreen({
   expiredAt: string | null;
   onBatal: () => void;
 }) {
+  const { t } = useTranslation();
   const qrSrc = useQrDataUrl(qrString);
   const [secondsLeft, setSecondsLeft] = useState(() => (expiredAt ? secondsUntil(expiredAt) : 0));
 
@@ -30,14 +32,14 @@ export function BayarScreen({
 
   return (
     <QRScreen
-      title="Scan untuk Bayar"
-      subtitle="Pakai aplikasi e-wallet atau m-banking dengan QRIS."
+      title={t('bayar.title')}
+      subtitle={t('bayar.subtitle')}
       qrSrc={qrSrc ?? undefined}
       amount={nominal !== null ? formatRupiah(nominal) : undefined}
       secondsLeft={expiredAt ? secondsLeft : undefined}
       footer={
         <KioskButton tone="neutral" size="md" onClick={onBatal}>
-          Batalkan
+          {t('common.batalkan')}
         </KioskButton>
       }
     />

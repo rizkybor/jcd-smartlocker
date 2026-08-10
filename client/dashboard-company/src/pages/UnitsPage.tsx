@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Panel, DataTable, Button, StatusBadge, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type Unit } from '../api/client';
 import { CreateUnitDialog } from './units/CreateUnitDialog';
 
 export function UnitsPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.units.list>> | null>(null);
@@ -15,44 +17,47 @@ export function UnitsPage() {
     companyApi.units
       .list(page)
       .then(setResult)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar unit.'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('unitsPage.gagalMuat')));
   }
 
-  useEffect(reload, [page]);
+  useEffect(reload, [page, t]);
 
   const columns: DataTableColumn<Unit>[] = [
-    { header: 'Kode Unit', render: (u) => u.kodeUnit },
-    { header: 'Lokasi', render: (u) => u.lokasi.nama },
+    { header: t('unitsPage.kolomKodeUnit'), render: (u) => u.kodeUnit },
+    { header: t('unitsPage.kolomLokasi'), render: (u) => u.lokasi.nama },
     {
-      header: 'Mitra',
+      header: t('unitsPage.kolomMitra'),
       render: (u) => u.lokasi.mitraLokasi.map((ml) => ml.mitra.nama).join(', ') || <span style={{ color: 'var(--sl-text-faint)' }}>—</span>,
     },
-    { header: 'Loker', align: 'center', render: (u) => `${u.lokers.filter((l) => l.status === 'TERSEDIA').length}/${u.jumlahLoker}` },
-    { header: 'Mode', render: (u) => (u.modePemakaian === 'BERBAYAR' ? 'Berbayar' : 'Gratis') },
-    { header: 'Status', render: (u) => <StatusBadge status={u.aktif ? 'tersedia' : 'nonaktif'}>{u.aktif ? 'Aktif' : 'Nonaktif'}</StatusBadge> },
+    { header: t('unitsPage.kolomLoker'), align: 'center', render: (u) => `${u.lokers.filter((l) => l.status === 'TERSEDIA').length}/${u.jumlahLoker}` },
+    { header: t('unitsPage.kolomMode'), render: (u) => (u.modePemakaian === 'BERBAYAR' ? t('common.modePemakaian.berbayar') : t('common.modePemakaian.gratis')) },
+    {
+      header: t('unitsPage.kolomStatus'),
+      render: (u) => <StatusBadge status={u.aktif ? 'tersedia' : 'nonaktif'}>{u.aktif ? t('common.aktif') : t('common.nonaktif')}</StatusBadge>,
+    },
   ];
 
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sl-space-6)' }}>
         <h1 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-24)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
-          Unit Locker
+          {t('unitsPage.judul')}
         </h1>
-        <Button onClick={() => setCreateOpen(true)}>+ Tambah Unit</Button>
+        <Button onClick={() => setCreateOpen(true)}>{t('unitsPage.tambahUnit')}</Button>
       </div>
 
       <Panel>
         {error ? (
           <div style={{ color: 'var(--sl-status-offline-strong)' }}>{error}</div>
         ) : !result ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>
         ) : (
           <DataTable
             columns={columns}
             rows={result.data}
             striped
             onRowClick={(u) => navigate(`/units/${u.id}`)}
-            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'unit' }}
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: t('unitsPage.itemLabel') }}
           />
         )}
       </Panel>

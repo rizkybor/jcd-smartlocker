@@ -1,22 +1,25 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Sidebar, type SidebarItem } from '@smartbox/ui';
 import { useAuth } from '../auth/AuthContext';
 import type { AkunInternalRole } from '../api/client';
 
-const NAV_ITEMS: SidebarItem[] = [
-  { section: 'Utama' },
-  { id: '/', label: 'Overview', icon: 'layout-grid' },
-  { id: '/units', label: 'Unit Locker', icon: 'package' },
-  { section: 'Partner' },
-  { id: '/partner', label: 'Mitra & Skema', icon: 'building-2' },
-  { section: 'Laporan' },
-  { id: '/laporan/transaksi', label: 'Transaksi', icon: 'receipt' },
-  { id: '/laporan/bagi-hasil', label: 'Bagi Hasil', icon: 'chart-column' },
-  { section: 'Admin' },
-  { id: '/users', label: 'Manajemen User', icon: 'users' },
-  { id: '/emergency-unlock', label: 'Emergency Unlock', icon: 'key-round' },
-  { id: '/aktivitas', label: 'Aktivitas', icon: 'activity' },
-];
+function buildNavItems(t: (key: string) => string): SidebarItem[] {
+  return [
+    { section: t('dashboardLayout.nav.utama') },
+    { id: '/', label: t('dashboardLayout.nav.overview'), icon: 'layout-grid' },
+    { id: '/units', label: t('dashboardLayout.nav.unitLocker'), icon: 'package' },
+    { section: t('dashboardLayout.nav.partner') },
+    { id: '/partner', label: t('dashboardLayout.nav.mitraSkema'), icon: 'building-2' },
+    { section: t('dashboardLayout.nav.laporan') },
+    { id: '/laporan/transaksi', label: t('dashboardLayout.nav.transaksi'), icon: 'receipt' },
+    { id: '/laporan/bagi-hasil', label: t('dashboardLayout.nav.bagiHasil'), icon: 'chart-column' },
+    { section: t('dashboardLayout.nav.admin') },
+    { id: '/users', label: t('dashboardLayout.nav.manajemenUser'), icon: 'users' },
+    { id: '/emergency-unlock', label: t('dashboardLayout.nav.emergencyUnlock'), icon: 'key-round' },
+    { id: '/aktivitas', label: t('dashboardLayout.nav.aktivitas'), icon: 'activity' },
+  ];
+}
 
 /**
  * Cocok dengan `@Roles(...)` masing-masing endpoint GET di backend (§5) —
@@ -43,11 +46,12 @@ const ROLE_RESTRICTED: Partial<Record<string, AkunInternalRole[]>> = {
 };
 
 export function DashboardLayout() {
+  const { t } = useTranslation();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  const items = NAV_ITEMS.filter((it) => {
+  const items = buildNavItems(t).filter((it) => {
     if ('section' in it) return true;
     const allowed = ROLE_RESTRICTED[it.id];
     if (!allowed) return true;
@@ -69,7 +73,7 @@ export function DashboardLayout() {
               onClick={() => void signOut()}
               style={{ marginTop: 8, background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}
             >
-              Keluar
+              {t('dashboardLayout.keluar')}
             </button>
           </div>
         }

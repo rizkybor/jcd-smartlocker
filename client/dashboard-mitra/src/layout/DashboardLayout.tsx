@@ -1,4 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Sidebar, type SidebarItem } from '@smartbox/ui';
 import { useAuth } from '../auth/AuthContext';
 
@@ -7,22 +8,23 @@ import { useAuth } from '../auth/AuthContext';
  * jenis akun (AkunMitra), semua route sama-sama read-only & terbuka untuk
  * mitra yang login (§5.5).
  */
-const NAV_ITEMS: SidebarItem[] = [
-  { section: 'Utama' },
-  { id: '/', label: 'Overview', icon: 'layout-grid' },
-  { id: '/units', label: 'Unit Locker', icon: 'package' },
-  { id: '/laporan', label: 'Laporan', icon: 'receipt' },
-];
-
 export function DashboardLayout() {
+  const { t } = useTranslation();
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const navItems: SidebarItem[] = [
+    { section: t('sidebar.utama') },
+    { id: '/', label: t('sidebar.overview'), icon: 'layout-grid' },
+    { id: '/units', label: t('sidebar.unitLocker'), icon: 'package' },
+    { id: '/laporan', label: t('sidebar.laporan'), icon: 'receipt' },
+  ];
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: 'var(--sl-surface-page)' }}>
       <Sidebar
-        items={NAV_ITEMS}
+        items={navItems}
         activeId={location.pathname}
         onSelect={(id) => navigate(id)}
         footer={
@@ -34,7 +36,7 @@ export function DashboardLayout() {
               onClick={() => void signOut()}
               style={{ marginTop: 8, background: 'none', border: 'none', color: 'inherit', textDecoration: 'underline', cursor: 'pointer', padding: 0, font: 'inherit' }}
             >
-              Keluar
+              {t('common.keluar')}
             </button>
           </div>
         }

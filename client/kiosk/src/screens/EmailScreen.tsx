@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { KioskButton } from '@smartbox/ui';
 import { KioskShell } from './KioskShell';
 
@@ -21,12 +22,9 @@ export function EmailScreen({
   onKembali: () => void;
   valid: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <KioskShell
-      step={1}
-      title="Masukkan Email Anda"
-      subtitle="Dipakai untuk kirim kode OTP saat ambil barang nanti."
-    >
+    <KioskShell step={1} title={t('email.title')} subtitle={t('email.subtitle')}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--sl-space-6)' }}>
         <input
           type="email"
@@ -34,7 +32,7 @@ export function EmailScreen({
           autoFocus
           value={email}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="nama@email.com"
+          placeholder={t('email.placeholder')}
           style={{
             width: '100%',
             maxWidth: 480,
@@ -52,10 +50,10 @@ export function EmailScreen({
         />
         <div style={{ display: 'flex', gap: 'var(--sl-space-4)' }}>
           <KioskButton tone="neutral" size="md" onClick={onKembali}>
-            Kembali
+            {t('common.kembali')}
           </KioskButton>
           <KioskButton tone="primary" size="lg" disabled={!valid} onClick={onLanjut}>
-            Lanjut
+            {t('common.lanjut')}
           </KioskButton>
         </div>
       </div>

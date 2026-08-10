@@ -1,11 +1,18 @@
+import './instrument';
+
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 import type { EnvConfig } from './config/env.validation';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService<EnvConfig, true>);
+
+  // Security headers standar (X-Content-Type-Options, HSTS, dll) — SMB-908,
+  // docs/PRD-Smartbox.md §7.1.
+  app.use(helmet());
 
   // CORS ketat, bukan wildcard (docs/PRD-Smartbox.md §7.1) — hanya origin
   // Dashboard Company/Mitra/kiosk yang dikenal (CORS_ORIGIN, comma-separated)

@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import { KioskButton } from '@smartbox/ui';
 
 export function MenuScreen({ onSewa, onAmbil }: { onSewa: () => void; onAmbil: () => void }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -14,14 +16,14 @@ export function MenuScreen({ onSewa, onAmbil }: { onSewa: () => void; onAmbil: (
       }}
     >
       <div style={{ fontSize: 'var(--sl-kiosk-fs-title)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)' }}>
-        Mau ngapain hari ini?
+        {t('menu.judul')}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-touch-gap)' }}>
         <KioskButton tone="primary" size="xl" onClick={onSewa}>
-          Sewa Loker
+          {t('menu.sewa')}
         </KioskButton>
         <KioskButton tone="neutral" size="xl" onClick={onAmbil}>
-          Ambil Barang
+          {t('menu.ambil')}
         </KioskButton>
       </div>
     </div>

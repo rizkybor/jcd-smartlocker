@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { IdleScreen } from '@smartbox/ui';
 
 export function IdleScreenView({
@@ -7,13 +8,10 @@ export function IdleScreenView({
   onWake: () => void;
   errorMessage?: string | null;
 }) {
+  const { t } = useTranslation();
   return (
     <div style={{ position: 'relative', height: '100%' }}>
-      <IdleScreen
-        headline="Sentuh untuk Sewa Loker"
-        subline="Tanpa aplikasi. Tanpa kunci. Bayar dengan QRIS."
-        onWake={onWake}
-      />
+      <IdleScreen headline={t('idle.headline')} subline={t('idle.subline')} onWake={onWake} />
       {errorMessage ? (
         <div
           style={{

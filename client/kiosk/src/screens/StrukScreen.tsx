@@ -1,8 +1,10 @@
+import { useTranslation } from 'react-i18next';
 import { KioskButton, SuccessBurst } from '@smartbox/ui';
 import type { StrukResult } from '../api/client';
 import { formatRupiah } from '../utils/format';
 
 export function StrukScreen({ struk, onSelesai }: { struk: StrukResult | null; onSelesai: () => void }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{
@@ -15,7 +17,11 @@ export function StrukScreen({ struk, onSelesai }: { struk: StrukResult | null; o
         padding: 'var(--sl-kiosk-pad)',
       }}
     >
-      <SuccessBurst title="Loker Siap Dipakai" detail={struk ? `Loker ${struk.nomorLoker}` : undefined} size={140} />
+      <SuccessBurst
+        title={t('struk.judul')}
+        detail={struk ? t('struk.loker', { nomor: struk.nomorLoker }) : undefined}
+        size={140}
+      />
       {struk ? (
         <div
           style={{
@@ -25,13 +31,13 @@ export function StrukScreen({ struk, onSelesai }: { struk: StrukResult | null; o
             textAlign: 'center',
           }}
         >
-          <div>ID Transaksi: {struk.idTransaksi}</div>
-          <div>Durasi: {struk.durasiJam} jam · {formatRupiah(struk.nominal)}</div>
-          {struk.berlakuSampai ? <div>Berlaku sampai: {struk.berlakuSampai}</div> : null}
+          <div>{t('struk.idTransaksi', { id: struk.idTransaksi })}</div>
+          <div>{t('struk.durasi', { jam: struk.durasiJam, nominal: formatRupiah(struk.nominal) })}</div>
+          {struk.berlakuSampai ? <div>{t('struk.berlakuSampai', { waktu: struk.berlakuSampai })}</div> : null}
         </div>
       ) : null}
       <KioskButton tone="primary" size="lg" onClick={onSelesai}>
-        Selesai
+        {t('common.selesai')}
       </KioskButton>
     </div>
   );

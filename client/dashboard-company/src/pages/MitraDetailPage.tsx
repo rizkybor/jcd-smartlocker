@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Panel, Button, Field, StatusBadge } from '@smartbox/ui';
 import { companyApi, ApiError, type MitraFull } from '../api/client';
 import { SkemaHistoriPanel } from './partner/SkemaHistoriPanel';
 
 export function MitraDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const [mitra, setMitra] = useState<MitraFull | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -24,10 +26,10 @@ export function MitraDetailPage() {
         setNama(res.data.nama);
         setKontak(res.data.kontak ?? '');
       })
-      .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat detail mitra.'));
+      .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('mitraDetailPage.gagalMuat')));
   }
 
-  useEffect(reload, [id]);
+  useEffect(reload, [id, t]);
 
   async function handleSave() {
     if (!id) return;
@@ -39,7 +41,7 @@ export function MitraDetailPage() {
       setSaved(true);
       reload();
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : 'Gagal menyimpan.');
+      setSaveError(err instanceof ApiError ? err.message : t('mitraDetailPage.gagalSimpan'));
     } finally {
       setSaving(false);
     }
@@ -52,7 +54,7 @@ export function MitraDetailPage() {
       </Panel>
     );
   }
-  if (!mitra) return <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>;
+  if (!mitra) return <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>;
 
   return (
     <div>
@@ -61,30 +63,30 @@ export function MitraDetailPage() {
       </h1>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-6)' }}>
-        <Panel title="Data Dasar">
+        <Panel title={t('mitraDetailPage.dataDasar')}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)', maxWidth: 420 }}>
-            <Field label="Nama Mitra" required value={nama} onChange={(e) => setNama(e.target.value)} />
-            <Field label="Kontak" value={kontak} onChange={(e) => setKontak(e.target.value)} />
+            <Field label={t('mitraDetailPage.namaMitra')} required value={nama} onChange={(e) => setNama(e.target.value)} />
+            <Field label={t('mitraDetailPage.kontak')} value={kontak} onChange={(e) => setKontak(e.target.value)} />
             {saveError ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{saveError}</div> : null}
-            {saved ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-available-strong)' }}>Tersimpan.</div> : null}
+            {saved ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-available-strong)' }}>{t('common.tersimpan')}</div> : null}
             <div>
               <Button onClick={handleSave} disabled={saving || !nama.trim()}>
-                {saving ? 'Menyimpan...' : 'Simpan'}
+                {saving ? t('common.menyimpan') : t('common.simpan')}
               </Button>
             </div>
           </div>
         </Panel>
 
-        <Panel title="Lokasi & Skema">
+        <Panel title={t('mitraDetailPage.lokasiSkema')}>
           {mitra.mitraLokasi.length === 0 ? (
-            <div style={{ color: 'var(--sl-text-muted)' }}>Belum ada lokasi terhubung.</div>
+            <div style={{ color: 'var(--sl-text-muted)' }}>{t('mitraDetailPage.kosongLokasi')}</div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
               {mitra.mitraLokasi.map((ml) => (
                 <div key={ml.id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sl-space-3)' }}>
                   <span style={{ fontWeight: 'var(--sl-fw-semibold)' }}>{ml.lokasi.nama}</span>
                   <StatusBadge status={ml.tipeSkema === 'REVENUE_SHARING' ? 'terisi' : 'tersedia'}>
-                    {ml.tipeSkema === 'REVENUE_SHARING' ? 'Revenue Sharing' : 'Fixed Rental'}
+                    {ml.tipeSkema === 'REVENUE_SHARING' ? t('common.tipeSkema.revenueSharing') : t('common.tipeSkema.fixedRental')}
                   </StatusBadge>
                 </div>
               ))}

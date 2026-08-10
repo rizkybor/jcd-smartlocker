@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useMachine } from '@xstate/react';
+import { useTranslation } from 'react-i18next';
 import { KioskButton } from '@smartbox/ui';
 import { sewaMachine } from './machine/sewaMachine';
 import { IdleScreenView } from './screens/IdleScreenView';
@@ -13,7 +14,7 @@ import { BayarGagalScreen } from './screens/BayarGagalScreen';
 import { BukaPintuScreen } from './screens/BukaPintuScreen';
 import { StrukScreen } from './screens/StrukScreen';
 import { OtpScreen } from './screens/OtpScreen';
-import { AMBIL_STEPS } from './screens/KioskShell';
+import { ambilSteps } from './screens/KioskShell';
 
 // Session timeout (PRD §5.3, SMB-307) — reset ke idle setelah tidak ada
 // interaksi. Idle sendiri dikecualikan (tidak ada apa-apa untuk di-timeout).
@@ -21,6 +22,7 @@ const SESSION_TIMEOUT_MS = 60_000;
 
 export default function App() {
   const [state, send] = useMachine(sewaMachine);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (state.matches('idle')) return;
@@ -144,9 +146,9 @@ export default function App() {
           onLanjut={() => send({ type: 'LANJUT_AMBIL_NOMOR_HP' })}
           onKembali={() => send({ type: 'KEMBALI' })}
           valid={/^08\d{8,13}$/.test(state.context.ambilNomorHp)}
-          steps={AMBIL_STEPS}
-          title="Masukkan Nomor HP Anda"
-          subtitle="Nomor HP yang sama saat menyewa loker."
+          steps={ambilSteps()}
+          title={t('nomorHp.ambil.title')}
+          subtitle={t('nomorHp.ambil.subtitle')}
         />
       );
     }
@@ -164,17 +166,17 @@ export default function App() {
       );
     }
     if (state.matches('ambilBukaPintu')) {
-      return <BukaPintuScreen label="Membuka pintu..." />;
+      return <BukaPintuScreen label={t('bukaPintu.membuka')} />;
     }
     if (state.matches('ambilSelesai')) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
           <div style={{ flex: 1, minHeight: 0 }}>
-            <BukaPintuScreen label="Silakan ambil barang Anda" />
+            <BukaPintuScreen label={t('bukaPintu.ambilBarang')} />
           </div>
           <div style={{ padding: 'var(--sl-kiosk-pad)', display: 'flex', justifyContent: 'center' }}>
             <KioskButton tone="primary" size="lg" onClick={() => send({ type: 'SELESAI' })}>
-              Selesai
+              {t('common.selesai')}
             </KioskButton>
           </div>
         </div>

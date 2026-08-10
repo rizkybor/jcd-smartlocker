@@ -2,11 +2,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { SentryModule, SentryGlobalFilter } from '@sentry/nestjs/setup';
 import { ResponseInterceptor } from './common/response.interceptor';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { HealthController } from './health/health.controller';
+import { MetricsModule } from './metrics/metrics.module';
 import { validateEnv } from './config/env.validation';
 import { PrismaModule } from './prisma/prisma.module';
 import { SupabaseModule } from './supabase/supabase.module';
@@ -31,6 +33,9 @@ import { DashboardMitraModule } from './dashboard-mitra/dashboard-mitra.module';
 
 @Module({
   imports: [
+    // Wajib jadi import PERTAMA (dokumentasi @sentry/nestjs) supaya
+    // instrumentasi otomatis error/tracing kebagian semua module lain.
+    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
@@ -65,12 +70,14 @@ import { DashboardMitraModule } from './dashboard-mitra/dashboard-mitra.module';
     LaporanModule,
     AktivitasModule,
     DashboardMitraModule,
+    MetricsModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: ResponseInterceptor },
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
   ],
 })
 export class AppModule {}

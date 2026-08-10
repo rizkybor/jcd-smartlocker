@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../lib/supabase';
 import { companyApi, ApiError, type Me } from '../api/client';
 
@@ -21,6 +22,7 @@ const AuthContext = createContext<AuthState | null>(null);
  * berubah.
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const { t } = useTranslation();
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,13 +72,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // network error, dst.) jangan salah tuduh, itu kegagalan server/
         // jaringan, bukan masalah akun.
         if (err instanceof ApiError && (err.status === 401 || err.status === 403)) {
-          setError('Akun ini belum terdaftar sebagai akun internal Dashboard Company.');
+          setError(t('authContext.akunBelumTerdaftar'));
         } else {
-          setError('Gagal memuat profil akun — server atau jaringan bermasalah. Coba muat ulang halaman.');
+          setError(t('authContext.gagalMuatProfil'));
         }
       })
       .finally(() => setLoading(false));
-  }, [session]);
+  }, [session, t]);
 
   async function signIn(email: string, password: string) {
     setError(null);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Panel, DataTable, Button, Field, StatCard, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
 import { mitraApi, ApiError, type Lokasi, type LaporanFilter, type LaporanResult, type LaporanTransaksiRow } from '../api/client';
 
@@ -14,6 +15,7 @@ const STATUS_MAP: Record<LaporanTransaksiRow['statusBayar'], 'tersedia' | 'teris
 };
 
 export function LaporanPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [lokasiOptions, setLokasiOptions] = useState<Lokasi[]>([]);
   const [filter, setFilter] = useState<LaporanFilter>({});
@@ -40,8 +42,8 @@ export function LaporanPage() {
     mitraApi
       .laporan(filter, page)
       .then(setResult)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat laporan.'));
-  }, [filter, page]);
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('laporanPage.gagalMuatLaporan')));
+  }, [filter, page, t]);
 
   async function handleExport() {
     setExporting(true);
@@ -51,32 +53,32 @@ export function LaporanPage() {
       const res = await mitraApi.export(filter);
       setExportUrl(res.data.url);
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Gagal ekspor laporan.';
+      const message = err instanceof ApiError ? err.message : t('laporanPage.gagalEksporLaporan');
       setError(message);
-      toast({ title: 'Ekspor gagal', description: message, tone: 'error' });
+      toast({ title: t('laporanPage.eksporGagalToast'), description: message, tone: 'error' });
     } finally {
       setExporting(false);
     }
   }
 
   const columns: DataTableColumn<LaporanTransaksiRow>[] = [
-    { header: 'ID Transaksi', render: (r) => r.idTransaksi },
-    { header: 'Tanggal', render: (r) => r.tanggal },
-    { header: 'Lokasi', render: (r) => r.lokasiNama },
-    { header: 'Loker', render: (r) => r.nomorLoker },
-    { header: 'Nominal', align: 'right', numeric: true, render: (r) => formatRupiah(r.nominal) },
-    { header: 'Status', render: (r) => <StatusBadge status={STATUS_MAP[r.statusBayar]}>{r.statusBayar}</StatusBadge> },
+    { header: t('laporanPage.kolom.idTransaksi'), render: (r) => r.idTransaksi },
+    { header: t('laporanPage.kolom.tanggal'), render: (r) => r.tanggal },
+    { header: t('laporanPage.kolom.lokasi'), render: (r) => r.lokasiNama },
+    { header: t('laporanPage.kolom.loker'), render: (r) => r.nomorLoker },
+    { header: t('laporanPage.kolom.nominal'), align: 'right', numeric: true, render: (r) => formatRupiah(r.nominal) },
+    { header: t('laporanPage.kolom.status'), render: (r) => <StatusBadge status={STATUS_MAP[r.statusBayar]}>{r.statusBayar}</StatusBadge> },
   ];
 
   return (
     <div>
       <h1 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-24)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', marginBottom: 'var(--sl-space-6)' }}>
-        Laporan
+        {t('laporanPage.judul')}
       </h1>
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sl-space-3)', alignItems: 'flex-end', marginBottom: 'var(--sl-space-5)' }}>
         <Field
-          label="Dari Tanggal"
+          label={t('laporanPage.dariTanggal')}
           type="date"
           value={filter.tanggalMulai ?? ''}
           onChange={(e) => {
@@ -86,7 +88,7 @@ export function LaporanPage() {
           style={{ width: 170 }}
         />
         <Field
-          label="Sampai Tanggal"
+          label={t('laporanPage.sampaiTanggal')}
           type="date"
           value={filter.tanggalSelesai ?? ''}
           onChange={(e) => {
@@ -97,8 +99,8 @@ export function LaporanPage() {
         />
         {lokasiOptions.length > 1 ? (
           <Field
-            label="Lokasi"
-            options={[{ value: '', label: 'Semua Lokasi' }, ...lokasiOptions.map((l) => ({ value: l.id, label: l.nama }))]}
+            label={t('laporanPage.lokasi')}
+            options={[{ value: '', label: t('laporanPage.semuaLokasi') }, ...lokasiOptions.map((l) => ({ value: l.id, label: l.nama }))]}
             value={filter.lokasiId ?? ''}
             onChange={(e) => {
               setFilter({ ...filter, lokasiId: e.target.value || undefined });
@@ -108,25 +110,25 @@ export function LaporanPage() {
           />
         ) : null}
         <Button tone="outline" onClick={handleExport} disabled={exporting}>
-          {exporting ? 'Menyiapkan...' : 'Ekspor CSV'}
+          {exporting ? t('laporanPage.menyiapkan') : t('laporanPage.ekspor')}
         </Button>
       </div>
 
       {exportUrl ? (
         <Panel style={{ marginBottom: 'var(--sl-space-5)' }}>
-          File siap —{' '}
+          {t('laporanPage.fileSiap')}{' '}
           <a href={exportUrl} target="_blank" rel="noreferrer">
-            unduh CSV
+            {t('laporanPage.unduhCsv')}
           </a>{' '}
-          (tautan berlaku 1 jam).
+          {t('laporanPage.tautanBerlaku')}
         </Panel>
       ) : null}
 
       {result ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--sl-space-5)', marginBottom: 'var(--sl-space-6)' }}>
-          <StatCard label="Jumlah Transaksi" value={result.bagiHasil.jumlahTransaksi} accent="primary" />
-          <StatCard label="Total Nominal" value={formatRupiah(result.bagiHasil.totalNominal)} accent="primary" />
-          <StatCard label="Bagi Hasil Anda" value={formatRupiah(result.bagiHasil.totalBagiHasilMitra)} accent="available" />
+          <StatCard label={t('laporanPage.jumlahTransaksi')} value={result.bagiHasil.jumlahTransaksi} accent="primary" />
+          <StatCard label={t('laporanPage.totalNominal')} value={formatRupiah(result.bagiHasil.totalNominal)} accent="primary" />
+          <StatCard label={t('laporanPage.bagiHasilAnda')} value={formatRupiah(result.bagiHasil.totalBagiHasilMitra)} accent="available" />
         </div>
       ) : null}
 
@@ -134,15 +136,15 @@ export function LaporanPage() {
         {error ? (
           <div style={{ color: 'var(--sl-status-offline-strong)' }}>{error}</div>
         ) : !result ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>
         ) : result.data.length === 0 ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Tidak ada transaksi untuk filter ini.</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('laporanPage.tidakAdaTransaksi')}</div>
         ) : (
           <DataTable
             columns={columns}
             rows={result.data}
             striped
-            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'transaksi' }}
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: t('laporanPage.itemLabel') }}
           />
         )}
       </Panel>

@@ -1,10 +1,16 @@
 import type { ReactNode } from 'react';
 import { StepProgress } from '@smartbox/ui';
+import i18n from '../i18n';
 
-/** Dipakai kalau caller tidak kirim `steps` — konteks alur Sewa. */
-export const SEWA_STEPS = ['Nomor HP', 'Email', 'Durasi', 'Bayar', 'Ambil Barang'];
-/** Step bar konteks alur Ambil Barang (§5.2) — dipakai NomorHpScreen dkk. */
-export const AMBIL_STEPS = ['Nomor HP', 'Verifikasi OTP', 'Buka Pintu'];
+/**
+ * Dipakai kalau caller tidak kirim `steps` — konteks alur Sewa/Ambil.
+ * Fungsi (bukan konstanta) supaya selalu baca locale aktif saat dipanggil
+ * (SMB-1002, docs/PRD-Smartbox.md §7.2) — dipakai di luar body komponen
+ * (default parameter, module-level export) jadi tidak bisa pakai hook
+ * `useTranslation`.
+ */
+export const sewaSteps = (): string[] => i18n.t('steps.sewa', { returnObjects: true }) as string[];
+export const ambilSteps = (): string[] => i18n.t('steps.ambil', { returnObjects: true }) as string[];
 
 /**
  * Layout bersama semua layar alur sewa/ambil selain Idle (yang full-bleed).
@@ -13,12 +19,12 @@ export const AMBIL_STEPS = ['Nomor HP', 'Verifikasi OTP', 'Buka Pintu'];
  * disusun vertikal, tidak lagi split kiri-kanan seperti asumsi landscape.
  * `steps` WAJIB dikirim eksplisit oleh caller kalau `step` dipakai di luar
  * konteks alur Sewa (mis. NomorHpScreen dipakai ulang oleh alur Ambil
- * Barang dengan label step yang beda) — default SEWA_STEPS supaya caller
+ * Barang dengan label step yang beda) — default `sewaSteps()` supaya caller
  * lama tidak perlu berubah.
  */
 export function KioskShell({
   step,
-  steps = SEWA_STEPS,
+  steps = sewaSteps(),
   title,
   subtitle,
   children,

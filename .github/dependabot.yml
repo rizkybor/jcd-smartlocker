@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Monorepo pnpm workspace — satu entri root sudah mencakup semua paket
+  # client/* + server/* (Dependabot mendeteksi pnpm-workspace.yaml
+  # otomatis). SMB-905, docs/PRD-Smartbox.md §7.1.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

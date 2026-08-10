@@ -1,4 +1,5 @@
 import { assign, fromPromise, setup } from 'xstate';
+import i18n from '../i18n';
 import {
   ApiError,
   kioskApi,
@@ -46,7 +47,7 @@ const initialContext: SewaContext = {
 
 function errorMessageOf(err: unknown): string {
   if (err instanceof ApiError) return err.message;
-  return 'Terjadi kesalahan jaringan. Silakan coba lagi.';
+  return i18n.t('errors.jaringan');
 }
 
 export const sewaMachine = setup({

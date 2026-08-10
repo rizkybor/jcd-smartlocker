@@ -1,5 +1,6 @@
+import { useTranslation } from 'react-i18next';
 import { KioskButton, Numpad } from '@smartbox/ui';
-import { KioskShell, AMBIL_STEPS } from './KioskShell';
+import { KioskShell, ambilSteps } from './KioskShell';
 
 /** Alur Ambil Barang langkah 3 (§5.2) — kode OTP 6 digit, berlaku 5 menit. */
 export function OtpScreen({
@@ -19,8 +20,9 @@ export function OtpScreen({
   valid: boolean;
   errorMessage: string | null;
 }) {
+  const { t } = useTranslation();
   return (
-    <KioskShell step={1} steps={AMBIL_STEPS} title="Masukkan Kode OTP" subtitle="Kode 6 digit sudah dikirim, berlaku 5 menit.">
+    <KioskShell step={1} steps={ambilSteps()} title={t('otp.title')} subtitle={t('otp.subtitle')}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--sl-space-6)' }}>
         <Numpad value={kode} onChange={onChange} length={6} />
         {errorMessage ? (
@@ -37,14 +39,14 @@ export function OtpScreen({
         ) : null}
         <div style={{ display: 'flex', gap: 'var(--sl-space-4)' }}>
           <KioskButton tone="neutral" size="md" onClick={onKembali}>
-            Kembali
+            {t('common.kembali')}
           </KioskButton>
           <KioskButton tone="primary" size="lg" disabled={!valid} onClick={onVerifikasi}>
-            Verifikasi
+            {t('otp.verifikasi')}
           </KioskButton>
         </div>
         <KioskButton tone="neutral" size="md" onClick={onKirimUlang}>
-          Kirim Ulang Kode
+          {t('otp.kirimUlang')}
         </KioskButton>
       </div>
     </KioskShell>

@@ -1,0 +1,81 @@
+{
+  "common": {
+    "memuat": "Memuat...",
+    "keluar": "Keluar"
+  },
+  "app": {
+    "akunTidakDikenali": "Akun tidak dikenali."
+  },
+  "auth": {
+    "bukanAkunMitra": "Akun ini belum terdaftar sebagai akun mitra Dashboard Mitra.",
+    "gagalMuatProfil": "Gagal memuat profil akun — server atau jaringan bermasalah. Coba muat ulang halaman."
+  },
+  "login": {
+    "judul": "Sewa Smart Locker",
+    "subjudul": "Dashboard Mitra",
+    "email": "Email",
+    "password": "Password",
+    "masuk": "Masuk",
+    "sedangMasuk": "Masuk..."
+  },
+  "sidebar": {
+    "utama": "Utama",
+    "overview": "Overview",
+    "unitLocker": "Unit Locker",
+    "laporan": "Laporan"
+  },
+  "overviewPage": {
+    "judul": "Overview",
+    "gagalMuat": "Gagal memuat ringkasan.",
+    "lokasi": "Lokasi",
+    "unit": "Unit",
+    "unitCaption": "{{online}} online, {{offline}} offline",
+    "okupansiLoker": "Okupansi Loker",
+    "okupansiCaption": "{{terisi}}/{{total}} terisi",
+    "pendapatan": "Pendapatan"
+  },
+  "unitsPage": {
+    "judul": "Unit Locker",
+    "gagalMuat": "Gagal memuat daftar unit.",
+    "belumAdaUnit": "Belum ada unit di lokasi Anda.",
+    "kodeUnit": "Kode Unit",
+    "lokasi": "Lokasi",
+    "loker": "Loker",
+    "lokerTersedia": "{{jumlah}}/{{total}} tersedia",
+    "mode": "Mode",
+    "berbayar": "Berbayar",
+    "gratis": "Gratis",
+    "status": "Status",
+    "aktif": "Aktif",
+    "nonaktif": "Nonaktif",
+    "itemLabel": "unit"
+  },
+  "laporanPage": {
+    "judul": "Laporan",
+    "dariTanggal": "Dari Tanggal",
+    "sampaiTanggal": "Sampai Tanggal",
+    "lokasi": "Lokasi",
+    "semuaLokasi": "Semua Lokasi",
+    "ekspor": "Ekspor CSV",
+    "menyiapkan": "Menyiapkan...",
+    "eksporGagalToast": "Ekspor gagal",
+    "gagalMuatLaporan": "Gagal memuat laporan.",
+    "gagalEksporLaporan": "Gagal ekspor laporan.",
+    "fileSiap": "File siap —",
+    "unduhCsv": "unduh CSV",
+    "tautanBerlaku": "(tautan berlaku 1 jam).",
+    "jumlahTransaksi": "Jumlah Transaksi",
+    "totalNominal": "Total Nominal",
+    "bagiHasilAnda": "Bagi Hasil Anda",
+    "tidakAdaTransaksi": "Tidak ada transaksi untuk filter ini.",
+    "itemLabel": "transaksi",
+    "kolom": {
+      "idTransaksi": "ID Transaksi",
+      "tanggal": "Tanggal",
+      "lokasi": "Lokasi",
+      "loker": "Loker",
+      "nominal": "Nominal",
+      "status": "Status"
+    }
+  }
+}

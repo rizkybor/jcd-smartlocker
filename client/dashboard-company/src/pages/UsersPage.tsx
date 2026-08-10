@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type AkunInternal, type AkunInternalRole } from '../api/client';
 import { CreateUserDialog } from './users/CreateUserDialog';
@@ -6,6 +7,7 @@ import { CreateUserDialog } from './users/CreateUserDialog';
 const ROLE_OPTIONS: AkunInternalRole[] = ['SUPER_ADMIN', 'OPS', 'MANAGER', 'STAFF'];
 
 export function UsersPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.users.list>> | null>(null);
@@ -19,21 +21,21 @@ export function UsersPage() {
     companyApi.users
       .list(page)
       .then(setResult)
-      .catch((err) => setError(err instanceof ApiError ? err.message : 'Gagal memuat daftar user.'));
+      .catch((err) => setError(err instanceof ApiError ? err.message : t('usersPage.gagalMuat')));
   }
 
-  useEffect(reload, [page]);
+  useEffect(reload, [page, t]);
 
   async function handleRoleChange(user: AkunInternal, role: AkunInternalRole) {
     if (role === user.role) return;
     try {
       await companyApi.users.updateRole(user.id, role);
-      toast({ title: 'Role diperbarui', description: `${user.nama} sekarang ${role}.`, tone: 'success' });
+      toast({ title: t('usersPage.toastRoleDiperbarui'), description: t('usersPage.toastRoleDeskripsi', { nama: user.nama, role }), tone: 'success' });
       reload();
     } catch (err) {
-      const message = err instanceof ApiError ? err.message : 'Gagal mengubah role.';
+      const message = err instanceof ApiError ? err.message : t('usersPage.gagalUbahRole');
       setError(message);
-      toast({ title: 'Gagal mengubah role', description: message, tone: 'error' });
+      toast({ title: t('usersPage.gagalUbahRole'), description: message, tone: 'error' });
     }
   }
 
@@ -43,21 +45,21 @@ export function UsersPage() {
     setRemoveError(null);
     try {
       await companyApi.users.remove(removeTarget.id);
-      toast({ title: 'Akun dinonaktifkan', description: removeTarget.nama, tone: 'success' });
+      toast({ title: t('usersPage.toastDinonaktifkan'), description: removeTarget.nama, tone: 'success' });
       setRemoveTarget(null);
       reload();
     } catch (err) {
-      setRemoveError(err instanceof ApiError ? err.message : 'Gagal menonaktifkan akun.');
+      setRemoveError(err instanceof ApiError ? err.message : t('usersPage.gagalNonaktifkan'));
     } finally {
       setRemoveLoading(false);
     }
   }
 
   const columns: DataTableColumn<AkunInternal>[] = [
-    { header: 'Nama', render: (u) => u.nama },
-    { header: 'Email', render: (u) => u.email },
+    { header: t('usersPage.kolomNama'), render: (u) => u.nama },
+    { header: t('usersPage.kolomEmail'), render: (u) => u.email },
     {
-      header: 'Role',
+      header: t('usersPage.kolomRole'),
       render: (u) => (
         <select
           value={u.role}
@@ -72,14 +74,17 @@ export function UsersPage() {
         </select>
       ),
     },
-    { header: 'Status', render: (u) => <StatusBadge status={u.deletedAt ? 'nonaktif' : 'tersedia'}>{u.deletedAt ? 'Nonaktif' : 'Aktif'}</StatusBadge> },
+    {
+      header: t('usersPage.kolomStatus'),
+      render: (u) => <StatusBadge status={u.deletedAt ? 'nonaktif' : 'tersedia'}>{u.deletedAt ? t('common.nonaktif') : t('common.aktif')}</StatusBadge>,
+    },
     {
       header: '',
       align: 'right',
       render: (u) =>
         !u.deletedAt ? (
           <Button tone="danger" size="sm" onClick={() => setRemoveTarget(u)}>
-            Nonaktifkan
+            {t('common.nonaktifkan')}
           </Button>
         ) : null,
     },
@@ -89,22 +94,22 @@ export function UsersPage() {
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sl-space-6)' }}>
         <h1 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-24)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
-          Manajemen User
+          {t('usersPage.judul')}
         </h1>
-        <Button onClick={() => setCreateOpen(true)}>+ Tambah User</Button>
+        <Button onClick={() => setCreateOpen(true)}>{t('usersPage.tambahUser')}</Button>
       </div>
 
       <Panel>
         {error ? (
           <div style={{ color: 'var(--sl-status-offline-strong)' }}>{error}</div>
         ) : !result ? (
-          <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>
+          <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>
         ) : (
           <DataTable
             columns={columns}
             rows={result.data}
             striped
-            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'user' }}
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: t('usersPage.itemLabel') }}
           />
         )}
       </Panel>
@@ -126,10 +131,10 @@ export function UsersPage() {
             setRemoveError(null);
           }
         }}
-        title={`Nonaktifkan ${removeTarget?.nama}?`}
-        description="Akun tidak bisa login lagi sampai diaktifkan ulang oleh Super Admin."
+        title={t('usersPage.nonaktifkanTitle', { nama: removeTarget?.nama })}
+        description={t('usersPage.nonaktifkanDeskripsi')}
         tone="danger"
-        confirmLabel="Nonaktifkan"
+        confirmLabel={t('common.nonaktifkan')}
         loading={removeLoading}
         errorMessage={removeError}
         onConfirm={handleRemoveConfirm}

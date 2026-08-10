@@ -1,23 +1,25 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Panel, Button, Field, StatusBadge, DataTable, ConfirmDialog, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type UnitDetail, type Loker, type LokerStatus, type SesiTransaksiRingkas } from '../api/client';
+import { formatTanggalLokasi } from '../utils/formatTanggal';
 
 type DurasiRow = { id?: string; durasiJam: string; harga: string };
-
-const LOKER_STATUS_OPTIONS: { value: LokerStatus; label: string }[] = [
-  { value: 'TERSEDIA', label: 'Tersedia' },
-  { value: 'TERISI', label: 'Terisi' },
-  { value: 'MAINTENANCE', label: 'Maintenance' },
-  { value: 'OFFLINE', label: 'Offline' },
-  { value: 'NONAKTIF', label: 'Nonaktif' },
-];
 
 function formatRupiah(nominal: number): string {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nominal);
 }
 
 export function UnitDetailPage() {
+  const { t } = useTranslation();
+  const LOKER_STATUS_OPTIONS: { value: LokerStatus; label: string }[] = [
+    { value: 'TERSEDIA', label: t('unitDetailPage.statusLoker.tersedia') },
+    { value: 'TERISI', label: t('unitDetailPage.statusLoker.terisi') },
+    { value: 'MAINTENANCE', label: t('unitDetailPage.statusLoker.maintenance') },
+    { value: 'OFFLINE', label: t('unitDetailPage.statusLoker.offline') },
+    { value: 'NONAKTIF', label: t('unitDetailPage.statusLoker.nonaktif') },
+  ];
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [unit, setUnit] = useState<UnitDetail | null>(null);
@@ -57,10 +59,10 @@ export function UnitDetailPage() {
             .map((d) => ({ id: d.id, durasiJam: String(d.durasiJam), harga: String(d.harga) })),
         );
       })
-      .catch((err) => setLoadError(err instanceof ApiError ? err.message : 'Gagal memuat detail unit.'));
+      .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalMuat')));
   }
 
-  useEffect(reload, [id]);
+  useEffect(reload, [id, t]);
 
   function updateDurasi(index: number, field: 'durasiJam' | 'harga', value: string) {
     setDurasiRows((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
@@ -84,7 +86,7 @@ export function UnitDetailPage() {
       setConfigSaved(true);
       reload();
     } catch (err) {
-      setConfigError(err instanceof ApiError ? err.message : 'Gagal menyimpan konfigurasi.');
+      setConfigError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalSimpanConfig'));
     } finally {
       setSavingConfig(false);
     }
@@ -96,7 +98,7 @@ export function UnitDetailPage() {
       await companyApi.lokerUpdateStatus(loker.id, status);
       reload();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : 'Gagal mengubah status loker.');
+      setLoadError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalUbahStatus'));
     }
   }
 
@@ -109,7 +111,7 @@ export function UnitDetailPage() {
       setBukaPaksaLoker(null);
       setBukaPaksaAlasan('');
     } catch (err) {
-      setBukaPaksaError(err instanceof ApiError ? err.message : 'Gagal memicu buka paksa.');
+      setBukaPaksaError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalBukaPaksa'));
     } finally {
       setBukaPaksaLoading(false);
     }
@@ -123,7 +125,7 @@ export function UnitDetailPage() {
       await companyApi.units.remove(id, nonaktifkanAlasan);
       navigate('/units');
     } catch (err) {
-      setNonaktifkanError(err instanceof ApiError ? err.message : 'Gagal menonaktifkan unit.');
+      setNonaktifkanError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalNonaktifkan'));
     } finally {
       setNonaktifkanLoading(false);
     }
@@ -136,12 +138,12 @@ export function UnitDetailPage() {
       </Panel>
     );
   }
-  if (!unit) return <div style={{ color: 'var(--sl-text-muted)' }}>Memuat...</div>;
+  if (!unit) return <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>;
 
   const lokerColumns: DataTableColumn<Loker>[] = [
-    { header: 'Nomor', render: (l) => l.nomorLoker },
+    { header: t('unitDetailPage.kolomNomor'), render: (l) => l.nomorLoker },
     {
-      header: 'Status',
+      header: t('unitDetailPage.kolomStatus'),
       render: (l) => (
         <select
           value={l.status}
@@ -161,18 +163,21 @@ export function UnitDetailPage() {
       align: 'right',
       render: (l) => (
         <Button tone="danger" size="sm" onClick={() => setBukaPaksaLoker(l)}>
-          Buka Paksa
+          {t('unitDetailPage.bukaPaksa')}
         </Button>
       ),
     },
   ];
 
   const riwayatColumns: DataTableColumn<SesiTransaksiRingkas>[] = [
-    { header: 'ID Transaksi', render: (s) => s.idTransaksi },
-    { header: 'Loker', render: (s) => s.loker.nomorLoker },
-    { header: 'Status Bayar', render: (s) => <StatusBadge status={s.statusBayar === 'PAID' ? 'tersedia' : s.statusBayar === 'PENDING' ? 'terisi' : 'offline'}>{s.statusBayar}</StatusBadge> },
-    { header: 'Nominal', align: 'right', numeric: true, render: (s) => formatRupiah(s.nominal) },
-    { header: 'Tanggal', render: (s) => new Date(s.createdAt).toLocaleString('id-ID') },
+    { header: t('unitDetailPage.kolomIdTransaksi'), render: (s) => s.idTransaksi },
+    { header: t('unitDetailPage.kolomLoker'), render: (s) => s.loker.nomorLoker },
+    {
+      header: t('unitDetailPage.kolomStatusBayar'),
+      render: (s) => <StatusBadge status={s.statusBayar === 'PAID' ? 'tersedia' : s.statusBayar === 'PENDING' ? 'terisi' : 'offline'}>{s.statusBayar}</StatusBadge>,
+    },
+    { header: t('unitDetailPage.kolomNominal'), align: 'right', numeric: true, render: (s) => formatRupiah(s.nominal) },
+    { header: t('unitDetailPage.kolomTanggal'), render: (s) => formatTanggalLokasi(s.createdAt, unit.lokasi.timezone) },
   ];
 
   const mitraNames = unit.lokasi.mitraLokasi.map((ml) => ml.mitra.nama).join(', ') || '—';
@@ -183,48 +188,48 @@ export function UnitDetailPage() {
         <h1 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-24)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
           {unit.kodeUnit}
         </h1>
-        <StatusBadge status={unit.aktif ? 'tersedia' : 'nonaktif'}>{unit.aktif ? 'Aktif' : 'Nonaktif'}</StatusBadge>
+        <StatusBadge status={unit.aktif ? 'tersedia' : 'nonaktif'}>{unit.aktif ? t('common.aktif') : t('common.nonaktif')}</StatusBadge>
       </div>
       <div style={{ color: 'var(--sl-text-muted)', marginBottom: 'var(--sl-space-6)' }}>
-        {unit.lokasi.nama} · Mitra: {mitraNames}
+        {t('unitDetailPage.subjudul', { lokasi: unit.lokasi.nama, mitra: mitraNames })}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-6)' }}>
         <Panel>
-          <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>Konfigurasi</h2>
+          <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>{t('unitDetailPage.konfigurasi')}</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)', maxWidth: 480 }}>
-            <Field label="Varian Kompartemen" value={varianKompartemen} onChange={(e) => setVarianKompartemen(e.target.value)} />
+            <Field label={t('unitDetailPage.varianKompartemen')} value={varianKompartemen} onChange={(e) => setVarianKompartemen(e.target.value)} />
             <Field
-              label="Mode Pemakaian"
+              label={t('unitDetailPage.modePemakaian')}
               options={[
-                { value: 'BERBAYAR', label: 'Berbayar' },
-                { value: 'GRATIS', label: 'Gratis' },
+                { value: 'BERBAYAR', label: t('common.modePemakaian.berbayar') },
+                { value: 'GRATIS', label: t('common.modePemakaian.gratis') },
               ]}
               value={modePemakaian}
               onChange={(e) => setModePemakaian(e.target.value as 'BERBAYAR' | 'GRATIS')}
             />
             <div>
               <span style={{ display: 'block', marginBottom: 6, fontSize: 'var(--sl-fs-13)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-body)' }}>
-                Durasi & Harga
+                {t('unitDetailPage.durasiHarga')}
               </span>
               {durasiRows.map((row, i) => (
                 <div key={row.id ?? i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(i, 'durasiJam', e.target.value)} placeholder="Jam" />
-                  <Field type="number" value={row.harga} onChange={(e) => updateDurasi(i, 'harga', e.target.value)} placeholder="Harga (Rp)" />
+                  <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(i, 'durasiJam', e.target.value)} placeholder={t('unitDetailPage.placeholderJam')} />
+                  <Field type="number" value={row.harga} onChange={(e) => updateDurasi(i, 'harga', e.target.value)} placeholder={t('unitDetailPage.placeholderHarga')} />
                   <Button tone="ghost" size="sm" onClick={() => setDurasiRows((rows) => rows.filter((_, ri) => ri !== i))}>
-                    Hapus
+                    {t('common.hapus')}
                   </Button>
                 </div>
               ))}
               <Button tone="outline" size="sm" onClick={() => setDurasiRows((rows) => [...rows, { durasiJam: '', harga: '' }])}>
-                + Tambah Durasi
+                {t('unitDetailPage.tambahDurasi')}
               </Button>
             </div>
             {configError ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{configError}</div> : null}
-            {configSaved ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-available-strong)' }}>Tersimpan.</div> : null}
+            {configSaved ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-available-strong)' }}>{t('common.tersimpan')}</div> : null}
             <div>
               <Button onClick={handleSaveConfig} disabled={savingConfig}>
-                {savingConfig ? 'Menyimpan...' : 'Simpan Konfigurasi'}
+                {savingConfig ? t('common.menyimpan') : t('unitDetailPage.simpanKonfigurasi')}
               </Button>
             </div>
           </div>
@@ -232,17 +237,17 @@ export function UnitDetailPage() {
 
         <Panel>
           <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>
-            Loker ({unit.lokers.length})
+            {t('unitDetailPage.lokerHeading', { jumlah: unit.lokers.length })}
           </h2>
           <DataTable columns={lokerColumns} rows={unit.lokers} striped />
         </Panel>
 
         <Panel>
           <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>
-            Riwayat Transaksi Terbaru
+            {t('unitDetailPage.riwayatHeading')}
           </h2>
           {unit.riwayatTransaksi.length === 0 ? (
-            <div style={{ color: 'var(--sl-text-muted)' }}>Belum ada transaksi.</div>
+            <div style={{ color: 'var(--sl-text-muted)' }}>{t('unitDetailPage.kosongTransaksi')}</div>
           ) : (
             <DataTable columns={riwayatColumns} rows={unit.riwayatTransaksi} striped />
           )}
@@ -251,11 +256,11 @@ export function UnitDetailPage() {
         {unit.aktif ? (
           <Panel style={{ borderColor: 'var(--sl-status-offline)' }}>
             <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0, color: 'var(--sl-status-offline-strong)' }}>
-              Zona Berbahaya
+              {t('unitDetailPage.zonaBerbahaya')}
             </h2>
-            <p style={{ color: 'var(--sl-text-muted)', marginTop: 0 }}>Menonaktifkan unit tidak menghapus data — bisa dilihat kembali sebagai riwayat.</p>
+            <p style={{ color: 'var(--sl-text-muted)', marginTop: 0 }}>{t('unitDetailPage.zonaBerbahayaDeskripsi')}</p>
             <Button tone="danger" onClick={() => setNonaktifkanOpen(true)}>
-              Nonaktifkan Unit
+              {t('unitDetailPage.nonaktifkanUnit')}
             </Button>
           </Panel>
         ) : null}
@@ -270,10 +275,10 @@ export function UnitDetailPage() {
             setBukaPaksaError(null);
           }
         }}
-        title={`Buka Paksa Loker ${bukaPaksaLoker?.nomorLoker ?? ''}`}
-        description="Perintah buka pintu dikirim jarak jauh ke unit. Wajib dicatat alasannya (log keamanan)."
+        title={t('unitDetailPage.bukaPaksaTitle', { nomor: bukaPaksaLoker?.nomorLoker ?? '' })}
+        description={t('unitDetailPage.bukaPaksaDeskripsi')}
         tone="danger"
-        confirmLabel="Buka Paksa"
+        confirmLabel={t('unitDetailPage.bukaPaksa')}
         requireReason
         reasonValue={bukaPaksaAlasan}
         onReasonChange={setBukaPaksaAlasan}
@@ -291,10 +296,10 @@ export function UnitDetailPage() {
             setNonaktifkanError(null);
           }
         }}
-        title={`Nonaktifkan ${unit.kodeUnit}?`}
-        description="Unit tidak bisa dipakai kiosk lagi sampai diaktifkan ulang."
+        title={t('unitDetailPage.nonaktifkanTitle', { kode: unit.kodeUnit })}
+        description={t('unitDetailPage.nonaktifkanDeskripsi')}
         tone="danger"
-        confirmLabel="Nonaktifkan"
+        confirmLabel={t('common.nonaktifkan')}
         requireReason
         reasonValue={nonaktifkanAlasan}
         onReasonChange={setNonaktifkanAlasan}
