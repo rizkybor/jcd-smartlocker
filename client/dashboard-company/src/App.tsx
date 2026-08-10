@@ -3,6 +3,8 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './auth/LoginPage';
 import { DashboardLayout } from './layout/DashboardLayout';
 import { OverviewPage } from './pages/OverviewPage';
+import { UnitsPage } from './pages/UnitsPage';
+import { UnitDetailPage } from './pages/UnitDetailPage';
 import { ComingSoonPage } from './pages/ComingSoonPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -36,7 +38,8 @@ export default function App() {
           }
         >
           <Route path="/" element={<OverviewPage />} />
-          <Route path="/units" element={<ComingSoonPage title="Unit Locker" />} />
+          <Route path="/units" element={<UnitsPage />} />
+          <Route path="/units/:id" element={<UnitDetailPage />} />
           <Route path="/partner" element={<ComingSoonPage title="Mitra & Skema" />} />
           <Route path="/laporan/transaksi" element={<ComingSoonPage title="Laporan Transaksi" />} />
           <Route path="/laporan/bagi-hasil" element={<ComingSoonPage title="Laporan Bagi Hasil" />} />

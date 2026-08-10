@@ -175,6 +175,8 @@
 @keyframes sl-shimmer{0%{background-position:-360px 0}100%{background-position:360px 0}}
 @keyframes sl-idle-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @keyframes sl-status-flip{0%{background-color:var(--sl-status-occupied);}100%{background-color:var(--sl-status-available);}}
+@keyframes sl-dialog-overlay-in{0%{opacity:0}100%{opacity:1}}
+@keyframes sl-dialog-content-in{0%{opacity:0;transform:translate(-50%,-46%) scale(.97)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}}
 *,*::before,*::after{box-sizing:border-box}
 body{margin:0;font-family:var(--sl-font-body);font-size:var(--sl-fs-14);color:var(--sl-text-body);background:var(--sl-surface-page);-webkit-font-smoothing:antialiased}

@@ -56,7 +56,93 @@ export type OverviewRingkasan = {
   unitOffline: number;
 };
 
+export type Lokasi = { id: string; nama: string; alamat: string; timezone: string };
+
+export type Mitra = { id: string; nama: string; kontak: string | null };
+
+export type MitraLokasiRingkas = { id: string; mitraId: string; tipeSkema: 'FIXED_RENTAL' | 'REVENUE_SHARING'; mitra: Mitra };
+
+export type LokasiDenganMitra = Lokasi & { mitraLokasi: MitraLokasiRingkas[] };
+
+export type LokerStatus = 'TERSEDIA' | 'TERISI' | 'MAINTENANCE' | 'OFFLINE' | 'NONAKTIF';
+
+export type Loker = { id: string; unitId: string; nomorLoker: string; status: LokerStatus };
+
+export type UnitDurasiHarga = { id: string; unitId: string; durasiJam: number; harga: number; aktif: boolean };
+
+export type Unit = {
+  id: string;
+  lokasiId: string;
+  kodeUnit: string;
+  varianKompartemen: string | null;
+  jumlahLoker: number;
+  modePemakaian: 'BERBAYAR' | 'GRATIS';
+  aktif: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  lokasi: LokasiDenganMitra;
+  lokers: Loker[];
+  durasiHarga: UnitDurasiHarga[];
+};
+
+export type SesiTransaksiRingkas = {
+  id: string;
+  idTransaksi: string;
+  statusBayar: 'PENDING' | 'PAID' | 'FAILED' | 'EXPIRED';
+  nominal: number;
+  createdAt: string;
+  loker: { nomorLoker: string };
+};
+
+export type UnitDetail = Unit & { riwayatTransaksi: SesiTransaksiRingkas[] };
+
+export type Paginated<T> = { data: T[]; meta: { page: number; pageSize: number; totalItems: number; totalPages: number } };
+
+export type CreateUnitInput = {
+  lokasiId: string;
+  kodeUnit: string;
+  varianKompartemen?: string;
+  jumlahLoker: number;
+  modePemakaian: 'BERBAYAR' | 'GRATIS';
+  durasiHarga: { durasiJam: number; harga: number }[];
+};
+
+export type UpdateUnitInput = {
+  varianKompartemen?: string;
+  modePemakaian?: 'BERBAYAR' | 'GRATIS';
+  aktif?: boolean;
+  durasiHarga?: { id?: string; durasiJam: number; harga: number }[];
+};
+
 export const companyApi = {
   me: () => request<{ data: Me }>('/company/me'),
   overview: () => request<{ data: OverviewRingkasan }>('/company/overview'),
+
+  lokasiList: () => request<Paginated<Lokasi>>('/company/lokasi?pageSize=100'),
+
+  units: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<Unit>>(`/company/units?page=${page}&pageSize=${pageSize}`),
+    detail: (id: string) => request<{ data: UnitDetail }>(`/company/units/${id}`),
+    create: (input: CreateUnitInput) =>
+      request<{ data: Unit }>('/company/units', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, input: UpdateUnitInput) =>
+      request<{ data: Unit }>(`/company/units/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    remove: (id: string, alasan: string) =>
+      request<{ data: { deleted: true } }>(`/company/units/${id}`, {
+        method: 'DELETE',
+        body: JSON.stringify({ alasan }),
+      }),
+    bukaPaksa: (id: string, lokerId: string, alasan: string) =>
+      request<{ data: { triggered: true } }>(`/company/units/${id}/buka-paksa`, {
+        method: 'POST',
+        body: JSON.stringify({ lokerId, alasan }),
+      }),
+  },
+
+  lokerUpdateStatus: (id: string, status: LokerStatus) =>
+    request<{ data: Loker }>(`/company/lokers/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
 };
