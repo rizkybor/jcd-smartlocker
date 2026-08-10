@@ -19,6 +19,11 @@ import { mitraLaporanFilterSchema, type MitraLaporanFilterDto } from './dto/mitr
 export class DashboardMitraController {
   constructor(private readonly dashboardMitraService: DashboardMitraService) {}
 
+  @Get('me')
+  me(@CurrentMitra() actor: AuthenticatedMitraUser) {
+    return this.dashboardMitraService.me(actor);
+  }
+
   @Get('overview')
   overview(@CurrentMitra() actor: AuthenticatedMitraUser) {
     return this.dashboardMitraService.overview(actor);

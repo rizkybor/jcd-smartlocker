@@ -74,6 +74,7 @@ export class SupabaseAuthGuard implements CanActivate {
         id: mitra.id,
         supabaseAuthUid: mitra.supabaseAuthUid,
         email: mitra.email,
+        nama: mitra.nama,
         mitraId: mitra.mitraId,
       };
       return true;

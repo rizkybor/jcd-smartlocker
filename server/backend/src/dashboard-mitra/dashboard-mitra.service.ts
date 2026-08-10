@@ -34,6 +34,12 @@ export class DashboardMitraService {
     private readonly gatewayService: GatewayService,
   ) {}
 
+  /** `GET /mitra/me` — profil login, dipakai frontend tahu "saya siapa" (§5.5, sama pola dengan ProfileController Dashboard Company). */
+  async me(actor: AuthenticatedMitraUser) {
+    const mitra = await this.prisma.db.mitra.findUnique({ where: { id: actor.mitraId }, select: { nama: true } });
+    return { id: actor.id, email: actor.email, nama: actor.nama, mitraId: actor.mitraId, mitraNama: mitra?.nama ?? '' };
+  }
+
   /** Lokasi yang benar-benar boleh diakses akun mitra ini — satu sumber kebenaran untuk semua method di bawah. */
   private async accessibleLokasiIds(actor: AuthenticatedMitraUser): Promise<string[]> {
     const rows = await this.prisma.db.akunMitraLokasi.findMany({

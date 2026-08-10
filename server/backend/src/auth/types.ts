@@ -20,6 +20,7 @@ export type AuthenticatedMitraUser = {
   id: string;
   supabaseAuthUid: string;
   email: string;
+  nama: string;
   mitraId: string;
 };
 
