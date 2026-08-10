@@ -114,6 +114,42 @@ export type UpdateUnitInput = {
   durasiHarga?: { id?: string; durasiJam: number; harga: number }[];
 };
 
+export type TipeSkema = 'FIXED_RENTAL' | 'REVENUE_SHARING';
+export type StatusApproval = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export type MitraLokasiFull = {
+  id: string;
+  mitraId: string;
+  lokasiId: string;
+  tipeSkema: TipeSkema;
+  persentaseAktif: number | null;
+  lokasi: Lokasi;
+};
+
+export type MitraFull = {
+  id: string;
+  nama: string;
+  kontak: string | null;
+  deletedAt: string | null;
+  createdAt: string;
+  mitraLokasi: MitraLokasiFull[];
+};
+
+export type SkemaHistoriRow = {
+  id: string;
+  mitraLokasiId: string;
+  persentase: number;
+  statusApproval: StatusApproval;
+  diajukanOleh: string;
+  disetujuiOleh: string | null;
+  diajukanAt: string;
+  disetujuiAt: string | null;
+  berlakuDari: string | null;
+  berlakuSampai: string | null;
+};
+
+export type CreateMitraInput = { nama: string; kontak?: string; lokasiId: string; tipeSkema: TipeSkema };
+
 export const companyApi = {
   me: () => request<{ data: Me }>('/company/me'),
   overview: () => request<{ data: OverviewRingkasan }>('/company/overview'),
@@ -145,4 +181,29 @@ export const companyApi = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
+
+  mitra: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<MitraFull>>(`/company/mitra?page=${page}&pageSize=${pageSize}`),
+    detail: (id: string) => request<{ data: MitraFull }>(`/company/mitra/${id}`),
+    create: (input: CreateMitraInput) =>
+      request<{ data: MitraFull }>('/company/mitra', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, input: { nama?: string; kontak?: string }) =>
+      request<{ data: MitraFull }>(`/company/mitra/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    remove: (id: string) => request<{ data: unknown }>(`/company/mitra/${id}`, { method: 'DELETE' }),
+  },
+
+  skemaHistori: {
+    list: (mitraLokasiId: string) =>
+      request<{ data: SkemaHistoriRow[] }>(`/company/mitra-lokasi/${mitraLokasiId}/skema-histori`),
+    ajukan: (mitraLokasiId: string, persentase: number) =>
+      request<{ data: SkemaHistoriRow }>(`/company/mitra-lokasi/${mitraLokasiId}/ajukan-skema`, {
+        method: 'POST',
+        body: JSON.stringify({ persentase }),
+      }),
+    approve: (historiId: string) =>
+      request<{ data: SkemaHistoriRow }>(`/company/skema-histori/${historiId}/approve`, { method: 'POST' }),
+    reject: (historiId: string) =>
+      request<{ data: SkemaHistoriRow }>(`/company/skema-histori/${historiId}/reject`, { method: 'POST' }),
+  },
 };

@@ -5,6 +5,8 @@ import { DashboardLayout } from './layout/DashboardLayout';
 import { OverviewPage } from './pages/OverviewPage';
 import { UnitsPage } from './pages/UnitsPage';
 import { UnitDetailPage } from './pages/UnitDetailPage';
+import { PartnerPage } from './pages/PartnerPage';
+import { MitraDetailPage } from './pages/MitraDetailPage';
 import { ComingSoonPage } from './pages/ComingSoonPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
@@ -40,7 +42,8 @@ export default function App() {
           <Route path="/" element={<OverviewPage />} />
           <Route path="/units" element={<UnitsPage />} />
           <Route path="/units/:id" element={<UnitDetailPage />} />
-          <Route path="/partner" element={<ComingSoonPage title="Mitra & Skema" />} />
+          <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/partner/:id" element={<MitraDetailPage />} />
           <Route path="/laporan/transaksi" element={<ComingSoonPage title="Laporan Transaksi" />} />
           <Route path="/laporan/bagi-hasil" element={<ComingSoonPage title="Laporan Bagi Hasil" />} />
           <Route path="/users" element={<ComingSoonPage title="Manajemen User" />} />
