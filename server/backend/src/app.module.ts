@@ -27,6 +27,7 @@ import { GatewayModule } from './gateway/gateway.module';
 import { OverviewModule } from './overview/overview.module';
 import { LaporanModule } from './laporan/laporan.module';
 import { AktivitasModule } from './aktivitas/aktivitas.module';
+import { DashboardMitraModule } from './dashboard-mitra/dashboard-mitra.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { AktivitasModule } from './aktivitas/aktivitas.module';
     OverviewModule,
     LaporanModule,
     AktivitasModule,
+    DashboardMitraModule,
   ],
   controllers: [AppController, HealthController],
   providers: [
