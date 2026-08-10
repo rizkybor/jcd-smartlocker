@@ -1,6 +1,7 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Sidebar, type SidebarItem } from '@smartbox/ui';
 import { useAuth } from '../auth/AuthContext';
+import type { AkunInternalRole } from '../api/client';
 
 const NAV_ITEMS: SidebarItem[] = [
   { section: 'Utama' },
@@ -17,8 +18,29 @@ const NAV_ITEMS: SidebarItem[] = [
   { id: '/aktivitas', label: 'Aktivitas', icon: 'activity' },
 ];
 
-/** Item nav yang butuh role SUPER_ADMIN — disembunyikan dari role lain (§5.4), penegakan sungguhan tetap di backend guard. */
-const SUPER_ADMIN_ONLY = new Set(['/users']);
+/**
+ * Cocok dengan `@Roles(...)` masing-masing endpoint GET di backend (§5) —
+ * kalau role login tidak ada di daftar ini, jangan tampilkan link-nya sama
+ * sekali di sidebar (dead-end 403 lebih buruk daripada link disembunyikan).
+ * Route tanpa entri di sini = terbuka untuk semua role internal.
+ *
+ * STAFF sengaja TIDAK ada di `/emergency-unlock` walau boleh POST
+ * (catat kejadian) — GET listnya SUPER_ADMIN/OPS only di backend. Halaman
+ * itu sendiri yang menyesuaikan tampilan untuk STAFF (lihat
+ * EmergencyUnlockPage.tsx), bukan disembunyikan total, supaya STAFF tetap
+ * bisa mencatat.
+ */
+const ROLE_RESTRICTED: Partial<Record<string, AkunInternalRole[]>> = {
+  '/': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
+  '/units': ['SUPER_ADMIN', 'OPS'],
+  '/units/:id': ['SUPER_ADMIN', 'OPS'],
+  '/partner': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
+  '/laporan/transaksi': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
+  '/laporan/bagi-hasil': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
+  '/users': ['SUPER_ADMIN'],
+  '/emergency-unlock': ['SUPER_ADMIN', 'OPS', 'STAFF'],
+  '/aktivitas': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
+};
 
 export function DashboardLayout() {
   const { profile, signOut } = useAuth();
@@ -27,8 +49,9 @@ export function DashboardLayout() {
 
   const items = NAV_ITEMS.filter((it) => {
     if ('section' in it) return true;
-    if (SUPER_ADMIN_ONLY.has(it.id) && profile?.role !== 'SUPER_ADMIN') return false;
-    return true;
+    const allowed = ROLE_RESTRICTED[it.id];
+    if (!allowed) return true;
+    return !!profile && allowed.includes(profile.role);
   });
 
   return (

@@ -175,6 +175,46 @@ export type LaporanBagiHasilRow = {
   totalBagiHasilSmartbox: number;
 };
 
+export type AkunInternalRole = 'SUPER_ADMIN' | 'OPS' | 'MANAGER' | 'STAFF';
+
+export type AkunInternal = {
+  id: string;
+  nama: string;
+  email: string;
+  role: AkunInternalRole;
+  deletedAt: string | null;
+  createdAt: string;
+};
+
+export type EmergencyUnlockLogRow = {
+  id: string;
+  lokerId: string;
+  staffId: string;
+  catatan: string | null;
+  waktuKejadian: string;
+  waktuKejadianLokal: string;
+  disinkronkanAt: string;
+  staff: { nama: string; email: string };
+  nomorLoker: string;
+  kodeUnit: string;
+  lokasiNama: string;
+};
+
+export type LogKategori = 'KEAMANAN' | 'OPERASIONAL';
+
+export type LogAktivitasRow = {
+  id: string;
+  aktorId: string;
+  aktorRole: string;
+  kategori: LogKategori;
+  aksi: string;
+  entitas: string;
+  entitasId: string | null;
+  detail: unknown;
+  createdAt: string;
+  aktor: { nama: string; email: string };
+};
+
 function laporanQuery(filter: LaporanFilter, page?: number, pageSize?: number): string {
   const params = new URLSearchParams();
   if (filter.tanggalMulai) params.set('tanggalMulai', filter.tanggalMulai);
@@ -253,5 +293,29 @@ export const companyApi = {
         method: 'POST',
         body: JSON.stringify({ jenis, ...filter }),
       }),
+  },
+
+  users: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<AkunInternal>>(`/company/users?page=${page}&pageSize=${pageSize}`),
+    create: (input: { nama: string; email: string; role: AkunInternalRole }) =>
+      request<{ data: AkunInternal }>('/company/users', { method: 'POST', body: JSON.stringify(input) }),
+    updateRole: (id: string, role: AkunInternalRole) =>
+      request<{ data: AkunInternal }>(`/company/users/${id}/role`, { method: 'PATCH', body: JSON.stringify({ role }) }),
+    remove: (id: string) => request<{ data: unknown }>(`/company/users/${id}`, { method: 'DELETE' }),
+  },
+
+  emergencyUnlockLog: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<EmergencyUnlockLogRow>>(`/company/emergency-unlock-log?page=${page}&pageSize=${pageSize}`),
+    create: (input: { lokerId: string; catatan?: string; waktuKejadian: string }) =>
+      request<{ data: unknown }>('/company/emergency-unlock-log', { method: 'POST', body: JSON.stringify(input) }),
+  },
+
+  aktivitas: {
+    list: (page: number, pageSize = 25, kategori?: LogKategori) =>
+      request<Paginated<LogAktivitasRow>>(
+        `/company/aktivitas?page=${page}&pageSize=${pageSize}${kategori ? `&kategori=${kategori}` : ''}`,
+      ),
   },
 };

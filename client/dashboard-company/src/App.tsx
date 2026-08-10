@@ -9,7 +9,9 @@ import { PartnerPage } from './pages/PartnerPage';
 import { MitraDetailPage } from './pages/MitraDetailPage';
 import { LaporanTransaksiPage } from './pages/LaporanTransaksiPage';
 import { LaporanBagiHasilPage } from './pages/LaporanBagiHasilPage';
-import { ComingSoonPage } from './pages/ComingSoonPage';
+import { UsersPage } from './pages/UsersPage';
+import { EmergencyUnlockPage } from './pages/EmergencyUnlockPage';
+import { AktivitasPage } from './pages/AktivitasPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { session, profile, loading, error } = useAuth();
@@ -48,9 +50,9 @@ export default function App() {
           <Route path="/partner/:id" element={<MitraDetailPage />} />
           <Route path="/laporan/transaksi" element={<LaporanTransaksiPage />} />
           <Route path="/laporan/bagi-hasil" element={<LaporanBagiHasilPage />} />
-          <Route path="/users" element={<ComingSoonPage title="Manajemen User" />} />
-          <Route path="/emergency-unlock" element={<ComingSoonPage title="Emergency Unlock" />} />
-          <Route path="/aktivitas" element={<ComingSoonPage title="Aktivitas" />} />
+          <Route path="/users" element={<UsersPage />} />
+          <Route path="/emergency-unlock" element={<EmergencyUnlockPage />} />
+          <Route path="/aktivitas" element={<AktivitasPage />} />
         </Route>
       </Routes>
     </AuthProvider>
