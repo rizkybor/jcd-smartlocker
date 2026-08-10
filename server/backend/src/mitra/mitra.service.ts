@@ -1,6 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateMitraDto } from './dto/create-mitra.dto';
+import type { UpdateMitraDto } from './dto/update-mitra.dto';
+
+const mitraInclude = { mitraLokasi: { include: { lokasi: true } } } as const;
 
 @Injectable()
 export class MitraService {
@@ -12,7 +15,7 @@ export class MitraService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
-        include: { mitraLokasi: true },
+        include: mitraInclude,
       }),
       this.prisma.db.mitra.count(),
     ]);
@@ -26,6 +29,32 @@ export class MitraService {
         totalPages: Math.max(1, Math.ceil(totalItems / pageSize)),
       },
     };
+  }
+
+  async findOneOrThrow(id: string) {
+    const mitra = await this.prisma.db.mitra.findUnique({
+      where: { id },
+      include: mitraInclude,
+    });
+    if (!mitra) throw this.mitraTidakDitemukan();
+    return mitra;
+  }
+
+  async update(id: string, dto: UpdateMitraDto) {
+    const existing = await this.prisma.db.mitra.findUnique({ where: { id } });
+    if (!existing) throw this.mitraTidakDitemukan();
+
+    return this.prisma.db.mitra.update({
+      where: { id },
+      data: { nama: dto.nama, kontak: dto.kontak },
+      include: mitraInclude,
+    });
+  }
+
+  private mitraTidakDitemukan() {
+    return new NotFoundException({
+      error: { code: 'MITRA_TIDAK_DITEMUKAN', message: 'Mitra tidak ditemukan.' },
+    });
   }
 
   /**

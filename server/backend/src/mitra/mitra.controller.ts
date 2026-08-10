@@ -4,10 +4,10 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -16,10 +16,14 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { MitraService } from './mitra.service';
 import { createMitraSchema, type CreateMitraDto } from './dto/create-mitra.dto';
+import { updateMitraSchema, type UpdateMitraDto } from './dto/update-mitra.dto';
 
 /**
  * docs/API-Contract-Smartbox.md §5.2 (Partner). List boleh Ops/Manager
- * lihat, tapi create/delete tetap Super Admin saja (§5.4).
+ * lihat, tapi create/update/delete tetap Super Admin saja (§5.4).
+ *
+ * Pipe Zod per-parameter, bukan `@UsePipes()` method-level — lihat catatan
+ * bug di kiosk/kiosk-sewa.controller.ts.
  */
 @Controller('company/mitra')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
@@ -34,11 +38,22 @@ export class MitraController {
     return this.mitraService.list(pageNum, pageSizeNum);
   }
 
+  @Get(':id')
+  @Roles(AkunInternalRole.SUPER_ADMIN, AkunInternalRole.OPS, AkunInternalRole.MANAGER)
+  findOne(@Param('id') id: string) {
+    return this.mitraService.findOneOrThrow(id);
+  }
+
   @Post()
   @Roles(AkunInternalRole.SUPER_ADMIN)
-  @UsePipes(new ZodValidationPipe(createMitraSchema))
-  create(@Body() dto: CreateMitraDto) {
+  create(@Body(new ZodValidationPipe(createMitraSchema)) dto: CreateMitraDto) {
     return this.mitraService.create(dto);
+  }
+
+  @Patch(':id')
+  @Roles(AkunInternalRole.SUPER_ADMIN)
+  update(@Param('id') id: string, @Body(new ZodValidationPipe(updateMitraSchema)) dto: UpdateMitraDto) {
+    return this.mitraService.update(id, dto);
   }
 
   @Delete(':id')
