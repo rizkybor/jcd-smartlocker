@@ -32,15 +32,21 @@ export class RolesGuard implements CanActivate {
     const user = request.user;
 
     if (!user) {
-      throw new ForbiddenException(
-        'RolesGuard dipanggil tanpa request.user — pastikan SupabaseAuthGuard dipasang sebelum RolesGuard.',
-      );
+      throw new ForbiddenException({
+        error: {
+          code: 'GUARD_TIDAK_TERPASANG_BENAR',
+          message: 'RolesGuard dipanggil tanpa request.user — pastikan SupabaseAuthGuard dipasang sebelum RolesGuard.',
+        },
+      });
     }
 
     if (user.kind !== 'internal' || !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException(
-        `Role Anda tidak punya akses ke aksi ini. Dibutuhkan salah satu dari: ${requiredRoles.join(', ')}.`,
-      );
+      throw new ForbiddenException({
+        error: {
+          code: 'ROLE_TIDAK_DIIZINKAN',
+          message: `Role Anda tidak punya akses ke aksi ini. Dibutuhkan salah satu dari: ${requiredRoles.join(', ')}.`,
+        },
+      });
     }
 
     return true;
