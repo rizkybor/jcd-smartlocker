@@ -52,21 +52,7 @@ export function UnitsPage() {
             rows={result.data}
             striped
             onRowClick={(u) => navigate(`/units/${u.id}`)}
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} unit
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'unit' }}
           />
         )}
       </Panel>

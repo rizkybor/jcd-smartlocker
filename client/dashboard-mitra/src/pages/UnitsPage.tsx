@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, Button, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, type DataTableColumn } from '@smartbox/ui';
 import { mitraApi, ApiError, type Unit } from '../api/client';
 
 export function UnitsPage() {
@@ -40,21 +40,7 @@ export function UnitsPage() {
             columns={columns}
             rows={result.data}
             striped
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} unit
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'unit' }}
           />
         )}
       </Panel>

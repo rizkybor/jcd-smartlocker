@@ -41,12 +41,15 @@ export { StatusBadge } from './components/dashboard/StatusBadge';
 export type { StatusBadgeProps, StatusBadgeStatus } from './components/dashboard/StatusBadge';
 
 export { DataTable } from './components/dashboard/DataTable';
-export type { DataTableProps, DataTableColumn } from './components/dashboard/DataTable';
+export type { DataTableProps, DataTableColumn, DataTablePaginationMeta, DataTablePaginationProps } from './components/dashboard/DataTable';
 
 export { ConfirmDialog } from './components/dashboard/ConfirmDialog';
 export type { ConfirmDialogProps } from './components/dashboard/ConfirmDialog';
 
 export { Sidebar } from './components/dashboard/Sidebar';
 export type { SidebarProps, SidebarItem } from './components/dashboard/Sidebar';
+
+export { ToastProvider, useToast } from './components/dashboard/Toast';
+export type { ToastInput, ToastTone } from './components/dashboard/Toast';
 
 import './styles.css';

@@ -1,4 +1,5 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
+import { Button } from './Button';
 
 export type DataTableColumn<T> = {
   key?: keyof T & string;
@@ -10,18 +11,37 @@ export type DataTableColumn<T> = {
   render?: (row: T) => ReactNode;
 };
 
+export type DataTablePaginationMeta = { page: number; pageSize: number; totalItems: number; totalPages: number };
+
+export type DataTablePaginationProps = {
+  meta: DataTablePaginationMeta;
+  onPageChange: (page: number) => void;
+  /** Kata benda jamak untuk teks ringkasan, mis. "unit", "mitra", "transaksi" (§5.6). */
+  itemLabel: string;
+};
+
 export type DataTableProps<T> = {
   columns: DataTableColumn<T>[];
   rows: T[];
   onRowClick?: (row: T, index: number) => void;
   striped?: boolean;
   density?: 'default' | 'compact';
+  /**
+   * Kontrol paginasi eksplisit bawaan (SMB-804) — dipakai lewat
+   * `pagination={{ meta, onPageChange, itemLabel: 'unit' }}` alih-alih tiap
+   * halaman menulis ulang tombol Sebelumnya/Berikutnya + teks
+   * "Halaman X dari Y" sendiri-sendiri.
+   */
+  pagination?: DataTablePaginationProps;
+  /** Footer custom penuh — dipakai kalau butuh konten selain paginasi standar. Diabaikan kalau `pagination` diisi. */
   footer?: ReactNode;
   style?: CSSProperties;
 };
 
 /** Tabel data dashboard (docs/design_reference/components/dashboard/DataTable.jsx). */
-export function DataTable<T>({ columns, rows, onRowClick, striped, density = 'default', footer, style }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, onRowClick, striped, density = 'default', pagination, footer, style }: DataTableProps<T>) {
+  const resolvedFooter = pagination ? <PaginationFooter {...pagination} /> : footer;
+
   return (
     <div style={{ width: '100%', overflowX: 'auto', ...style }}>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--sl-font-body)', fontSize: 'var(--sl-fs-14)' }}>
@@ -55,12 +75,30 @@ export function DataTable<T>({ columns, rows, onRowClick, striped, density = 'de
           ))}
         </tbody>
       </table>
-      {footer ? (
+      {resolvedFooter ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--sl-space-4) var(--sl-space-5)', fontSize: 'var(--sl-fs-13)', color: 'var(--sl-text-muted)' }}>
-          {footer}
+          {resolvedFooter}
         </div>
       ) : null}
     </div>
+  );
+}
+
+function PaginationFooter({ meta, onPageChange, itemLabel }: DataTablePaginationProps) {
+  return (
+    <>
+      <span>
+        Halaman {meta.page} dari {meta.totalPages} — {meta.totalItems} {itemLabel}
+      </span>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <Button tone="outline" size="sm" disabled={meta.page <= 1} onClick={() => onPageChange(meta.page - 1)}>
+          Sebelumnya
+        </Button>
+        <Button tone="outline" size="sm" disabled={meta.page >= meta.totalPages} onClick={() => onPageChange(meta.page + 1)}>
+          Berikutnya
+        </Button>
+      </div>
+    </>
   );
 }
 

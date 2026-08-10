@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, Button, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type EmergencyUnlockLogRow } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { CatatEmergencyUnlockDialog } from './emergency-unlock/CatatEmergencyUnlockDialog';
 
 export function EmergencyUnlockPage() {
   const { profile } = useAuth();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.emergencyUnlockLog.list>> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,21 +65,7 @@ export function EmergencyUnlockPage() {
             columns={columns}
             rows={result.data}
             striped
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} catatan
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'catatan' }}
           />
         )}
       </Panel>
@@ -88,6 +75,7 @@ export function EmergencyUnlockPage() {
         onOpenChange={setCreateOpen}
         onCreated={() => {
           setCreateOpen(false);
+          toast({ title: 'Kejadian dicatat', tone: 'success' });
           reload();
         }}
       />

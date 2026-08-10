@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, Button, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LaporanFilter, type LaporanTransaksiRow } from '../api/client';
 import { LaporanFilterBar } from './laporan/LaporanFilterBar';
 
@@ -15,6 +15,7 @@ const STATUS_MAP: Record<LaporanTransaksiRow['statusBayar'], 'tersedia' | 'teris
 };
 
 export function LaporanTransaksiPage() {
+  const { toast } = useToast();
   const [filter, setFilter] = useState<LaporanFilter>({});
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.laporan.transaksi>> | null>(null);
@@ -37,7 +38,9 @@ export function LaporanTransaksiPage() {
       const res = await companyApi.laporan.export('transaksi', filter);
       setExportUrl(res.data.url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal ekspor laporan.');
+      const message = err instanceof ApiError ? err.message : 'Gagal ekspor laporan.';
+      setError(message);
+      toast({ title: 'Ekspor gagal', description: message, tone: 'error' });
     } finally {
       setExporting(false);
     }
@@ -91,21 +94,7 @@ export function LaporanTransaksiPage() {
             columns={columns}
             rows={result.data}
             striped
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} transaksi
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'transaksi' }}
           />
         )}
       </Panel>

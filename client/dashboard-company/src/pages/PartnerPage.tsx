@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Panel, DataTable, Button, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type MitraFull } from '../api/client';
 import { CreateMitraDialog } from './partner/CreateMitraDialog';
 
 export function PartnerPage() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.mitra.list>> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -58,21 +59,7 @@ export function PartnerPage() {
             rows={result.data}
             striped
             onRowClick={(m) => navigate(`/partner/${m.id}`)}
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} mitra
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'mitra' }}
           />
         )}
       </Panel>
@@ -82,6 +69,7 @@ export function PartnerPage() {
         onOpenChange={setCreateOpen}
         onCreated={() => {
           setCreateOpen(false);
+          toast({ title: 'Mitra ditambahkan', tone: 'success' });
           reload();
         }}
       />

@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type AkunInternal, type AkunInternalRole } from '../api/client';
 import { CreateUserDialog } from './users/CreateUserDialog';
 
 const ROLE_OPTIONS: AkunInternalRole[] = ['SUPER_ADMIN', 'OPS', 'MANAGER', 'STAFF'];
 
 export function UsersPage() {
+  const { toast } = useToast();
   const [page, setPage] = useState(1);
   const [result, setResult] = useState<Awaited<ReturnType<typeof companyApi.users.list>> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +28,12 @@ export function UsersPage() {
     if (role === user.role) return;
     try {
       await companyApi.users.updateRole(user.id, role);
+      toast({ title: 'Role diperbarui', description: `${user.nama} sekarang ${role}.`, tone: 'success' });
       reload();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal mengubah role.');
+      const message = err instanceof ApiError ? err.message : 'Gagal mengubah role.';
+      setError(message);
+      toast({ title: 'Gagal mengubah role', description: message, tone: 'error' });
     }
   }
 
@@ -39,6 +43,7 @@ export function UsersPage() {
     setRemoveError(null);
     try {
       await companyApi.users.remove(removeTarget.id);
+      toast({ title: 'Akun dinonaktifkan', description: removeTarget.nama, tone: 'success' });
       setRemoveTarget(null);
       reload();
     } catch (err) {
@@ -99,21 +104,7 @@ export function UsersPage() {
             columns={columns}
             rows={result.data}
             striped
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} user
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'user' }}
           />
         )}
       </Panel>

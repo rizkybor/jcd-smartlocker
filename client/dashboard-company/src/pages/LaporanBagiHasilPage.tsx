@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, useToast, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LaporanFilter, type LaporanBagiHasilRow } from '../api/client';
 import { LaporanFilterBar } from './laporan/LaporanFilterBar';
 
@@ -8,6 +8,7 @@ function formatRupiah(nominal: number): string {
 }
 
 export function LaporanBagiHasilPage() {
+  const { toast } = useToast();
   const [filter, setFilter] = useState<LaporanFilter>({});
   const [rows, setRows] = useState<LaporanBagiHasilRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +30,9 @@ export function LaporanBagiHasilPage() {
       const res = await companyApi.laporan.export('bagi-hasil', filter);
       setExportUrl(res.data.url);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Gagal ekspor laporan.');
+      const message = err instanceof ApiError ? err.message : 'Gagal ekspor laporan.';
+      setError(message);
+      toast({ title: 'Ekspor gagal', description: message, tone: 'error' });
     } finally {
       setExporting(false);
     }

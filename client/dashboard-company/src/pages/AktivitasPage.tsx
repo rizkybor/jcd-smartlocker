@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Panel, DataTable, Button, StatusBadge, Field, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, Field, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LogAktivitasRow, type LogKategori } from '../api/client';
 
 export function AktivitasPage() {
@@ -57,21 +57,7 @@ export function AktivitasPage() {
             columns={columns}
             rows={result.data}
             striped
-            footer={
-              <>
-                <span>
-                  Halaman {result.meta.page} dari {result.meta.totalPages} — {result.meta.totalItems} entri
-                </span>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <Button tone="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-                    Sebelumnya
-                  </Button>
-                  <Button tone="outline" size="sm" disabled={page >= result.meta.totalPages} onClick={() => setPage((p) => p + 1)}>
-                    Berikutnya
-                  </Button>
-                </div>
-              </>
-            }
+            pagination={{ meta: result.meta, onPageChange: setPage, itemLabel: 'entri' }}
           />
         )}
       </Panel>
