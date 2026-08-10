@@ -1,4 +1,4 @@
-import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from './guards/unit-key.guard';
@@ -44,5 +44,15 @@ export class KioskAmbilController {
   @Post(':sesiId/buka-pintu')
   bukaPintu(@Param('sesiId') sesiId: string) {
     return this.kioskAmbilService.bukaPintu(sesiId);
+  }
+
+  @Post(':sesiId/bayar-denda')
+  bayarDenda(@Param('sesiId') sesiId: string) {
+    return this.kioskAmbilService.bayarDenda(sesiId);
+  }
+
+  @Get(':sesiId/status-denda')
+  statusDenda(@Param('sesiId') sesiId: string) {
+    return this.kioskAmbilService.statusDenda(sesiId);
   }
 }

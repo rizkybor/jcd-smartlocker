@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -10,6 +11,10 @@ import { LokerStatus, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { OtpService } from '../otp/otp.service';
 import { MqttClientService } from '../gateway/mqtt-client.service';
+import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
+import type { PaymentProvider } from '../payment/payment-provider.interface';
+import { computeOverdueStatus, tarifPerJamTermurah } from '../common/overdue.util';
+import { generateIdTransaksi } from '../common/id-transaksi.util';
 import type { EnvConfig } from '../config/env.validation';
 import type { AmbilMulaiDto } from './dto/ambil-mulai.dto';
 import type { VerifikasiOtpDto } from './dto/verifikasi-otp.dto';
@@ -22,6 +27,14 @@ const OTP_EXPIRY_MINUTES = 5;
  * diambil" — tidak ada kolom "sudah diambil" terpisah di SesiTransaksi,
  * konsisten dengan model yang sudah ada (bukukan financial record tetap
  * append-only, status operasional ada di Loker).
+ *
+ * Overdue/denda/suspend (fitur tambahan di luar PRD awal, permintaan bisnis
+ * langsung): kalau `waktuSelesai` sudah lewat tapi belum 24 jam, penyewa
+ * WAJIB bayar denda kekurangan (SesiDenda) dulu sebelum bisa kirim/verifikasi
+ * OTP/buka pintu — ditegakkan di `getSesiAktifOrThrow()` supaya SEMUA langkah
+ * alur ambil konsisten menolak sampai lunas. Kalau sudah >=24 jam, loker
+ * DISUSPEND — kiosk tidak lagi menawarkan jalur bayar sendiri sama sekali,
+ * cuma Super Admin yang bisa buka (lihat unit.service.ts).
  */
 @Injectable()
 export class KioskAmbilService {
@@ -30,12 +43,15 @@ export class KioskAmbilService {
     private readonly otpService: OtpService,
     private readonly config: ConfigService<EnvConfig, true>,
     private readonly mqttClient: MqttClientService,
+    @Inject(PAYMENT_PROVIDER) private readonly paymentProvider: PaymentProvider,
   ) {}
 
   /**
    * Cari sesi aktif (sudah bayar, pintu pernah dibuka saat sewa, loker
    * masih TERISI, di unit yang sama dengan kiosk ini) yang cocok dengan
-   * nomorHp. Loker fisik cuma bisa dibuka dari kiosk/unit yang sama.
+   * nomorHp, lalu sertakan status overdue/denda/suspend supaya kiosk bisa
+   * langsung mengarahkan ke layar yang tepat (normal / bayar denda /
+   * suspend) tanpa panggilan tambahan.
    */
   async mulaiAmbil(unit: Unit, dto: AmbilMulaiDto) {
     const sesi = await this.prisma.db.sesiTransaksi.findFirst({
@@ -46,7 +62,7 @@ export class KioskAmbilService {
         loker: { status: LokerStatus.TERISI, unitId: unit.id },
       },
       orderBy: { createdAt: 'desc' },
-      select: { id: true },
+      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
     });
 
     if (!sesi) {
@@ -58,7 +74,89 @@ export class KioskAmbilService {
       });
     }
 
-    return { id: sesi.id };
+    const overdue = await this.overdueStatusOf(sesi.id);
+    return { id: sesi.id, ...overdue };
+  }
+
+  /** Denda kekurangan (jam overdue x tarif per-jam termurah unit ini) — lihat overdue.util.ts. */
+  private async overdueStatusOf(sesiId: string) {
+    const sesi = await this.prisma.db.sesiTransaksi.findUniqueOrThrow({
+      where: { id: sesiId },
+      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
+    });
+    const tarifPerJam = tarifPerJamTermurah(
+      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+    );
+    return computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
+  }
+
+  /** Denda sudah lunas kalau ADA baris SesiDenda berstatus PAID untuk sesi ini. */
+  private async dendaSudahLunas(sesiId: string): Promise<boolean> {
+    const paid = await this.prisma.db.sesiDenda.findFirst({
+      where: { sesiTransaksiId: sesiId, statusBayar: StatusBayar.PAID },
+      select: { id: true },
+    });
+    return !!paid;
+  }
+
+  /** `POST /kiosk/ambil/:sesiId/bayar-denda` — buat charge QRIS untuk denda kekurangan. */
+  async bayarDenda(sesiId: string) {
+    const sesi = await this.prisma.db.sesiTransaksi.findUnique({ where: { id: sesiId } });
+    if (!sesi) throw this.sesiTidakDitemukan();
+
+    const overdue = await this.overdueStatusOf(sesiId);
+    if (!overdue.overdue) {
+      throw new ConflictException({
+        error: { code: 'BELUM_OVERDUE', message: 'Sesi ini belum melewati waktu selesai, tidak ada denda.' },
+      });
+    }
+    if (overdue.suspended) {
+      throw new ConflictException({
+        error: {
+          code: 'LOKER_DISUSPEND',
+          message: 'Terlambat lebih dari 24 jam — loker disuspend, hubungi Super Admin untuk membuka.',
+        },
+      });
+    }
+    if (await this.dendaSudahLunas(sesiId)) {
+      throw new ConflictException({
+        error: { code: 'DENDA_SUDAH_LUNAS', message: 'Denda untuk sesi ini sudah lunas.' },
+      });
+    }
+
+    const idTransaksi = generateIdTransaksi();
+    const charge = await this.paymentProvider.createQrisCharge({
+      idTransaksi,
+      nominal: overdue.dendaNominal,
+    });
+
+    await this.prisma.db.sesiDenda.create({
+      data: {
+        sesiTransaksiId: sesiId,
+        jamTerlambat: overdue.jamTerlambat,
+        nominal: overdue.dendaNominal,
+        paymentProvider: this.paymentProvider.name,
+        paymentProviderRefId: charge.providerRefId,
+        idTransaksi,
+      },
+    });
+
+    return { qrString: charge.qrString, expiredAt: charge.expiredAt, nominal: overdue.dendaNominal, jamTerlambat: overdue.jamTerlambat };
+  }
+
+  /** `GET /kiosk/ambil/:sesiId/status-denda` — status charge denda TERBARU untuk sesi ini. */
+  async statusDenda(sesiId: string) {
+    const terbaru = await this.prisma.db.sesiDenda.findFirst({
+      where: { sesiTransaksiId: sesiId },
+      orderBy: { createdAt: 'desc' },
+      select: { statusBayar: true },
+    });
+    if (!terbaru) {
+      throw new NotFoundException({
+        error: { code: 'DENDA_BELUM_DIBUAT', message: 'Belum ada tagihan denda untuk sesi ini.' },
+      });
+    }
+    return { statusBayar: terbaru.statusBayar };
   }
 
   async kirimOtp(sesiId: string) {
@@ -125,11 +223,7 @@ export class KioskAmbilService {
    * sensor sebelum loker ditandai TERSEDIA lagi.
    */
   async bukaPintu(sesiId: string) {
-    const sesi = await this.prisma.db.sesiTransaksi.findUnique({
-      where: { id: sesiId },
-      include: { loker: { include: { unit: true } } },
-    });
-    if (!sesi) throw this.sesiTidakDitemukan();
+    const sesi = await this.getSesiAktifOrThrow(sesiId);
 
     if (!sesi.otpVerifiedAt) {
       throw new ConflictException({
@@ -172,6 +266,12 @@ export class KioskAmbilService {
     return destination;
   }
 
+  /**
+   * Satu sumber kebenaran dipakai kirimOtp/verifikasiOtp/bukaPintu — SEMUA
+   * langkah alur ambil menolak konsisten kalau loker disuspend atau denda
+   * belum lunas, bukan cuma ditolak di satu titik lalu langkah lain
+   * kebobolan lewat urutan panggilan yang salah.
+   */
   private async getSesiAktifOrThrow(sesiId: string) {
     const sesi = await this.prisma.db.sesiTransaksi.findFirst({
       where: {
@@ -179,8 +279,36 @@ export class KioskAmbilService {
         statusBayar: StatusBayar.PAID,
         loker: { status: LokerStatus.TERISI },
       },
+      include: {
+        unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } },
+        loker: { include: { unit: true } },
+      },
     });
     if (!sesi) throw this.sesiTidakDitemukan();
+
+    const tarifPerJam = tarifPerJamTermurah(
+      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+    );
+    const overdue = computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
+
+    if (overdue.suspended) {
+      throw new ConflictException({
+        error: {
+          code: 'LOKER_DISUSPEND',
+          message: 'Terlambat lebih dari 24 jam — loker disuspend, hubungi Super Admin untuk membuka.',
+        },
+      });
+    }
+
+    if (overdue.overdue && !(await this.dendaSudahLunas(sesiId))) {
+      throw new ConflictException({
+        error: {
+          code: 'DENDA_BELUM_DIBAYAR',
+          message: 'Sesi ini terlambat — bayar denda kekurangan dulu sebelum lanjut.',
+        },
+      });
+    }
+
     return sesi;
   }
 

@@ -69,6 +69,20 @@
     "judul": "Unit Ini Penuh",
     "detail": "Semua loker sedang terisi. Silakan coba lagi nanti atau cari unit lain di lokasi ini."
   },
+  "bayarDenda": {
+    "title": "Bayar Denda Keterlambatan",
+    "subtitle": "Terlambat {{jam}} jam dari waktu selesai sewa — scan untuk bayar kekurangan."
+  },
+  "bayarDendaGagal": {
+    "iconLabel": "Pembayaran denda gagal",
+    "judul": "QR Denda Sudah Kedaluwarsa",
+    "detail": "Waktu pembayaran habis atau pembayaran gagal diproses. Silakan coba lagi untuk mendapat QR baru."
+  },
+  "lokerSuspended": {
+    "iconLabel": "Loker disuspend",
+    "judul": "Loker Disuspend",
+    "detail": "Anda terlambat lebih dari 24 jam mengambil barang. Loker ini tidak bisa dibuka sendiri lagi — silakan hubungi petugas/admin di lokasi ini untuk bantuan."
+  },
   "errors": {
     "jaringan": "Terjadi kesalahan jaringan. Silakan coba lagi."
   }

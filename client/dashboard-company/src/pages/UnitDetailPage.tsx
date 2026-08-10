@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Panel, Button, Field, StatusBadge, DataTable, ConfirmDialog, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type UnitDetail, type Loker, type LokerStatus, type SesiTransaksiRingkas } from '../api/client';
 import { formatTanggalLokasi } from '../utils/formatTanggal';
+import { useAuth } from '../auth/AuthContext';
 
 type DurasiRow = { id?: string; durasiJam: string; harga: string };
 
@@ -20,6 +21,7 @@ export function UnitDetailPage() {
     { value: 'OFFLINE', label: t('unitDetailPage.statusLoker.offline') },
     { value: 'NONAKTIF', label: t('unitDetailPage.statusLoker.nonaktif') },
   ];
+  const { profile } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [unit, setUnit] = useState<UnitDetail | null>(null);
@@ -38,6 +40,12 @@ export function UnitDetailPage() {
   const [bukaPaksaAlasan, setBukaPaksaAlasan] = useState('');
   const [bukaPaksaLoading, setBukaPaksaLoading] = useState(false);
   const [bukaPaksaError, setBukaPaksaError] = useState<string | null>(null);
+
+  // --- Buka loker disuspend (fitur overdue/denda/suspend, di luar cakupan PRD awal) ---
+  const [bukaSuspendLoker, setBukaSuspendLoker] = useState<Loker | null>(null);
+  const [bukaSuspendAlasan, setBukaSuspendAlasan] = useState('');
+  const [bukaSuspendLoading, setBukaSuspendLoading] = useState(false);
+  const [bukaSuspendError, setBukaSuspendError] = useState<string | null>(null);
 
   // --- Nonaktifkan unit ---
   const [nonaktifkanOpen, setNonaktifkanOpen] = useState(false);
@@ -117,6 +125,22 @@ export function UnitDetailPage() {
     }
   }
 
+  async function handleBukaSuspendConfirm() {
+    if (!id || !bukaSuspendLoker) return;
+    setBukaSuspendLoading(true);
+    setBukaSuspendError(null);
+    try {
+      await companyApi.units.bukaSuspend(id, bukaSuspendLoker.id, bukaSuspendAlasan);
+      setBukaSuspendLoker(null);
+      setBukaSuspendAlasan('');
+      reload();
+    } catch (err) {
+      setBukaSuspendError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalBukaSuspend'));
+    } finally {
+      setBukaSuspendLoading(false);
+    }
+  }
+
   async function handleNonaktifkanConfirm() {
     if (!id) return;
     setNonaktifkanLoading(true);
@@ -159,12 +183,30 @@ export function UnitDetailPage() {
       ),
     },
     {
+      header: t('unitDetailPage.kolomKeterlambatan'),
+      render: (l) =>
+        l.overdueStatus?.suspended ? (
+          <StatusBadge status="offline">{t('unitDetailPage.disuspend')}</StatusBadge>
+        ) : l.overdueStatus?.overdue ? (
+          <StatusBadge status="terisi">{t('unitDetailPage.terlambat', { jam: l.overdueStatus.jamTerlambat })}</StatusBadge>
+        ) : (
+          '—'
+        ),
+    },
+    {
       header: '',
       align: 'right',
       render: (l) => (
-        <Button tone="danger" size="sm" onClick={() => setBukaPaksaLoker(l)}>
-          {t('unitDetailPage.bukaPaksa')}
-        </Button>
+        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+          {l.overdueStatus?.suspended && profile?.role === 'SUPER_ADMIN' ? (
+            <Button tone="danger" size="sm" onClick={() => setBukaSuspendLoker(l)}>
+              {t('unitDetailPage.bukaSuspend')}
+            </Button>
+          ) : null}
+          <Button tone="danger" size="sm" onClick={() => setBukaPaksaLoker(l)}>
+            {t('unitDetailPage.bukaPaksa')}
+          </Button>
+        </div>
       ),
     },
   ];
@@ -285,6 +327,27 @@ export function UnitDetailPage() {
         loading={bukaPaksaLoading}
         errorMessage={bukaPaksaError}
         onConfirm={handleBukaPaksaConfirm}
+      />
+
+      <ConfirmDialog
+        open={!!bukaSuspendLoker}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBukaSuspendLoker(null);
+            setBukaSuspendAlasan('');
+            setBukaSuspendError(null);
+          }
+        }}
+        title={t('unitDetailPage.bukaSuspendTitle', { nomor: bukaSuspendLoker?.nomorLoker ?? '' })}
+        description={t('unitDetailPage.bukaSuspendDeskripsi')}
+        tone="danger"
+        confirmLabel={t('unitDetailPage.bukaSuspend')}
+        requireReason
+        reasonValue={bukaSuspendAlasan}
+        onReasonChange={setBukaSuspendAlasan}
+        loading={bukaSuspendLoading}
+        errorMessage={bukaSuspendError}
+        onConfirm={handleBukaSuspendConfirm}
       />
 
       <ConfirmDialog

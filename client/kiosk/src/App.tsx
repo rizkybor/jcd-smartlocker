@@ -14,6 +14,9 @@ import { BayarGagalScreen } from './screens/BayarGagalScreen';
 import { BukaPintuScreen } from './screens/BukaPintuScreen';
 import { StrukScreen } from './screens/StrukScreen';
 import { OtpScreen } from './screens/OtpScreen';
+import { BayarDendaScreen } from './screens/BayarDendaScreen';
+import { BayarDendaGagalScreen } from './screens/BayarDendaGagalScreen';
+import { LokerSuspendedScreen } from './screens/LokerSuspendedScreen';
 import { ambilSteps } from './screens/KioskShell';
 
 // Session timeout (PRD §5.3, SMB-307) — reset ke idle setelah tidak ada
@@ -150,6 +153,25 @@ export default function App() {
           title={t('nomorHp.ambil.title')}
           subtitle={t('nomorHp.ambil.subtitle')}
         />
+      );
+    }
+    if (state.matches('ambilSuspended')) {
+      return <LokerSuspendedScreen onKembali={() => send({ type: 'KEMBALI' })} />;
+    }
+    if (state.matches('ambilBayarDenda')) {
+      return (
+        <BayarDendaScreen
+          qrString={state.context.pembayaranDenda?.qrString ?? null}
+          nominal={state.context.pembayaranDenda?.nominal ?? null}
+          jamTerlambat={state.context.pembayaranDenda?.jamTerlambat ?? state.context.ambilSesi?.jamTerlambat ?? null}
+          expiredAt={state.context.pembayaranDenda?.expiredAt ?? null}
+          onBatal={() => send({ type: 'BATAL' })}
+        />
+      );
+    }
+    if (state.matches('ambilBayarDendaGagal')) {
+      return (
+        <BayarDendaGagalScreen onUlangi={() => send({ type: 'ULANGI' })} onBatal={() => send({ type: 'BATAL' })} />
       );
     }
     if (state.matches('ambilKirimOtp') || state.matches('ambilOtp') || state.matches('ambilVerifikasi')) {

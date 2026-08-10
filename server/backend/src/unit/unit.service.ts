@@ -1,8 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { LogKategori } from '@prisma/client';
+import { LogKategori, LokerStatus, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
+import { MqttClientService } from '../gateway/mqtt-client.service';
+import { computeOverdueStatus, tarifPerJamTermurah } from '../common/overdue.util';
 import type { AuthenticatedInternalUser } from '../auth/types';
 import type { CreateUnitDto } from './dto/create-unit.dto';
 import type { UpdateUnitDto } from './dto/update-unit.dto';
@@ -38,6 +40,7 @@ export class UnitService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly activityLog: ActivityLogService,
+    private readonly mqttClient: MqttClientService,
   ) {}
 
   async list(page: number, pageSize: number) {
@@ -78,7 +81,38 @@ export class UnitService {
       include: { loker: { select: { nomorLoker: true } } },
     });
 
-    return { ...omitUnitKey(unit), riwayatTransaksi };
+    return { ...omitUnitKey(unit), lokers: await this.lokersDenganOverdueStatus(unit), riwayatTransaksi };
+  }
+
+  /**
+   * Sisipkan status overdue/denda/suspend (fitur di luar cakupan PRD awal,
+   * lihat overdue.util.ts) ke tiap loker TERISI unit ini — supaya Dashboard
+   * Company bisa tampilkan badge "Disuspend" & tombol buka khusus Super
+   * Admin tanpa panggilan API terpisah.
+   */
+  private async lokersDenganOverdueStatus(unit: { durasiHarga: { harga: unknown; durasiJam: number; aktif: boolean }[]; lokers: { id: string; status: LokerStatus }[] }) {
+    const tarifPerJam = tarifPerJamTermurah(
+      unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+    );
+
+    const lokerTerisiIds = unit.lokers.filter((l) => l.status === LokerStatus.TERISI).map((l) => l.id);
+    const sesiAktifList = lokerTerisiIds.length
+      ? await this.prisma.db.sesiTransaksi.findMany({
+          where: { lokerId: { in: lokerTerisiIds }, statusBayar: StatusBayar.PAID, waktuMulai: { not: null } },
+          orderBy: { createdAt: 'desc' },
+          select: { lokerId: true, waktuSelesai: true },
+        })
+      : [];
+
+    const waktuSelesaiPerLoker = new Map<string, Date | null>();
+    for (const s of sesiAktifList) {
+      if (!waktuSelesaiPerLoker.has(s.lokerId)) waktuSelesaiPerLoker.set(s.lokerId, s.waktuSelesai);
+    }
+
+    return unit.lokers.map((l) => ({
+      ...l,
+      overdueStatus: waktuSelesaiPerLoker.has(l.id) ? computeOverdueStatus(waktuSelesaiPerLoker.get(l.id) ?? null, tarifPerJam) : null,
+    }));
   }
 
   /**
@@ -232,6 +266,70 @@ export class UnitService {
     });
 
     return { triggered: true };
+  }
+
+  /**
+   * Buka loker yang DISUSPEND karena keterlambatan ambil barang >= 24 jam
+   * (fitur overdue/denda/suspend, di luar cakupan PRD awal — lihat
+   * overdue.util.ts). SENGAJA `@Roles(SUPER_ADMIN)` SAJA di controller —
+   * BUKAN Ops juga seperti bukaPaksa() di atas — karena ini jalur terakhir
+   * setelah penyewa sama sekali tidak bisa lagi bayar/buka sendiri lewat
+   * kiosk. Beda dari bukaPaksa()/EmergencyUnlockLog (keduanya cuma
+   * mencatat), method ini BENAR-BENAR publish perintah MQTT (sama seperti
+   * kiosk-ambil.service.ts::bukaPintu()) supaya barang penyewa bisa
+   * benar-benar diambil — tidak ada "staf sudah buka manual" untuk dicatat
+   * di kasus ini.
+   */
+  async bukaLokerSuspended(unitId: string, dto: BukaPaksaDto, actor: AuthenticatedInternalUser) {
+    const loker = await this.prisma.db.loker.findFirst({
+      where: { id: dto.lokerId, unitId },
+      include: { unit: true },
+    });
+    if (!loker) {
+      throw new NotFoundException({
+        error: { code: 'LOKER_TIDAK_DITEMUKAN', message: 'Loker tidak ditemukan di unit ini.' },
+      });
+    }
+
+    const sesi = await this.prisma.db.sesiTransaksi.findFirst({
+      where: { lokerId: loker.id, statusBayar: StatusBayar.PAID, loker: { status: LokerStatus.TERISI } },
+      orderBy: { createdAt: 'desc' },
+      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
+    });
+    if (!sesi) {
+      throw new NotFoundException({
+        error: { code: 'SESI_TIDAK_DITEMUKAN', message: 'Tidak ada sesi aktif pada loker ini.' },
+      });
+    }
+
+    const tarifPerJam = tarifPerJamTermurah(
+      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+    );
+    const overdue = computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
+    if (!overdue.suspended) {
+      throw new ConflictException({
+        error: {
+          code: 'LOKER_BELUM_DISUSPEND',
+          message: 'Loker ini belum melewati 24 jam keterlambatan — belum berstatus suspend.',
+        },
+      });
+    }
+
+    this.mqttClient.publishPerintahBukaPintu(loker.unit.kodeUnit, loker.nomorLoker, sesi.id);
+
+    await this.prisma.db.loker.update({ where: { id: loker.id }, data: { status: LokerStatus.TERSEDIA } });
+
+    await this.activityLog.log({
+      aktorId: actor.id,
+      aktorRole: actor.role,
+      kategori: LogKategori.KEAMANAN,
+      aksi: 'buka_loker_suspend',
+      entitas: 'loker',
+      entitasId: loker.id,
+      detail: { alasan: dto.alasan, sesiTransaksiId: sesi.id, jamTerlambat: overdue.jamTerlambat },
+    });
+
+    return { triggered: true, jamTerlambat: overdue.jamTerlambat };
   }
 
   async updateLokerStatus(lokerId: string, dto: LokerStatusDto, actor: AuthenticatedInternalUser) {

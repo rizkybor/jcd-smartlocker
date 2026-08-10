@@ -70,7 +70,21 @@ export type StrukResult = {
   berlakuSampai: string | null;
 };
 
-export type AmbilSesi = { id: string };
+/**
+ * Status keterlambatan ambil barang (fitur overdue/denda/suspend, di luar
+ * PRD awal — permintaan bisnis langsung). `suspended: true` -> lewat 24
+ * jam, kiosk TIDAK menawarkan bayar sendiri lagi, cuma bisa hubungi admin.
+ */
+export type AmbilSesi = {
+  id: string;
+  overdue: boolean;
+  suspended: boolean;
+  jamTerlambat: number;
+  dendaNominal: number;
+};
+
+export type BayarDendaResult = { qrString: string; expiredAt: string; nominal: number; jamTerlambat: number };
+export type StatusDendaResult = { statusBayar: SesiTransaksi['statusBayar'] };
 
 export const kioskApi = {
   statusUnit: () => request<{ data: UnitStatus }>('/kiosk/unit/status'),
@@ -119,4 +133,9 @@ export const kioskApi = {
 
   bukaPintuAmbil: (sesiId: string) =>
     request<{ data: SesiTransaksi }>(`/kiosk/ambil/${sesiId}/buka-pintu`, { method: 'POST' }),
+
+  bayarDenda: (sesiId: string) =>
+    request<{ data: BayarDendaResult }>(`/kiosk/ambil/${sesiId}/bayar-denda`, { method: 'POST' }),
+
+  cekStatusDenda: (sesiId: string) => request<{ data: StatusDendaResult }>(`/kiosk/ambil/${sesiId}/status-denda`),
 };

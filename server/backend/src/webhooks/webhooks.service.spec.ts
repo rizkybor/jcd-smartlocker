@@ -24,6 +24,7 @@ describe('WebhooksService.processWebhook', () => {
     const prisma = {
       db: {
         sesiTransaksi: { findUnique: jest.fn().mockResolvedValue(sesi), update },
+        sesiDenda: { findUnique: jest.fn().mockResolvedValue(null), update: jest.fn().mockResolvedValue({}) },
       },
     } as unknown as PrismaService;
     return { prisma, update };
@@ -93,5 +94,40 @@ describe('WebhooksService.processWebhook', () => {
 
     expect(result.outcome).toBe('diproses');
     expect(update).toHaveBeenCalled();
+  });
+
+  describe('charge denda keterlambatan (SesiDenda)', () => {
+    function buildPrismaDenda(denda: Record<string, unknown> | null) {
+      const updateDenda = jest.fn().mockResolvedValue({});
+      const prisma = {
+        db: {
+          sesiTransaksi: { findUnique: jest.fn().mockResolvedValue(null) }, // tidak match charge sewa
+          sesiDenda: { findUnique: jest.fn().mockResolvedValue(denda), update: updateDenda },
+        },
+      } as unknown as PrismaService;
+      return { prisma, updateDenda };
+    }
+
+    it('kalau providerRefId tidak match SesiTransaksi TAPI match SesiDenda, tetap diproses ke tabel yang benar', async () => {
+      const provider = buildProvider({ valid: true, providerRefId: 'ref-denda-1', status: StatusBayar.PAID });
+      const { prisma, updateDenda } = buildPrismaDenda({ id: 'denda-1', statusBayar: StatusBayar.PENDING });
+      const service = new WebhooksService(prisma);
+
+      const result = await service.processWebhook(provider, {} as never);
+
+      expect(result).toEqual({ outcome: 'diproses', providerRefId: 'ref-denda-1', statusBayar: StatusBayar.PAID });
+      expect(updateDenda).toHaveBeenCalledWith({ where: { id: 'denda-1' }, data: { statusBayar: StatusBayar.PAID } });
+    });
+
+    it('idempotent juga berlaku untuk charge denda (retry webhook tidak update dobel)', async () => {
+      const provider = buildProvider({ valid: true, providerRefId: 'ref-denda-1', status: StatusBayar.PAID });
+      const { prisma, updateDenda } = buildPrismaDenda({ id: 'denda-1', statusBayar: StatusBayar.PAID });
+      const service = new WebhooksService(prisma);
+
+      const result = await service.processWebhook(provider, {} as never);
+
+      expect(result.outcome).toBe('idempotent_diabaikan');
+      expect(updateDenda).not.toHaveBeenCalled();
+    });
   });
 });

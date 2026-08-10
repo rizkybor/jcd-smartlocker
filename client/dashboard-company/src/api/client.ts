@@ -66,7 +66,17 @@ export type LokasiDenganMitra = Lokasi & { mitraLokasi: MitraLokasiRingkas[] };
 
 export type LokerStatus = 'TERSEDIA' | 'TERISI' | 'MAINTENANCE' | 'OFFLINE' | 'NONAKTIF';
 
-export type Loker = { id: string; unitId: string; nomorLoker: string; status: LokerStatus };
+/** Fitur overdue/denda/suspend keterlambatan ambil barang (di luar cakupan PRD awal). */
+export type OverdueStatus = { overdue: boolean; suspended: boolean; jamTerlambat: number; dendaNominal: number };
+
+export type Loker = {
+  id: string;
+  unitId: string;
+  nomorLoker: string;
+  status: LokerStatus;
+  /** Cuma diisi di response detail unit (findOneOrThrow), bukan list. */
+  overdueStatus?: OverdueStatus | null;
+};
 
 export type UnitDurasiHarga = { id: string; unitId: string; durasiJam: number; harga: number; aktif: boolean };
 
@@ -247,6 +257,12 @@ export const companyApi = {
       }),
     bukaPaksa: (id: string, lokerId: string, alasan: string) =>
       request<{ data: { triggered: true } }>(`/company/units/${id}/buka-paksa`, {
+        method: 'POST',
+        body: JSON.stringify({ lokerId, alasan }),
+      }),
+    /** Fitur overdue/denda/suspend (di luar cakupan PRD awal) — cuma Super Admin, lihat unit.service.ts::bukaLokerSuspended(). */
+    bukaSuspend: (id: string, lokerId: string, alasan: string) =>
+      request<{ data: { triggered: true; jamTerlambat: number } }>(`/company/units/${id}/buka-suspend`, {
         method: 'POST',
         body: JSON.stringify({ lokerId, alasan }),
       }),

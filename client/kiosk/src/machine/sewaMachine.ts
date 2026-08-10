@@ -4,6 +4,7 @@ import {
   ApiError,
   kioskApi,
   type AmbilSesi,
+  type BayarDendaResult,
   type BuatPembayaranResult,
   type SesiTransaksi,
   type StrukResult,
@@ -28,6 +29,8 @@ export type SewaContext = {
   ambilNomorHp: string;
   ambilSesi: AmbilSesi | null;
   kodeOtp: string;
+  // --- Denda keterlambatan (fitur overdue/suspend, di luar PRD awal) ---
+  pembayaranDenda: BayarDendaResult | null;
 };
 
 const initialContext: SewaContext = {
@@ -43,6 +46,7 @@ const initialContext: SewaContext = {
   ambilNomorHp: '',
   ambilSesi: null,
   kodeOtp: '',
+  pembayaranDenda: null,
 };
 
 function errorMessageOf(err: unknown): string {
@@ -120,6 +124,19 @@ export const sewaMachine = setup({
     bukaPintuAmbil: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
       const res = await kioskApi.bukaPintuAmbil(input.sesiId);
       return res.data;
+    }),
+    bayarDenda: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
+      const res = await kioskApi.bayarDenda(input.sesiId);
+      return res.data;
+    }),
+    pollStatusDenda: fromPromise(async ({ input, signal }: { input: { sesiId: string }; signal: AbortSignal }) => {
+      for (let elapsed = 0; elapsed < QR_EXPIRY_SECONDS * 1000; elapsed += POLL_INTERVAL_MS) {
+        if (signal.aborted) throw new Error('aborted');
+        const res = await kioskApi.cekStatusDenda(input.sesiId);
+        if (res.data.statusBayar !== 'PENDING') return res.data.statusBayar;
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+      }
+      return 'EXPIRED' as const;
     }),
   },
 }).createMachine({
@@ -286,11 +303,80 @@ export const sewaMachine = setup({
       invoke: {
         src: 'mulaiAmbil',
         input: ({ context }) => ({ nomorHp: context.ambilNomorHp }),
-        onDone: { target: 'ambilKirimOtp', actions: assign({ ambilSesi: ({ event }) => event.output }) },
+        onDone: [
+          // Terlambat >= 24 jam: loker disuspend, TIDAK ditawari jalur bayar
+          // sendiri sama sekali — cuma Super Admin yang bisa buka (§ konfirmasi
+          // bisnis, lihat overdue.util.ts di backend).
+          {
+            guard: ({ event }) => event.output.suspended,
+            target: 'ambilSuspended',
+            actions: assign({ ambilSesi: ({ event }) => event.output }),
+          },
+          // Terlambat tapi belum 24 jam: wajib bayar denda kekurangan dulu.
+          {
+            guard: ({ event }) => event.output.overdue,
+            target: 'ambilBayarDenda',
+            actions: assign({ ambilSesi: ({ event }) => event.output }),
+          },
+          { target: 'ambilKirimOtp', actions: assign({ ambilSesi: ({ event }) => event.output }) },
+        ],
         onError: {
           target: 'ambilNomorHp',
           actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
         },
+      },
+    },
+
+    // Loker disuspend (terlambat >= 24 jam) — dead end di kiosk, cuma
+    // hubungi admin yang bisa lanjut (Super Admin buka lewat Dashboard
+    // Company, lihat unit.service.ts::bukaLokerSuspended()).
+    ambilSuspended: {
+      on: { KEMBALI: 'idle', SELESAI: 'idle' },
+    },
+
+    ambilBayarDenda: {
+      initial: 'membuatChargeDenda',
+      states: {
+        membuatChargeDenda: {
+          invoke: {
+            src: 'bayarDenda',
+            input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
+            onDone: {
+              target: 'menungguPembayaranDenda',
+              actions: assign({ pembayaranDenda: ({ event }) => event.output, secondsLeft: QR_EXPIRY_SECONDS }),
+            },
+            onError: [
+              {
+                guard: ({ event }) => event.error instanceof ApiError && event.error.code === 'LOKER_DISUSPEND',
+                target: '#sewa.ambilSuspended',
+                actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
+              },
+              {
+                target: '#sewa.ambilNomorHp',
+                actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
+              },
+            ],
+          },
+        },
+        menungguPembayaranDenda: {
+          invoke: {
+            src: 'pollStatusDenda',
+            input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
+            onDone: [
+              { guard: ({ event }) => event.output === 'PAID', target: '#sewa.ambilKirimOtp' },
+              { target: '#sewa.ambilBayarDendaGagal' },
+            ],
+            onError: { target: '#sewa.ambilBayarDendaGagal' },
+          },
+        },
+      },
+      on: { BATAL: 'idle' },
+    },
+
+    ambilBayarDendaGagal: {
+      on: {
+        ULANGI: 'ambilBayarDenda',
+        BATAL: 'idle',
       },
     },
 

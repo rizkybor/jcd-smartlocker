@@ -4,19 +4,15 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { randomBytes } from 'node:crypto';
 import type { Unit } from '@prisma/client';
 import { LokerStatus, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
 import { formatUtcInLokasiTimezone } from '../common/timezone.util';
+import { generateIdTransaksi } from '../common/id-transaksi.util';
 import { MqttClientService } from '../gateway/mqtt-client.service';
 import type { MulaiSewaDto } from './dto/mulai-sewa.dto';
-
-function generateIdTransaksi(): string {
-  return `SB-${Date.now().toString(36).toUpperCase()}-${randomBytes(3).toString('hex').toUpperCase()}`;
-}
 
 /**
  * Alur sewa loker (docs/PRD-Smartbox.md §5.1; docs/API-Contract-Smartbox.md

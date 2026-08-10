@@ -302,9 +302,36 @@ model SesiTransaksi {
 
   loker           Loker           @relation(fields: [lokerId], references: [id])
   unitDurasiHarga UnitDurasiHarga @relation(fields: [unitDurasiHargaId], references: [id])
+  sesiDenda       SesiDenda[]
 
   @@unique([paymentProvider, paymentProviderRefId])
   @@map("sesi_transaksi")
+}
+
+/// Denda keterlambatan ambil barang (fitur overdue/suspend, di luar PRD
+/// awal) — charge TERPISAH dari SesiTransaksi.nominal (charge sewa asli),
+/// supaya paymentProviderRefId/idempotency sewa tidak tertimpa. Satu
+/// SesiTransaksi bisa punya BEBERAPA baris SesiDenda kalau QR sebelumnya
+/// kedaluwarsa & pengguna generate ulang (setiap percobaan = baris baru,
+/// jamTerlambat dihitung ulang di waktu percobaan itu, sama seperti pola
+/// retry alur sewa). Yang dianggap "lunas" adalah kalau ADA baris dengan
+/// statusBayar = PAID untuk sesiTransaksiId ini.
+model SesiDenda {
+  id                    String              @id @default(uuid()) @db.Uuid
+  sesiTransaksiId       String              @map("sesi_transaksi_id") @db.Uuid
+  /// Jam overdue dibulatkan ke atas, dihitung saat charge ini dibuat.
+  jamTerlambat          Int                 @map("jam_terlambat")
+  nominal               Decimal             @db.Decimal(12, 2)
+  statusBayar           StatusBayar         @default(PENDING) @map("status_bayar")
+  paymentProvider       PaymentProviderType @map("payment_provider")
+  paymentProviderRefId  String?             @map("payment_provider_ref_id")
+  idTransaksi           String              @unique @map("id_transaksi")
+  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
+
+  sesiTransaksi SesiTransaksi @relation(fields: [sesiTransaksiId], references: [id])
+
+  @@unique([paymentProvider, paymentProviderRefId])
+  @@map("sesi_denda")
 }
 
 /// Tidak menyimpan password — autentikasi didelegasikan penuh ke Supabase

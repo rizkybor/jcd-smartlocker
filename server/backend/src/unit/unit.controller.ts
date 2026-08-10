@@ -73,4 +73,15 @@ export class UnitController {
   ) {
     return this.unitService.bukaPaksa(id, dto, actor);
   }
+
+  /** Fitur overdue/denda/suspend (di luar cakupan PRD awal) — SENGAJA cuma SUPER_ADMIN, lihat catatan di unit.service.ts::bukaLokerSuspended(). */
+  @Post(':id/buka-suspend')
+  @Roles(AkunInternalRole.SUPER_ADMIN)
+  bukaLokerSuspended(
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(bukaPaksaSchema)) dto: BukaPaksaDto,
+    @CurrentUser() actor: AuthenticatedInternalUser,
+  ) {
+    return this.unitService.bukaLokerSuspended(id, dto, actor);
+  }
 }
