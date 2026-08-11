@@ -249,6 +249,7 @@
     "jenisUmum": "Umum (diskon tarif)",
     "mitra": "Mitra",
     "pilihMitra": "Pilih mitra...",
+    "pilihMitraDulu": "Pilih mitra dulu untuk melihat & mengelola member miliknya.",
     "kode": "Kode RFID/Unik",
     "kodeHint": "Dibaca listener kiosk saat kartu di-tap — masukkan sesuai kode fisik kartu.",
     "nama": "Nama",

@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { LogKategori } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
@@ -26,8 +26,21 @@ export class MemberService {
 
   // --- Super Admin ---
 
+  /**
+   * `mitraId` WAJIB — Super Admin bisa kelola member lintas semua mitra,
+   * tapi harus MENENTUKAN DULU mitra mana yang mau dikelola (§ konfirmasi
+   * bisnis) — bukan daftar tercampur semua mitra sekaligus. Ditegakkan di
+   * sini (bukan cuma di UI dashboard-company) supaya panggilan API
+   * langsung tanpa `mitraId` tetap ditolak jelas, bukan diam-diam
+   * mengembalikan semua mitra.
+   */
   async listForSuperAdmin(page: number, pageSize: number, mitraId?: string) {
-    const where = mitraId ? { mitraId } : {};
+    if (!mitraId) {
+      throw new BadRequestException({
+        error: { code: 'MITRA_ID_WAJIB', message: 'Pilih mitra dulu untuk melihat daftar member.' },
+      });
+    }
+    const where = { mitraId };
     const [data, totalItems] = await Promise.all([
       this.prisma.db.member.findMany({
         where,

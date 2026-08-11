@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AkunInternalRole } from '@prisma/client';
 import { MemberService } from './member.service';
 import type { PrismaService } from '../prisma/prisma.service';
@@ -59,6 +59,27 @@ describe('MemberService', () => {
 
     return { service: new MemberService(prisma, activityLog), prisma, activityLog, memberCreate, memberUpdate };
   }
+
+  describe('listForSuperAdmin — Super Admin wajib pilih mitra dulu', () => {
+    it('lempar BadRequestException MITRA_ID_WAJIB kalau mitraId tidak dikirim', async () => {
+      const { service } = buildService();
+
+      await expect(service.listForSuperAdmin(1, 25)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.listForSuperAdmin(1, 25, undefined)).rejects.toMatchObject({
+        response: { error: { code: 'MITRA_ID_WAJIB' } },
+      });
+    });
+
+    it('scoped ke mitraId yang dikirim kalau ada', async () => {
+      const { service, prisma } = buildService();
+
+      await service.listForSuperAdmin(1, 25, 'mitra-1');
+
+      expect(prisma.db.member.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { mitraId: 'mitra-1' } }),
+      );
+    });
+  });
 
   describe('createForSuperAdmin', () => {
     it('lempar NotFoundException kalau lokerId yang mau diikat tidak ada', async () => {

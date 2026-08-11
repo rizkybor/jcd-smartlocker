@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button, Field } from '@smartbox/ui';
-import { companyApi, ApiError, type Mitra, type Unit, type Loker } from '../../api/client';
+import { companyApi, ApiError, type Unit, type Loker } from '../../api/client';
 
 const DIALOG_STYLE = {
   content: {
@@ -29,24 +29,29 @@ type Jenis = 'EKSKLUSIF' | 'UMUM';
  * Fitur member RFID/kode unik (di luar cakupan PRD awal) — cuma Super
  * Admin bisa bikin member EKSKLUSIF (ikat 1 loker spesifik, gratis),
  * karena itu menyangkut kapasitas publik loker milik mitra (§ konfirmasi
- * bisnis). Loker dipilih 2 tahap: Unit dulu (difilter ke mitra terpilih),
- * baru daftar loker milik unit itu — `companyApi.units.list()` sudah
+ * bisnis). Loker dipilih 2 tahap: Unit dulu (difilter ke `mitraId`), baru
+ * daftar loker milik unit itu — `companyApi.units.list()` sudah
  * menyertakan `lokers` langsung, tidak perlu panggilan detail terpisah.
+ *
+ * `mitraId` WAJIB dikirim caller (dari `MembersPage`, dropdown "Mitra"
+ * di luar dialog ini) — SENGAJA bukan field pilihan di dalam dialog,
+ * supaya Super Admin memastikan konteks mitra dulu SEBELUM mengisi form
+ * member, bukan salah satu field yang gampang kelewat di tengah form.
  */
 export function CreateMemberDialog({
   open,
   onOpenChange,
+  mitraId,
   onCreated,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  mitraId: string;
   onCreated: () => void;
 }) {
   const { t } = useTranslation();
-  const [mitraList, setMitraList] = useState<Mitra[]>([]);
   const [unitList, setUnitList] = useState<Unit[]>([]);
 
-  const [mitraId, setMitraId] = useState('');
   const [jenis, setJenis] = useState<Jenis>('UMUM');
   const [kode, setKode] = useState('');
   const [nama, setNama] = useState('');
@@ -59,12 +64,10 @@ export function CreateMemberDialog({
 
   useEffect(() => {
     if (!open) return;
-    companyApi.mitra.list(1, 100).then((res) => setMitraList(res.data));
     companyApi.units.list(1, 100).then((res) => setUnitList(res.data));
   }, [open]);
 
   function reset() {
-    setMitraId('');
     setJenis('UMUM');
     setKode('');
     setNama('');
@@ -79,7 +82,6 @@ export function CreateMemberDialog({
   const lokerOptionsUntukUnit: Loker[] = unitOptionsUntukMitra.find((u) => u.id === unitId)?.lokers ?? [];
 
   const valid =
-    mitraId.length > 0 &&
     kode.trim().length > 0 &&
     nama.trim().length > 0 &&
     (jenis === 'EKSKLUSIF' ? lokerId.length > 0 : Number(diskonPersen) >= 0 && Number(diskonPersen) <= 100);
@@ -114,17 +116,6 @@ export function CreateMemberDialog({
           </Dialog.Title>
 
           <div style={{ marginTop: 'var(--sl-space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
-            <Field
-              label={t('membersPage.mitra')}
-              required
-              options={[{ value: '', label: t('membersPage.pilihMitra') }, ...mitraList.map((m) => ({ value: m.id, label: m.nama }))]}
-              value={mitraId}
-              onChange={(e) => {
-                setMitraId(e.target.value);
-                setUnitId('');
-                setLokerId('');
-              }}
-            />
             <Field label={t('membersPage.kode')} required value={kode} onChange={(e) => setKode(e.target.value)} hint={t('membersPage.kodeHint')} />
             <Field label={t('membersPage.nama')} required value={nama} onChange={(e) => setNama(e.target.value)} />
             <Field label={t('membersPage.kontak')} value={kontak} onChange={(e) => setKontak(e.target.value)} />
@@ -154,7 +145,6 @@ export function CreateMemberDialog({
                 <Field
                   label={t('membersPage.unit')}
                   required
-                  disabled={!mitraId}
                   options={[
                     { value: '', label: t('membersPage.pilihUnit') },
                     ...unitOptionsUntukMitra.map((u) => ({ value: u.id, label: u.kodeUnit })),
