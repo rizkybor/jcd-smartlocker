@@ -15,14 +15,18 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: 'http://localhost:5273',
     viewport: { width: 600, height: 1024 },
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npx vite dev --mode e2e --port 5173',
-    port: 5173,
+    // Port KHUSUS E2E (bukan 5173, port dev normal) — supaya tidak pernah
+    // ikut "reuse" server dev manual yang mungkin sudah jalan di 5173 tanpa
+    // .env.e2e (ditemukan langsung: mock page.route() tidak pernah kena
+    // kalau webServer nyasar reuse server lain yang base URL-nya beda).
+    command: 'npx vite dev --mode e2e --port 5273',
+    port: 5273,
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
