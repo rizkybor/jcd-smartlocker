@@ -14,10 +14,11 @@
  */
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient, AkunInternalRole, TipeSkema, ModePemakaian } from '@prisma/client';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import { randomBytes } from 'node:crypto';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { getOrCreateSupabaseUser } from '../src/supabase/supabase-user.util';
 
 function generateUnitKey(): string {
   return `uk_${randomBytes(24).toString('hex')}`;
@@ -40,36 +41,6 @@ function upsertEnvVar(key: string, value: string) {
 
 function nomorLokerFromIndex(index: number): string {
   return String(index + 1).padStart(3, '0');
-}
-
-/**
- * `prisma migrate reset` cuma mengosongkan tabel yang dikelola Prisma
- * (public schema) — `auth.users` Supabase Auth TIDAK ikut ter-reset (beda
- * schema, bukan tanggung jawab Prisma migrate). Jadi re-run seed setelah
- * reset sering ketemu email yang secara Auth masih terdaftar padahal baris
- * `akun_internal`/`akun_mitra`-nya sudah hilang — cari user Auth yang ada
- * lalu SINKRONKAN password-nya ke nilai `.env` saat ini (supaya kredensial
- * di .env selalu valid buat login), bukan gagal total.
- */
-async function getOrCreateSupabaseUser(supabase: SupabaseClient, email: string, password: string) {
-  const created = await supabase.auth.admin.createUser({ email, password, email_confirm: true });
-  if (!created.error && created.data.user) return created.data.user;
-
-  const sudahTerdaftar = created.error?.message?.toLowerCase().includes('already been registered');
-  if (!sudahTerdaftar) {
-    throw new Error(`Gagal membuat akun Supabase Auth untuk ${email}: ${created.error?.message ?? 'unknown error'}`);
-  }
-
-  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-  if (error) throw new Error(`Gagal mencari akun Supabase Auth existing untuk ${email}: ${error.message}`);
-  const existing = data.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
-  if (!existing) throw new Error(`Supabase bilang ${email} sudah terdaftar, tapi tidak ketemu di listUsers().`);
-
-  const updated = await supabase.auth.admin.updateUserById(existing.id, { password });
-  if (updated.error || !updated.data.user) {
-    throw new Error(`Gagal sinkronkan password akun Supabase Auth existing ${email}: ${updated.error?.message ?? 'unknown error'}`);
-  }
-  return updated.data.user;
 }
 
 async function main() {
@@ -118,8 +89,24 @@ async function main() {
     // --- 2. Lokasi + Mitra + skema revenue sharing 20% ---
     let lokasi = await prisma.lokasi.findFirst({ where: { nama: 'Mall Demo Jakarta' } });
     if (!lokasi) {
+      // Kode wilayah dari emsifa/api-wilayah-indonesia (di luar cakupan PRD
+      // awal) — DKI Jakarta > Jakarta Selatan > Kebayoran Baru > Selong,
+      // dipilih statis di sini (bukan fetch API) karena seed harus jalan
+      // tanpa akses jaringan eksternal.
       lokasi = await prisma.lokasi.create({
-        data: { nama: 'Mall Demo Jakarta', alamat: 'Jl. Contoh Raya No. 1, Jakarta Selatan', timezone: 'Asia/Jakarta' },
+        data: {
+          nama: 'Mall Demo Jakarta',
+          alamat: 'Jl. Contoh Raya No. 1, Jakarta Selatan',
+          timezone: 'Asia/Jakarta',
+          provinsiKode: '31',
+          provinsiNama: 'DKI Jakarta',
+          kabupatenKode: '31.71',
+          kabupatenNama: 'Kota Jakarta Selatan',
+          kecamatanKode: '31.71.03',
+          kecamatanNama: 'Kebayoran Baru',
+          kelurahanKode: '31.71.03.1001',
+          kelurahanNama: 'Selong',
+        },
       });
       console.log(`Lokasi dibuat: ${lokasi.nama}`);
     }
@@ -162,6 +149,7 @@ async function main() {
       const unitKey = generateUnitKey();
       unit = await prisma.unit.create({
         data: {
+          mitraId: mitra.id,
           lokasiId: lokasi.id,
           kodeUnit: 'KIOSK-DEMO-01',
           unitKey,

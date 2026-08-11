@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { ModePemakaian } from '@prisma/client';
+import { lokasiPilihanSchema } from '../../lokasi/dto/wilayah.dto';
 
 /**
  * Prasyarat untuk Kiosk API (Epic 3) — belum jadi ticket Epic tersendiri
@@ -29,12 +30,20 @@ const kategoriInputSchema = z.object({
     .min(1, 'Minimal satu pilihan durasi & harga per kategori.'),
 });
 
-export const createUnitSchema = z.object({
-  lokasiId: z.string().uuid('lokasiId harus UUID lokasi yang valid.'),
-  kodeUnit: z.string().min(1, 'kodeUnit tidak boleh kosong.'),
-  varianKompartemen: z.string().optional(),
-  modePemakaian: z.nativeEnum(ModePemakaian).default(ModePemakaian.BERBAYAR),
-  kategori: z.array(kategoriInputSchema).min(1, 'Minimal satu kategori ukuran loker.'),
-});
+/**
+ * `mitraId` (owner, di luar cakupan PRD awal, § konfirmasi bisnis) —
+ * sumber kebenaran LANGSUNG kepemilikan Unit, terpisah dari `lokasi`
+ * (tempat unit ditaruh secara fisik, boleh reuse existing atau bikin baru
+ * inline lewat wilayah picker — lihat `lokasi/dto/wilayah.dto.ts`).
+ */
+export const createUnitSchema = z
+  .object({
+    mitraId: z.string().uuid('mitraId (owner) harus UUID mitra yang valid.'),
+    kodeUnit: z.string().min(1, 'kodeUnit tidak boleh kosong.'),
+    varianKompartemen: z.string().optional(),
+    modePemakaian: z.nativeEnum(ModePemakaian).default(ModePemakaian.BERBAYAR),
+    kategori: z.array(kategoriInputSchema).min(1, 'Minimal satu kategori ukuran loker.'),
+  })
+  .and(lokasiPilihanSchema);
 
 export type CreateUnitDto = z.infer<typeof createUnitSchema>;

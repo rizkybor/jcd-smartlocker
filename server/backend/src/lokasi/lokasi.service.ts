@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateLokasiDto } from './dto/create-lokasi.dto';
+import type { UpdateLokasiDto } from './dto/update-lokasi.dto';
+import type { LokasiPilihanDto } from './dto/wilayah.dto';
 
 @Injectable()
 export class LokasiService {
@@ -35,8 +37,43 @@ export class LokasiService {
         nama: dto.nama,
         alamat: dto.alamat,
         timezone: dto.timezone,
+        ...dto.wilayah,
       },
     });
+  }
+
+  async update(id: string, dto: UpdateLokasiDto) {
+    const existing = await this.prisma.db.lokasi.findUnique({ where: { id } });
+    if (!existing) throw this.lokasiTidakDitemukan();
+
+    if (dto.timezone) this.assertValidTimezone(dto.timezone);
+
+    return this.prisma.db.lokasi.update({
+      where: { id },
+      data: {
+        nama: dto.nama,
+        alamat: dto.alamat,
+        timezone: dto.timezone,
+        ...dto.wilayah,
+      },
+    });
+  }
+
+  /**
+   * Dipakai `MitraService`/`UnitService` — mitra & unit sama-sama boleh
+   * REUSE Lokasi existing atau bikin baru inline lewat wilayah picker
+   * (§ konfirmasi bisnis, di luar cakupan PRD awal). Satu sumber logic
+   * supaya perilakunya konsisten di kedua alur.
+   */
+  async resolveOrCreateLokasi(pilihan: LokasiPilihanDto) {
+    if (pilihan.lokasiId) {
+      const lokasi = await this.prisma.db.lokasi.findUnique({ where: { id: pilihan.lokasiId } });
+      if (!lokasi) throw this.lokasiTidakDitemukan();
+      return lokasi;
+    }
+
+    // `lokasiPilihanSchema` sudah memastikan salah satu dari keduanya wajib ada.
+    return this.create(pilihan.lokasiBaru!);
   }
 
   /**
@@ -53,5 +90,11 @@ export class LokasiService {
         },
       });
     }
+  }
+
+  private lokasiTidakDitemukan() {
+    return new NotFoundException({
+      error: { code: 'LOKASI_TIDAK_DITEMUKAN', message: 'Lokasi tidak ditemukan.' },
+    });
   }
 }

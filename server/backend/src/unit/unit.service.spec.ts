@@ -5,6 +5,7 @@ import type { PrismaService } from '../prisma/prisma.service';
 import type { ActivityLogService } from '../activity-log/activity-log.service';
 import type { MqttClientService } from '../gateway/mqtt-client.service';
 import type { AuthenticatedInternalUser } from '../auth/types';
+import type { LokasiService } from '../lokasi/lokasi.service';
 
 /**
  * Fitur overdue/denda/suspend (di luar cakupan PRD awal — permintaan bisnis
@@ -46,7 +47,13 @@ describe('UnitService.bukaLokerSuspended', () => {
     const activityLog = { log: logActivity } as unknown as ActivityLogService;
     const mqttClient = { publishPerintahBukaPintu: jest.fn() } as unknown as MqttClientService;
 
-    return { service: new UnitService(prisma, activityLog, mqttClient), updateLoker, logActivity, mqttClient, sesiFindFirst };
+    return {
+      service: new UnitService(prisma, activityLog, mqttClient, {} as LokasiService),
+      updateLoker,
+      logActivity,
+      mqttClient,
+      sesiFindFirst,
+    };
   }
 
   /** -30 menit dari batas jam genap, supaya tidak flaky di sekitar boundary Math.ceil() saat test dijalankan. */
@@ -151,7 +158,7 @@ describe('UnitService.findOneOrThrow — sisipkan overdueStatus per loker', () =
       },
     } as unknown as PrismaService;
 
-    return { service: new UnitService(prisma, {} as ActivityLogService, {} as MqttClientService) };
+    return { service: new UnitService(prisma, {} as ActivityLogService, {} as MqttClientService, {} as LokasiService) };
   }
 
   it('loker TERSEDIA -> overdueStatus null (tidak ada sesi aktif untuk dicek)', async () => {
@@ -189,5 +196,96 @@ describe('UnitService.findOneOrThrow — sisipkan overdueStatus per loker', () =
     const { service } = buildService({ unit: null });
 
     await expect(service.findOneOrThrow('unit-x')).rejects.toBeInstanceOf(NotFoundException);
+  });
+});
+
+/**
+ * `mitraId` (owner, di luar cakupan PRD awal) — dulu Unit cuma diikat ke
+ * Lokasi, ownership diturunkan tidak langsung lewat MitraLokasi (ambigu
+ * kalau 1 Lokasi dipakai >1 mitra). Sekarang `mitraId` WAJIB & langsung,
+ * dan `create()` otomatis pastikan baris MitraLokasi(mitraId, lokasiId)
+ * ada supaya revenue-sharing & isolasi Dashboard Mitra tetap jalan.
+ */
+describe('UnitService.create — owner (mitraId) & resolve Lokasi', () => {
+  const dtoDasar = {
+    mitraId: 'mitra-1',
+    lokasiId: 'lokasi-1',
+    kodeUnit: 'UNIT-01',
+    modePemakaian: 'BERBAYAR' as never,
+    kategori: [{ nama: 'Standar', jumlahLoker: 2, durasiHarga: [{ durasiJam: 1, harga: 5000 }] }],
+  };
+
+  function buildCreateService(opts: { mitra?: unknown; mitraLokasiAda?: unknown } = {}) {
+    const mitraFindUnique = jest.fn().mockResolvedValue(opts.mitra !== undefined ? opts.mitra : { id: 'mitra-1' });
+    const mitraLokasiFindFirst = jest.fn().mockResolvedValue(opts.mitraLokasiAda !== undefined ? opts.mitraLokasiAda : null);
+    const mitraLokasiCreate = jest.fn().mockResolvedValue({});
+    const unitCreate = jest.fn().mockImplementation(({ data }) => Promise.resolve({ id: 'unit-1', ...data }));
+    const tx = {
+      unit: { create: unitCreate },
+      lokerKategori: { create: jest.fn().mockResolvedValue({ id: 'kategori-1' }), findMany: jest.fn().mockResolvedValue([]) },
+      loker: { createMany: jest.fn().mockResolvedValue({}), findMany: jest.fn().mockResolvedValue([]) },
+      unitDurasiHarga: { createMany: jest.fn().mockResolvedValue({}), findMany: jest.fn().mockResolvedValue([]) },
+    };
+    const prisma = {
+      db: {
+        mitra: { findUnique: mitraFindUnique },
+        mitraLokasi: { findFirst: mitraLokasiFindFirst, create: mitraLokasiCreate },
+        $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
+      },
+    } as unknown as PrismaService;
+    const lokasiService = {
+      resolveOrCreateLokasi: jest.fn().mockResolvedValue({ id: 'lokasi-1' }),
+    } as unknown as LokasiService;
+
+    return {
+      service: new UnitService(prisma, {} as ActivityLogService, {} as MqttClientService, lokasiService),
+      mitraFindUnique,
+      mitraLokasiFindFirst,
+      mitraLokasiCreate,
+      unitCreate,
+      lokasiService,
+    };
+  }
+
+  it('lempar NotFoundException kalau mitraId (owner) tidak ditemukan', async () => {
+    const { service } = buildCreateService({ mitra: null });
+
+    await expect(service.create(dtoDasar)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('resolve/buat Lokasi lewat LokasiService', async () => {
+    const { service, lokasiService } = buildCreateService();
+
+    await service.create(dtoDasar);
+
+    expect(lokasiService.resolveOrCreateLokasi).toHaveBeenCalledWith(dtoDasar);
+  });
+
+  it('buat MitraLokasi(mitraId, lokasiId) kalau belum ada', async () => {
+    const { service, mitraLokasiCreate } = buildCreateService({ mitraLokasiAda: null });
+
+    await service.create(dtoDasar);
+
+    expect(mitraLokasiCreate).toHaveBeenCalledWith({
+      data: { mitraId: 'mitra-1', lokasiId: 'lokasi-1', tipeSkema: 'FIXED_RENTAL' },
+    });
+  });
+
+  it('TIDAK buat MitraLokasi baru kalau sudah ada', async () => {
+    const { service, mitraLokasiCreate } = buildCreateService({ mitraLokasiAda: { id: 'ml-1' } });
+
+    await service.create(dtoDasar);
+
+    expect(mitraLokasiCreate).not.toHaveBeenCalled();
+  });
+
+  it('buat Unit dengan mitraId & lokasiId yang benar', async () => {
+    const { service, unitCreate } = buildCreateService();
+
+    await service.create(dtoDasar);
+
+    expect(unitCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ mitraId: 'mitra-1', lokasiId: 'lokasi-1' }) }),
+    );
   });
 });

@@ -56,7 +56,46 @@ export type OverviewRingkasan = {
   unitOffline: number;
 };
 
-export type Lokasi = { id: string; nama: string; alamat: string; timezone: string };
+/** Monitoring lanjutan Overview (di luar cakupan PRD awal — permintaan bisnis langsung). */
+export type OverviewTrenPoin = { tanggal: string; jumlahTransaksi: number; pendapatan: number };
+
+export type OverviewMitraRow = {
+  mitraId: string;
+  mitraNama: string;
+  jumlahUnit: number;
+  okupansiPersen: number;
+  pendapatanBulanIni: number;
+};
+
+export type OverviewLokerRow = {
+  id: string;
+  nomorLoker: string;
+  kodeUnit: string;
+  lokasiNama: string;
+  status: LokerStatus;
+  lastActivityAt: string | null;
+  overdueStatus: OverdueStatus | null;
+};
+
+/** Wilayah administratif (Provinsi/Kab-Kota/Kecamatan/Kelurahan) — di luar cakupan PRD awal, lihat lib/wilayah.ts. */
+export type Wilayah = {
+  provinsiKode: string;
+  provinsiNama: string;
+  kabupatenKode: string;
+  kabupatenNama: string;
+  kecamatanKode: string;
+  kecamatanNama: string;
+  kelurahanKode: string;
+  kelurahanNama: string;
+};
+
+export type Lokasi = { id: string; nama: string; alamat: string; timezone: string } & Wilayah;
+
+/** Buat Lokasi baru inline (dipakai Mitra & Unit creation) — lihat `LokasiPilihan`. */
+export type LokasiBaruInput = { nama: string; alamat: string; timezone: string; wilayah: Wilayah };
+
+/** Reuse Lokasi existing (`lokasiId`) ATAU buat baru inline (`lokasiBaru`) — persis satu, tidak boleh dua-duanya. */
+export type LokasiPilihan = { lokasiId: string; lokasiBaru?: never } | { lokasiId?: never; lokasiBaru: LokasiBaruInput };
 
 export type Mitra = { id: string; nama: string; kontak: string | null };
 
@@ -97,6 +136,9 @@ export type LokerKategori = {
 
 export type Unit = {
   id: string;
+  /** Owner — sumber kebenaran LANGSUNG (di luar cakupan PRD awal, dulu diturunkan tidak langsung lewat lokasi.mitraLokasi). */
+  mitraId: string;
+  mitra: Mitra;
   lokasiId: string;
   kodeUnit: string;
   varianKompartemen: string | null;
@@ -135,12 +177,13 @@ export type KategoriInput = {
 };
 
 export type CreateUnitInput = {
-  lokasiId: string;
+  /** Owner (di luar cakupan PRD awal) — terpisah dari `lokasi` (tempat unit ditaruh secara fisik). */
+  mitraId: string;
   kodeUnit: string;
   varianKompartemen?: string;
   modePemakaian: 'BERBAYAR' | 'GRATIS';
   kategori: (KategoriInput & { jumlahLoker: number })[];
-};
+} & LokasiPilihan;
 
 export type UpdateUnitInput = {
   varianKompartemen?: string;
@@ -185,7 +228,15 @@ export type SkemaHistoriRow = {
   berlakuSampai: string | null;
 };
 
-export type CreateMitraInput = { nama: string; kontak?: string; lokasiId: string; tipeSkema: TipeSkema };
+/** Buat login Dashboard Mitra sekaligus (di luar cakupan PRD awal) — password Super Admin isi langsung, bukan invite-link. */
+export type AkunMitraBaruInput = { nama: string; email: string; password: string };
+
+export type CreateMitraInput = {
+  nama: string;
+  kontak?: string;
+  tipeSkema: TipeSkema;
+  akunMitra: AkunMitraBaruInput;
+} & LokasiPilihan;
 
 export type LaporanFilter = { tanggalMulai?: string; tanggalSelesai?: string; lokasiId?: string; mitraId?: string };
 
@@ -304,6 +355,12 @@ function laporanQuery(filter: LaporanFilter, page?: number, pageSize?: number): 
 export const companyApi = {
   me: () => request<{ data: Me }>('/company/me'),
   overview: () => request<{ data: OverviewRingkasan }>('/company/overview'),
+  overviewTren: () => request<{ data: OverviewTrenPoin[] }>('/company/overview/tren'),
+  overviewMitra: () => request<{ data: OverviewMitraRow[] }>('/company/overview/mitra'),
+  overviewLokers: (page: number, pageSize = 25, status?: LokerStatus, search?: string) =>
+    request<Paginated<OverviewLokerRow>>(
+      `/company/overview/lokers?page=${page}&pageSize=${pageSize}${status ? `&status=${status}` : ''}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
+    ),
 
   lokasiList: () => request<Paginated<Lokasi>>('/company/lokasi?pageSize=100'),
 

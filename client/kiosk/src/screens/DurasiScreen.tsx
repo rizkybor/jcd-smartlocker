@@ -9,18 +9,21 @@ export function DurasiScreen({
   onPilih,
   onKembali,
   errorMessage,
+  loading = false,
 }: {
   pilihan: UnitDurasiHarga[];
   onPilih: (durasi: UnitDurasiHarga) => void;
   onKembali: () => void;
   errorMessage: string | null;
+  /** Sesi sedang dibuat di backend (state `memulaiSewa`) — kunci tombol supaya tidak dobel-klik saat menunggu respons API. */
+  loading?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <KioskShell step={3} title={t('durasi.title')}>
       <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)', flexWrap: 'wrap', justifyContent: 'center' }}>
         {pilihan.map((d) => (
-          <KioskButton key={d.id} tone="secondary" size="xl" onClick={() => onPilih(d)}>
+          <KioskButton key={d.id} tone="secondary" size="xl" disabled={loading} onClick={() => onPilih(d)}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <span>{t('durasi.jam', { jumlah: d.durasiJam })}</span>
               <span style={{ fontSize: 'var(--sl-kiosk-fs-body)', fontWeight: 'var(--sl-fw-regular)' }}>{formatRupiah(d.harga)}</span>
@@ -28,6 +31,19 @@ export function DurasiScreen({
           </KioskButton>
         ))}
       </div>
+      {loading ? (
+        <div
+          style={{
+            marginTop: 'var(--sl-space-4)',
+            textAlign: 'center',
+            color: 'var(--sl-text-muted)',
+            fontFamily: 'var(--sl-font-body)',
+            fontSize: 'var(--sl-kiosk-fs-caption)',
+          }}
+        >
+          {t('durasi.memproses')}
+        </div>
+      ) : null}
       {errorMessage ? (
         <div
           style={{

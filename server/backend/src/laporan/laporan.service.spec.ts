@@ -12,20 +12,20 @@ import type { SupabaseService } from '../supabase/supabase.service';
 describe('LaporanService.bagiHasil', () => {
   function buildService(mitraLokasiList: unknown[], sesiPerCall: unknown[][]) {
     let call = 0;
+    const sesiFindMany = jest.fn().mockImplementation(() => Promise.resolve(sesiPerCall[call++] ?? []));
     const prisma = {
       db: {
         mitraLokasi: { findMany: jest.fn().mockResolvedValue(mitraLokasiList) },
-        sesiTransaksi: {
-          findMany: jest.fn().mockImplementation(() => Promise.resolve(sesiPerCall[call++] ?? [])),
-        },
+        sesiTransaksi: { findMany: sesiFindMany },
       },
     } as unknown as PrismaService;
     const supabase = {} as SupabaseService;
-    return new LaporanService(prisma, supabase);
+    return { service: new LaporanService(prisma, supabase), sesiFindMany };
   }
 
   function mitraLokasi(overrides: Record<string, unknown> = {}) {
     return {
+      id: 'ml-1',
       mitraId: 'mitra-1',
       lokasiId: 'lokasi-1',
       persentaseAktif: 30,
@@ -50,7 +50,7 @@ describe('LaporanService.bagiHasil', () => {
         { persentase: 30, berlakuDari: new Date('2026-06-01'), berlakuSampai: null },
       ],
     });
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -66,7 +66,7 @@ describe('LaporanService.bagiHasil', () => {
         { persentase: 30, berlakuDari: new Date('2026-06-01'), berlakuSampai: null },
       ],
     });
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-07-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-07-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -75,7 +75,7 @@ describe('LaporanService.bagiHasil', () => {
 
   it('fallback ke persentaseAktif kalau tidak ada histori yang cocok dengan waktu transaksi', async () => {
     const ml = mitraLokasi({ persentaseAktif: 25, skemaHistori: [] });
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -84,7 +84,7 @@ describe('LaporanService.bagiHasil', () => {
 
   it('fallback ke 0 kalau persentaseAktif juga null', async () => {
     const ml = mitraLokasi({ persentaseAktif: null, skemaHistori: [] });
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-03-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -99,7 +99,7 @@ describe('LaporanService.bagiHasil', () => {
         { persentase: 30, berlakuDari: new Date('2026-06-01'), berlakuSampai: null },
       ],
     });
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-06-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-06-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -114,7 +114,7 @@ describe('LaporanService.bagiHasil', () => {
       ],
     });
     // createdAt sama persis dengan berlakuSampai histori lama -> histori lama TIDAK cocok (pakai `>`, bukan `>=`)
-    const service = buildService([ml], [[{ id: 't1', nominal: 100_000, createdAt: new Date('2026-06-01') }]]);
+    const { service } = buildService([ml], [[{ id: 't1', lokerId: 'loker-1', nominal: 100_000, createdAt: new Date('2026-06-01') }]]);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -123,7 +123,7 @@ describe('LaporanService.bagiHasil', () => {
 
   it('mitraLokasi tanpa loker sama sekali dilewati (tidak muncul di hasil)', async () => {
     const ml = mitraLokasi({ lokasi: { nama: 'Lokasi Kosong', units: [] } });
-    const service = buildService([ml], []);
+    const { service } = buildService([ml], []);
 
     const { data } = await service.bagiHasil(filter);
 
@@ -132,13 +132,13 @@ describe('LaporanService.bagiHasil', () => {
 
   it('totalBagiHasilMitra dan totalBagiHasilSmartbox dibulatkan dari SUM, bukan per-transaksi (menghindari drift pembulatan)', async () => {
     const ml = mitraLokasi({ persentaseAktif: 33 }); // 33% dari 3 transaksi ganjil -> banyak desimal
-    const service = buildService(
+    const { service } = buildService(
       [ml],
       [
         [
-          { id: 't1', nominal: 10_001, createdAt: new Date('2026-03-01') },
-          { id: 't2', nominal: 10_003, createdAt: new Date('2026-03-02') },
-          { id: 't3', nominal: 10_007, createdAt: new Date('2026-03-03') },
+          { id: 't1', lokerId: 'loker-1', nominal: 10_001, createdAt: new Date('2026-03-01') },
+          { id: 't2', lokerId: 'loker-1', nominal: 10_003, createdAt: new Date('2026-03-02') },
+          { id: 't3', lokerId: 'loker-1', nominal: 10_007, createdAt: new Date('2026-03-03') },
         ],
       ],
     );
@@ -151,14 +151,34 @@ describe('LaporanService.bagiHasil', () => {
     expect(data[0].totalBagiHasilMitra + data[0].totalBagiHasilSmartbox).toBe(totalNominal);
   });
 
+  it('batched jadi SATU query sesiTransaksi.findMany walau ada banyak mitraLokasi (bukan N+1)', async () => {
+    const mlA = mitraLokasi({ id: 'ml-a', mitraId: 'mitra-a', lokasi: { nama: 'Lokasi A', units: [{ lokers: [{ id: 'loker-a' }] }] } });
+    const mlB = mitraLokasi({ id: 'ml-b', mitraId: 'mitra-b', lokasi: { nama: 'Lokasi B', units: [{ lokers: [{ id: 'loker-b' }] }] } });
+    const { service, sesiFindMany } = buildService(
+      [mlA, mlB],
+      [
+        [
+          { id: 't1', lokerId: 'loker-a', nominal: 100_000, createdAt: new Date('2026-03-01') },
+          { id: 't2', lokerId: 'loker-b', nominal: 200_000, createdAt: new Date('2026-03-01') },
+        ],
+      ],
+    );
+
+    const { data } = await service.bagiHasil(filter);
+
+    expect(sesiFindMany).toHaveBeenCalledTimes(1);
+    expect(data.find((d) => d.mitraId === 'mitra-a')?.totalNominal).toBe(100_000);
+    expect(data.find((d) => d.mitraId === 'mitra-b')?.totalNominal).toBe(200_000);
+  });
+
   it('jumlahTransaksi dan persentaseAktif dilaporkan apa adanya dari data mitraLokasi', async () => {
     const ml = mitraLokasi({ persentaseAktif: 40 });
-    const service = buildService(
+    const { service } = buildService(
       [ml],
       [
         [
-          { id: 't1', nominal: 50_000, createdAt: new Date('2026-03-01') },
-          { id: 't2', nominal: 50_000, createdAt: new Date('2026-03-02') },
+          { id: 't1', lokerId: 'loker-1', nominal: 50_000, createdAt: new Date('2026-03-01') },
+          { id: 't2', lokerId: 'loker-1', nominal: 50_000, createdAt: new Date('2026-03-02') },
         ],
       ],
     );

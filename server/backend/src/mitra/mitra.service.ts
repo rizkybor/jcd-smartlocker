@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../supabase/supabase.service';
+import { LokasiService } from '../lokasi/lokasi.service';
 import type { CreateMitraDto } from './dto/create-mitra.dto';
 import type { UpdateMitraDto } from './dto/update-mitra.dto';
 
@@ -7,7 +9,11 @@ const mitraInclude = { mitraLokasi: { include: { lokasi: true } } } as const;
 
 @Injectable()
 export class MitraService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly supabase: SupabaseService,
+    private readonly lokasiService: LokasiService,
+  ) {}
 
   async list(page: number, pageSize: number) {
     const [data, totalItems] = await Promise.all([
@@ -58,31 +64,59 @@ export class MitraService {
   }
 
   /**
-   * Buat Mitra + relasi MitraLokasi sekaligus (§10, API Contract §5.2).
+   * Buat Mitra + relasi MitraLokasi + akun login Mitra sekaligus (§10, API
+   * Contract §5.2; fitur akun-sekaligus & lokasi-inline di luar cakupan PRD
+   * awal — permintaan bisnis langsung).
+   *
    * `persentaseAktif` sengaja tetap null di sini bahkan untuk
    * REVENUE_SHARING — harus lewat alur ajukan/approve (SkemaHistoriService)
    * supaya tercatat riwayatnya, tidak ada persentase "siluman" yang
    * langsung aktif tanpa approval Manager.
+   *
+   * Sengaja TIDAK dibungkus `$transaction` — provisioning Supabase Auth
+   * (panggilan API eksternal) tidak bisa ikut rollback transaksi Postgres.
+   * Kalau gagal di tengah, baris yang sudah dibuat tetap ada (Lokasi/Mitra)
+   * — dampaknya minor (data tambahan yang tidak terpakai), jauh lebih
+   * aman daripada mencoba "rollback" panggilan API pihak ketiga yang sudah
+   * terlanjur sukses.
    */
   async create(dto: CreateMitraDto) {
-    const lokasi = await this.prisma.db.lokasi.findUnique({ where: { id: dto.lokasiId } });
-    if (!lokasi) {
-      throw new NotFoundException('Lokasi tidak ditemukan.');
+    const lokasi = await this.lokasiService.resolveOrCreateLokasi(dto);
+
+    const emailSudahDipakai = await this.prisma.db.akunMitra.findUnique({ where: { email: dto.akunMitra.email } });
+    if (emailSudahDipakai) {
+      throw new ConflictException({
+        error: { code: 'EMAIL_SUDAH_DIPAKAI', message: 'Email ini sudah dipakai akun mitra lain.' },
+      });
     }
 
-    return this.prisma.db.mitra.create({
+    const mitra = await this.prisma.db.mitra.create({
       data: {
         nama: dto.nama,
         kontak: dto.kontak,
         mitraLokasi: {
           create: {
-            lokasiId: dto.lokasiId,
+            lokasiId: lokasi.id,
             tipeSkema: dto.tipeSkema,
           },
         },
       },
       include: { mitraLokasi: true },
     });
+
+    const authUser = await this.supabase.createAuthUserWithPassword(dto.akunMitra.email, dto.akunMitra.password);
+
+    await this.prisma.db.akunMitra.create({
+      data: {
+        mitraId: mitra.id,
+        supabaseAuthUid: authUser.id,
+        nama: dto.akunMitra.nama,
+        email: dto.akunMitra.email,
+        aksesLokasi: { create: { lokasiId: lokasi.id } },
+      },
+    });
+
+    return this.findOneOrThrow(mitra.id);
   }
 
   async softDelete(id: string) {

@@ -46,10 +46,22 @@ import { MemberModule } from './member/member.module';
     // pagar umum semua endpoint. Named throttler `otp-send`/`otp-verify`
     // dipakai KioskAmbilController (Epic 4, §2) lewat
     // `@Throttle({ 'otp-send': { limit: 3, ttl: 900_000 } })` dst.
+    //
+    // PENTING: ThrottlerGuard (@nestjs/throttler) mengecek SEMUA throttler
+    // terdaftar di sini untuk SETIAP route, bukan cuma yang dipasangi
+    // `@Throttle()` — decorator itu cuma OVERRIDE limit/ttl untuk route
+    // spesifik, bukan pembatas cakupan. Kalau default `limit` di sini
+    // dibuat ketat (limit: 3/5), maka SEMUA endpoint lain di backend ikut
+    // kena limit 3/5 permintaan per 15 menit pakai kredensial 'otp-send'/
+    // 'otp-verify' juga — ditemukan langsung sebagai bug 429 "kena limit
+    // cuma setelah beberapa kali hit endpoint APAPUN, bukan cuma OTP".
+    // Makanya default di sini SENGAJA longgar (efektif tidak pernah
+    // kena di luar 2 endpoint OTP); limit ketat yang sebenarnya HANYA
+    // berlaku di endpoint yang eksplisit override lewat `@Throttle()`.
     ThrottlerModule.forRoot([
       { name: 'default', ttl: 60_000, limit: 60 },
-      { name: 'otp-send', ttl: 900_000, limit: 3 },
-      { name: 'otp-verify', ttl: 900_000, limit: 5 },
+      { name: 'otp-send', ttl: 900_000, limit: 1000 },
+      { name: 'otp-verify', ttl: 900_000, limit: 1000 },
     ]),
     PrismaModule,
     SupabaseModule,

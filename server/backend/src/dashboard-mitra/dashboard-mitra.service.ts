@@ -182,33 +182,47 @@ export class DashboardMitraService {
       },
     });
 
+    // Batched jadi SATU query `sesiTransaksi.findMany` (dulu 1 query PER
+    // mitraLokasi — N+1, sama seperti bug yang diperbaiki di
+    // LaporanService.bagiHasil()) — kumpulkan semua lokerId dulu, lalu
+    // kelompokkan hasilnya balik ke mitraLokasi masing-masing di memori.
+    const lokerIdKeMl = new Map<string, (typeof mitraLokasiList)[number]>();
+    for (const ml of mitraLokasiList) {
+      for (const unit of ml.lokasi.units) {
+        for (const loker of unit.lokers) {
+          lokerIdKeMl.set(loker.id, ml);
+        }
+      }
+    }
+    const semuaLokerIds = [...lokerIdKeMl.keys()];
+
+    const semuaTransaksi = semuaLokerIds.length
+      ? await this.prisma.db.sesiTransaksi.findMany({
+          where: {
+            lokerId: { in: semuaLokerIds },
+            statusBayar: StatusBayar.PAID,
+            createdAt: { gte: filter.tanggalMulai, lte: filter.tanggalSelesai },
+          },
+          select: { lokerId: true, nominal: true, createdAt: true },
+        })
+      : [];
+
     let totalNominal = 0;
     let totalBagiHasilMitra = 0;
     let jumlahTransaksi = 0;
 
-    for (const ml of mitraLokasiList) {
-      const lokerIds = ml.lokasi.units.flatMap((u) => u.lokers.map((l) => l.id));
-      if (lokerIds.length === 0) continue;
+    for (const t of semuaTransaksi) {
+      const ml = lokerIdKeMl.get(t.lokerId);
+      if (!ml) continue;
 
-      const transaksiList = await this.prisma.db.sesiTransaksi.findMany({
-        where: {
-          lokerId: { in: lokerIds },
-          statusBayar: StatusBayar.PAID,
-          createdAt: { gte: filter.tanggalMulai, lte: filter.tanggalSelesai },
-        },
-        select: { nominal: true, createdAt: true },
-      });
-
-      for (const t of transaksiList) {
-        const histori = ml.skemaHistori.find(
-          (h) => h.berlakuDari && h.berlakuDari <= t.createdAt && (h.berlakuSampai === null || h.berlakuSampai > t.createdAt),
-        );
-        const persentase = histori ? Number(histori.persentase) : Number(ml.persentaseAktif ?? 0);
-        const nominal = Number(t.nominal);
-        totalNominal += nominal;
-        totalBagiHasilMitra += (nominal * persentase) / 100;
-        jumlahTransaksi += 1;
-      }
+      const histori = ml.skemaHistori.find(
+        (h) => h.berlakuDari && h.berlakuDari <= t.createdAt && (h.berlakuSampai === null || h.berlakuSampai > t.createdAt),
+      );
+      const persentase = histori ? Number(histori.persentase) : Number(ml.persentaseAktif ?? 0);
+      const nominal = Number(t.nominal);
+      totalNominal += nominal;
+      totalBagiHasilMitra += (nominal * persentase) / 100;
+      jumlahTransaksi += 1;
     }
 
     return {

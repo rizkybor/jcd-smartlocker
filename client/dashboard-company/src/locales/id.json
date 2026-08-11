@@ -1,4 +1,12 @@
 {
+  "wilayahPicker": {
+    "provinsi": "Provinsi",
+    "kabupaten": "Kabupaten/Kota",
+    "kecamatan": "Kecamatan",
+    "kelurahan": "Kelurahan",
+    "pilih": "Pilih...",
+    "gagalMuat": "Gagal memuat data wilayah. Coba lagi."
+  },
   "common": {
     "memuat": "Memuat...",
     "batal": "Batal",
@@ -136,7 +144,27 @@
     "unitCaption": "{{online}} online, {{offline}} offline",
     "okupansiLoker": "Okupansi Loker",
     "okupansiCaption": "{{terisi}}/{{total}} terisi",
-    "pendapatan": "Pendapatan"
+    "pendapatan": "Pendapatan",
+    "tren14Hari": "Tren 14 Hari Terakhir",
+    "okupansiPerMitra": "Okupansi per Mitra",
+    "belumAdaMitra": "Belum ada mitra.",
+    "semuaMitra": "Semua Mitra",
+    "semuaLoker": "Semua Loker",
+    "kolomMitra": "Mitra",
+    "kolomJumlahUnit": "Jumlah Unit",
+    "kolomOkupansi": "Okupansi",
+    "kolomPendapatanBulanIni": "Pendapatan Bulan Ini",
+    "kolomLoker": "Loker",
+    "kolomUnit": "Unit",
+    "kolomLokasi": "Lokasi",
+    "kolomStatus": "Status",
+    "kolomAktivitasTerakhir": "Aktivitas Terakhir",
+    "filterStatus": "Filter Status",
+    "semuaStatus": "Semua Status",
+    "cari": "Cari",
+    "cariPlaceholder": "Nomor loker, kode unit, atau lokasi...",
+    "gagalMuatLoker": "Gagal memuat daftar loker.",
+    "itemLabelLoker": "loker"
   },
   "partnerPage": {
     "judul": "Mitra & Skema",
@@ -192,6 +220,8 @@
     "kolomNominal": "Nominal",
     "kolomTanggal": "Tanggal",
     "subjudul": "{{lokasi}} · Mitra: {{mitra}}",
+    "owner": "Owner: {{mitra}}",
+    "penempatan": "Ditempatkan di: {{lokasi}} — {{wilayah}}",
     "konfigurasi": "Konfigurasi",
     "varianKompartemen": "Varian Kompartemen",
     "modePemakaian": "Mode Pemakaian",
@@ -297,7 +327,18 @@
     "revenueSharingOption": "Revenue Sharing (Bagi Hasil)",
     "hintRevenueSharing": "Persentase ditentukan & di-approve terpisah setelah mitra dibuat.",
     "gagalMuatLokasi": "Gagal memuat daftar lokasi.",
-    "gagalSimpan": "Gagal membuat mitra."
+    "gagalSimpan": "Gagal membuat mitra.",
+    "lokasiExisting": "Pakai lokasi yang sudah ada",
+    "lokasiBaru": "Buat lokasi baru",
+    "pilihLokasi": "Pilih Lokasi",
+    "namaLokasi": "Nama Lokasi",
+    "alamat": "Alamat",
+    "timezone": "Timezone",
+    "akunLogin": "Akun Login Dashboard Mitra",
+    "namaPic": "Nama PIC",
+    "email": "Email",
+    "password": "Password",
+    "passwordHint": "Minimal 8 karakter — mitra login pakai email & password ini."
   },
   "skemaHistoriPanel": {
     "gagalMuat": "Gagal memuat riwayat skema.",
@@ -322,6 +363,10 @@
   "createUnitDialog": {
     "judul": "Tambah Unit Baru",
     "lokasi": "Lokasi",
+    "owner": "Owner (Mitra Pemilik)",
+    "pilihOwner": "Pilih mitra pemilik...",
+    "gagalMuatMitra": "Gagal memuat daftar mitra.",
+    "lokasiPenempatan": "Lokasi Penempatan Locker",
     "kodeUnit": "Kode Unit",
     "kodeUnitPlaceholder": "mis. UNIT-02",
     "varianKompartemen": "Varian Kompartemen",

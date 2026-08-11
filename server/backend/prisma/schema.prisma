@@ -119,16 +119,31 @@ enum LogKategori {
 // Model
 // ---------------------------------------------------------------------------
 
+/// Alamat wilayah administratif (Provinsi/Kab-Kota/Kecamatan/Kelurahan) —
+/// di luar cakupan PRD awal, permintaan bisnis langsung. Kode+nama diambil
+/// dari dataset publik emsifa/api-wilayah-indonesia (dipilih via cascading
+/// picker di frontend, `client/dashboard-company/src/lib/wilayah.ts`) —
+/// backend TIDAK memvalidasi ulang ke API itu, sekadar menyimpan hasil
+/// pilihan Super Admin apa adanya (sama level kepercayaan seperti field
+/// admin-entered lain). `alamat` tetap ada untuk detail jalan/gedung.
 model Lokasi {
-  id        String    @id @default(uuid()) @db.Uuid
-  nama      String
-  alamat    String
+  id            String    @id @default(uuid()) @db.Uuid
+  nama          String
+  alamat        String
   /// IANA timezone name, mis. "Asia/Jakarta" — wajib diisi eksplisit saat
   /// pendaftaran, jangan asumsikan default (§7.2).
-  timezone  String
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  timezone      String
+  provinsiKode  String    @map("provinsi_kode")
+  provinsiNama  String    @map("provinsi_nama")
+  kabupatenKode String    @map("kabupaten_kode")
+  kabupatenNama String    @map("kabupaten_nama")
+  kecamatanKode String    @map("kecamatan_kode")
+  kecamatanNama String    @map("kecamatan_nama")
+  kelurahanKode String    @map("kelurahan_kode")
+  kelurahanNama String    @map("kelurahan_nama")
+  deletedAt     DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   units           Unit[]
   mitraLokasi     MitraLokasi[]
@@ -153,6 +168,7 @@ model Mitra {
   mitraLokasi MitraLokasi[]
   akunMitra   AkunMitra[]
   member      Member[]
+  units       Unit[]
 
   @@map("mitra")
 }
@@ -191,6 +207,7 @@ model Member {
   loker         Loker?          @relation(fields: [lokerId], references: [id])
   sesiTransaksi SesiTransaksi[]
 
+  @@index([mitraId])
   @@map("member")
 }
 
@@ -245,6 +262,16 @@ model MitraLokasiSkemaHistori {
 
 model Unit {
   id                String        @id @default(uuid()) @db.Uuid
+  /// Pemilik/owner Unit ini — sumber kebenaran LANGSUNG (di luar cakupan
+  /// PRD awal). Dulu "owner" cuma diturunkan tidak langsung lewat
+  /// `lokasi.mitraLokasi[].mitra`, yang ambigu kalau 1 Lokasi dipakai lebih
+  /// dari 1 mitra. `mitraId` di sini WAJIB, `lokasiId` di bawah sekarang
+  /// murni "di mana unit ini ditempatkan secara fisik" — 2 konsep terpisah.
+  /// `unit.service.ts::create()` otomatis pastikan baris `MitraLokasi`
+  /// (mitraId, lokasiId) ada juga, supaya revenue-sharing & isolasi
+  /// Dashboard Mitra (yang masih lewat AkunMitraLokasi->Lokasi) tetap jalan
+  /// tanpa berubah.
+  mitraId           String        @map("mitra_id") @db.Uuid
   lokasiId          String        @map("lokasi_id") @db.Uuid
   kodeUnit          String        @unique @map("kode_unit")
   /// Kredensial kiosk/gateway hardware — dikirim via header `X-Unit-Key`
@@ -262,11 +289,14 @@ model Unit {
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
+  mitra         Mitra             @relation(fields: [mitraId], references: [id])
   lokasi        Lokasi            @relation(fields: [lokasiId], references: [id])
   lokers        Loker[]
   durasiHarga   UnitDurasiHarga[]
   lokerKategori LokerKategori[]
 
+  @@index([lokasiId])
+  @@index([mitraId])
   @@map("unit")
 }
 
@@ -296,6 +326,10 @@ model LokerKategori {
   @@map("loker_kategori")
 }
 
+// (unitId sudah ter-index otomatis lewat @@unique([unitId, nama]) di atas —
+// Postgres index gabungan itu tetap kepakai kalau kolom pertama, unitId,
+// yang di-filter sendirian.)
+
 model UnitDurasiHarga {
   id              String   @id @default(uuid()) @db.Uuid
   unitId          String   @map("unit_id") @db.Uuid
@@ -312,6 +346,8 @@ model UnitDurasiHarga {
   lokerKategori LokerKategori   @relation(fields: [lokerKategoriId], references: [id])
   sesiTransaksi SesiTransaksi[]
 
+  @@index([unitId])
+  @@index([lokerKategoriId])
   @@map("unit_durasi_harga")
 }
 
@@ -333,7 +369,11 @@ model Loker {
   emergencyUnlockLog EmergencyUnlockLog[]
   memberEksklusif    Member?
 
+  // unitId sudah kepakai lewat @@unique([unitId, nomorLoker]) (leading
+  // column) — lokerKategoriId perlu index sendiri, dipakai kandidat
+  // `FOR UPDATE SKIP LOCKED` di kiosk-sewa.service.ts::mulaiSewa().
   @@unique([unitId, nomorLoker])
+  @@index([lokerKategoriId])
   @@map("loker")
 }
 
@@ -384,6 +424,16 @@ model SesiTransaksi {
   sesiDenda       SesiDenda[]
 
   @@unique([paymentProvider, paymentProviderRefId])
+  // `[lokerId, statusBayar]` menutupi pola query paling sering: cari sesi
+  // aktif (PAID) untuk 1 loker (kiosk-ambil.service.ts, unit.service.ts
+  // riwayatTransaksi/overdue status). `nomorHp`/`memberId` masing-masing
+  // dipakai `mulaiAmbil()`/`cariSesiAktifMember()` sebagai filter utama.
+  // `createdAt` dipakai HAMPIR SEMUA `orderBy` + filter rentang tanggal
+  // laporan (laporan.service.ts, dashboard-mitra.service.ts).
+  @@index([lokerId, statusBayar])
+  @@index([nomorHp])
+  @@index([memberId])
+  @@index([createdAt])
   @@map("sesi_transaksi")
 }
 
@@ -481,6 +531,7 @@ model EmergencyUnlockLog {
   loker Loker        @relation(fields: [lokerId], references: [id])
   staff AkunInternal @relation(fields: [staffId], references: [id])
 
+  @@index([waktuKejadian])
   @@map("emergency_unlock_log")
 }
 
@@ -499,5 +550,6 @@ model LogAktivitas {
 
   aktor AkunInternal @relation(fields: [aktorId], references: [id])
 
+  @@index([kategori, createdAt])
   @@map("log_aktivitas")
 }

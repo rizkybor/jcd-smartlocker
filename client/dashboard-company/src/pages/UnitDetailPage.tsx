@@ -31,6 +31,7 @@ export function UnitDetailPage() {
   const navigate = useNavigate();
   const [unit, setUnit] = useState<UnitDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lokerStatusChangingId, setLokerStatusChangingId] = useState<string | null>(null);
 
   // --- Form konfigurasi ---
   const [varianKompartemen, setVarianKompartemen] = useState('');
@@ -133,11 +134,14 @@ export function UnitDetailPage() {
 
   async function handleLokerStatusChange(loker: Loker, status: LokerStatus) {
     if (status === loker.status) return;
+    setLokerStatusChangingId(loker.id);
     try {
       await companyApi.lokerUpdateStatus(loker.id, status);
       reload();
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalUbahStatus'));
+    } finally {
+      setLokerStatusChangingId(null);
     }
   }
 
@@ -205,8 +209,15 @@ export function UnitDetailPage() {
       render: (l) => (
         <select
           value={l.status}
+          disabled={lokerStatusChangingId === l.id}
           onChange={(e) => void handleLokerStatusChange(l, e.target.value as LokerStatus)}
-          style={{ font: 'var(--sl-fw-medium) var(--sl-fs-13)/1 var(--sl-font-body)', padding: '4px 8px', borderRadius: 'var(--sl-radius-sm)', border: 'var(--sl-border-w) solid var(--sl-border-strong)' }}
+          style={{
+            font: 'var(--sl-fw-medium) var(--sl-fs-13)/1 var(--sl-font-body)',
+            padding: '4px 8px',
+            borderRadius: 'var(--sl-radius-sm)',
+            border: 'var(--sl-border-w) solid var(--sl-border-strong)',
+            opacity: lokerStatusChangingId === l.id ? 0.6 : 1,
+          }}
         >
           {LOKER_STATUS_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>
@@ -256,8 +267,6 @@ export function UnitDetailPage() {
     { header: t('unitDetailPage.kolomTanggal'), render: (s) => formatTanggalLokasi(s.createdAt, unit.lokasi.timezone) },
   ];
 
-  const mitraNames = unit.lokasi.mitraLokasi.map((ml) => ml.mitra.nama).join(', ') || '—';
-
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sl-space-4)', marginBottom: 'var(--sl-space-2)' }}>
@@ -266,8 +275,15 @@ export function UnitDetailPage() {
         </h1>
         <StatusBadge status={unit.aktif ? 'tersedia' : 'nonaktif'}>{unit.aktif ? t('common.aktif') : t('common.nonaktif')}</StatusBadge>
       </div>
+      {/* Owner (mitra pemilik, di luar cakupan PRD awal) & tempat penempatan fisik SEKARANG 2 baris terpisah — dulu owner diturunkan tidak langsung lewat lokasi.mitraLokasi, ambigu kalau 1 lokasi dipakai >1 mitra. */}
+      <div style={{ color: 'var(--sl-text-muted)', marginBottom: 'var(--sl-space-1)' }}>
+        {t('unitDetailPage.owner', { mitra: unit.mitra.nama })}
+      </div>
       <div style={{ color: 'var(--sl-text-muted)', marginBottom: 'var(--sl-space-6)' }}>
-        {t('unitDetailPage.subjudul', { lokasi: unit.lokasi.nama, mitra: mitraNames })}
+        {t('unitDetailPage.penempatan', {
+          lokasi: unit.lokasi.nama,
+          wilayah: [unit.lokasi.kelurahanNama, unit.lokasi.kecamatanNama, unit.lokasi.kabupatenNama, unit.lokasi.provinsiNama].join(', '),
+        })}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-6)' }}>

@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import * as Dialog from '@radix-ui/react-dialog';
 import { Button, Field } from '@smartbox/ui';
-import { companyApi, ApiError, type Lokasi } from '../../api/client';
+import { companyApi, ApiError, type Lokasi, type Mitra } from '../../api/client';
+import { WilayahPicker, type WilayahValue } from '../../components/WilayahPicker';
 
 type DurasiRow = { durasiJam: string; harga: string };
 type KategoriRow = { nama: string; ukuranWMm: string; ukuranHMm: string; jumlahLoker: string; durasiHarga: DurasiRow[] };
@@ -47,8 +48,15 @@ export function CreateUnitDialog({
   onCreated: () => void;
 }) {
   const { t } = useTranslation();
+  const [mitraList, setMitraList] = useState<Mitra[]>([]);
+  const [mitraId, setMitraId] = useState('');
   const [lokasiList, setLokasiList] = useState<Lokasi[]>([]);
+  const [modeLokasi, setModeLokasi] = useState<'EXISTING' | 'BARU'>('EXISTING');
   const [lokasiId, setLokasiId] = useState('');
+  const [lokasiBaruNama, setLokasiBaruNama] = useState('');
+  const [lokasiBaruAlamat, setLokasiBaruAlamat] = useState('');
+  const [lokasiBaruTimezone, setLokasiBaruTimezone] = useState('Asia/Jakarta');
+  const [wilayah, setWilayah] = useState<WilayahValue | null>(null);
   const [kodeUnit, setKodeUnit] = useState('');
   const [varianKompartemen, setVarianKompartemen] = useState('');
   const [modePemakaian, setModePemakaian] = useState<'BERBAYAR' | 'GRATIS'>('BERBAYAR');
@@ -58,6 +66,13 @@ export function CreateUnitDialog({
 
   useEffect(() => {
     if (!open) return;
+    companyApi
+      .mitra.list(1, 100)
+      .then((res) => {
+        setMitraList(res.data);
+        setMitraId((prev) => prev || res.data[0]?.id || '');
+      })
+      .catch(() => setError(t('createUnitDialog.gagalMuatMitra')));
     companyApi
       .lokasiList()
       .then((res) => {
@@ -81,8 +96,11 @@ export function CreateUnitDialog({
     );
   }
 
+  const lokasiValid = modeLokasi === 'EXISTING' ? lokasiId.length > 0 : lokasiBaruNama.trim().length > 0 && lokasiBaruAlamat.trim().length > 0 && !!wilayah;
+
   const valid =
-    lokasiId &&
+    mitraId.length > 0 &&
+    lokasiValid &&
     kodeUnit.trim().length > 0 &&
     kategoriRows.length > 0 &&
     kategoriRows.every(
@@ -98,7 +116,7 @@ export function CreateUnitDialog({
     setError(null);
     try {
       await companyApi.units.create({
-        lokasiId,
+        mitraId,
         kodeUnit: kodeUnit.trim(),
         varianKompartemen: varianKompartemen.trim() || undefined,
         modePemakaian,
@@ -109,6 +127,9 @@ export function CreateUnitDialog({
           jumlahLoker: Number(k.jumlahLoker),
           durasiHarga: k.durasiHarga.map((d) => ({ durasiJam: Number(d.durasiJam), harga: Number(d.harga) })),
         })),
+        ...(modeLokasi === 'EXISTING'
+          ? { lokasiId }
+          : { lokasiBaru: { nama: lokasiBaruNama.trim(), alamat: lokasiBaruAlamat.trim(), timezone: lokasiBaruTimezone, wilayah: wilayah! } }),
       });
       setKodeUnit('');
       setVarianKompartemen('');
@@ -132,12 +153,44 @@ export function CreateUnitDialog({
 
           <div style={{ marginTop: 'var(--sl-space-5)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
             <Field
-              label={t('createUnitDialog.lokasi')}
+              label={t('createUnitDialog.owner')}
               required
-              options={lokasiList.map((l) => ({ value: l.id, label: l.nama }))}
-              value={lokasiId}
-              onChange={(e) => setLokasiId(e.target.value)}
+              options={[{ value: '', label: t('createUnitDialog.pilihOwner') }, ...mitraList.map((m) => ({ value: m.id, label: m.nama }))]}
+              value={mitraId}
+              onChange={(e) => setMitraId(e.target.value)}
             />
+
+            <div style={{ borderTop: 'var(--sl-border-w) solid var(--sl-border-subtle)', paddingTop: 'var(--sl-space-4)' }}>
+              <Field
+                label={t('createUnitDialog.lokasiPenempatan')}
+                required
+                options={[
+                  { value: 'EXISTING', label: t('createMitraDialog.lokasiExisting') },
+                  { value: 'BARU', label: t('createMitraDialog.lokasiBaru') },
+                ]}
+                value={modeLokasi}
+                onChange={(e) => setModeLokasi(e.target.value as 'EXISTING' | 'BARU')}
+              />
+              {modeLokasi === 'EXISTING' ? (
+                <div style={{ marginTop: 'var(--sl-space-4)' }}>
+                  <Field
+                    label={t('createMitraDialog.pilihLokasi')}
+                    required
+                    options={lokasiList.map((l) => ({ value: l.id, label: l.nama }))}
+                    value={lokasiId}
+                    onChange={(e) => setLokasiId(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <div style={{ marginTop: 'var(--sl-space-4)', display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)' }}>
+                  <Field label={t('createMitraDialog.namaLokasi')} required value={lokasiBaruNama} onChange={(e) => setLokasiBaruNama(e.target.value)} />
+                  <Field label={t('createMitraDialog.alamat')} required multiline value={lokasiBaruAlamat} onChange={(e) => setLokasiBaruAlamat(e.target.value)} />
+                  <Field label={t('createMitraDialog.timezone')} required value={lokasiBaruTimezone} onChange={(e) => setLokasiBaruTimezone(e.target.value)} hint="Asia/Jakarta, Asia/Makassar, Asia/Jayapura" />
+                  <WilayahPicker onChange={setWilayah} />
+                </div>
+              )}
+            </div>
+
             <Field label={t('createUnitDialog.kodeUnit')} required value={kodeUnit} onChange={(e) => setKodeUnit(e.target.value)} placeholder={t('createUnitDialog.kodeUnitPlaceholder')} />
             <Field label={t('createUnitDialog.varianKompartemen')} value={varianKompartemen} onChange={(e) => setVarianKompartemen(e.target.value)} placeholder={t('common.opsional')} />
             <Field

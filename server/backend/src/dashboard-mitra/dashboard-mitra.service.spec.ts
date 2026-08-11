@@ -138,6 +138,40 @@ describe('DashboardMitraService — isolasi data mitra', () => {
         expect.objectContaining({ where: expect.objectContaining({ mitraId: 'mitra-1' }) }),
       );
     });
+
+    it('batched jadi SATU query sesiTransaksi.findMany untuk hitungBagiHasil walau ada banyak mitraLokasi (bukan N+1)', async () => {
+      const mlA = {
+        id: 'ml-a',
+        persentaseAktif: 20,
+        lokasi: { units: [{ lokers: [{ id: 'loker-a' }] }] },
+        skemaHistori: [],
+      };
+      const mlB = {
+        id: 'ml-b',
+        persentaseAktif: 30,
+        lokasi: { units: [{ lokers: [{ id: 'loker-b' }] }] },
+        skemaHistori: [],
+      };
+      const { service, sesiFindMany } = buildService({ accessibleLokasiIds: ['lokasi-milik-1'], mitraLokasi: [mlA, mlB] });
+      // Panggilan pertama = daftar transaksi paginated (laporan()), kedua =
+      // query batched hitungBagiHasil() — urutan sesuai Promise.all di kode.
+      sesiFindMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          { lokerId: 'loker-a', nominal: 100_000, createdAt: new Date('2026-03-01') },
+          { lokerId: 'loker-b', nominal: 200_000, createdAt: new Date('2026-03-01') },
+        ]);
+
+      const result = await service.laporan(actor, {} as never, 1, 20);
+
+      // sesiFindMany dipanggil 2x total: 1x untuk daftar transaksi paginated
+      // (laporan()), 1x untuk hitungBagiHasil() — BUKAN N+1 per mitraLokasi.
+      expect(sesiFindMany).toHaveBeenCalledTimes(2);
+      expect(result.bagiHasil.jumlahTransaksi).toBe(2);
+      expect(result.bagiHasil.totalNominal).toBe(300_000);
+      // 20% dari 100rb + 30% dari 200rb = 20.000 + 60.000 = 80.000
+      expect(result.bagiHasil.totalBagiHasilMitra).toBe(80_000);
+    });
   });
 
   describe('overview() — mitra tanpa lokasi tidak error, cuma hasil kosong', () => {

@@ -33,7 +33,7 @@ export function BayarScreen({
   return (
     <QRScreen
       title={t('bayar.title')}
-      subtitle={t('bayar.subtitle')}
+      subtitle={qrSrc ? t('bayar.subtitle') : t('bayar.menyiapkan')}
       qrSrc={qrSrc ?? undefined}
       amount={nominal !== null ? formatRupiah(nominal) : undefined}
       secondsLeft={expiredAt ? secondsLeft : undefined}

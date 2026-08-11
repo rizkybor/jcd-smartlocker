@@ -41,11 +41,13 @@
   },
   "durasi": {
     "title": "Pilih Durasi Sewa",
-    "jam": "{{jumlah}} jam"
+    "jam": "{{jumlah}} jam",
+    "memproses": "Memproses..."
   },
   "bayar": {
     "title": "Scan untuk Bayar",
-    "subtitle": "Pakai aplikasi e-wallet atau m-banking dengan QRIS."
+    "subtitle": "Pakai aplikasi e-wallet atau m-banking dengan QRIS.",
+    "menyiapkan": "Menyiapkan kode QR..."
   },
   "bayarGagal": {
     "iconLabel": "Pembayaran gagal",
@@ -69,7 +71,8 @@
     "title": "Masukkan Kode OTP",
     "subtitle": "Kode 6 digit sudah dikirim, berlaku 5 menit.",
     "verifikasi": "Verifikasi",
-    "kirimUlang": "Kirim Ulang Kode"
+    "kirimUlang": "Kirim Ulang Kode",
+    "memproses": "Memproses..."
   },
   "unitPenuh": {
     "judul": "Unit Ini Penuh",

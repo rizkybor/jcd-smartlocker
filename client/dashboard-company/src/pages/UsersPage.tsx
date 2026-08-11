@@ -16,6 +16,7 @@ export function UsersPage() {
   const [removeTarget, setRemoveTarget] = useState<AkunInternal | null>(null);
   const [removeLoading, setRemoveLoading] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [roleChangingId, setRoleChangingId] = useState<string | null>(null);
 
   function reload() {
     companyApi.users
@@ -28,6 +29,7 @@ export function UsersPage() {
 
   async function handleRoleChange(user: AkunInternal, role: AkunInternalRole) {
     if (role === user.role) return;
+    setRoleChangingId(user.id);
     try {
       await companyApi.users.updateRole(user.id, role);
       toast({ title: t('usersPage.toastRoleDiperbarui'), description: t('usersPage.toastRoleDeskripsi', { nama: user.nama, role }), tone: 'success' });
@@ -36,6 +38,8 @@ export function UsersPage() {
       const message = err instanceof ApiError ? err.message : t('usersPage.gagalUbahRole');
       setError(message);
       toast({ title: t('usersPage.gagalUbahRole'), description: message, tone: 'error' });
+    } finally {
+      setRoleChangingId(null);
     }
   }
 
@@ -63,8 +67,15 @@ export function UsersPage() {
       render: (u) => (
         <select
           value={u.role}
+          disabled={roleChangingId === u.id}
           onChange={(e) => void handleRoleChange(u, e.target.value as AkunInternalRole)}
-          style={{ font: 'var(--sl-fw-medium) var(--sl-fs-13)/1 var(--sl-font-body)', padding: '4px 8px', borderRadius: 'var(--sl-radius-sm)', border: 'var(--sl-border-w) solid var(--sl-border-strong)' }}
+          style={{
+            font: 'var(--sl-fw-medium) var(--sl-fs-13)/1 var(--sl-font-body)',
+            padding: '4px 8px',
+            borderRadius: 'var(--sl-radius-sm)',
+            border: 'var(--sl-border-w) solid var(--sl-border-strong)',
+            opacity: roleChangingId === u.id ? 0.6 : 1,
+          }}
         >
           {ROLE_OPTIONS.map((r) => (
             <option key={r} value={r}>

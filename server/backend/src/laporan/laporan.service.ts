@@ -85,20 +85,47 @@ export class LaporanService {
       },
     });
 
+    // Dulu 1 query `sesiTransaksi.findMany` PER mitraLokasi (N+1 — lambat
+    // kalau mitra/lokasi banyak). Sekarang: kumpulkan SEMUA lokerId lebih
+    // dulu, 1 kali query batched pakai `lokerId IN (...)`, baru dikelompokkan
+    // ke mitraLokasi masing-masing di memori lewat `lokerIdKeMl`.
+    const lokerIdKeMl = new Map<string, (typeof mitraLokasiList)[number]>();
+    for (const ml of mitraLokasiList) {
+      for (const unit of ml.lokasi.units) {
+        for (const loker of unit.lokers) {
+          lokerIdKeMl.set(loker.id, ml);
+        }
+      }
+    }
+    const semuaLokerIds = [...lokerIdKeMl.keys()];
+
+    const semuaTransaksi = semuaLokerIds.length
+      ? await this.prisma.db.sesiTransaksi.findMany({
+          where: {
+            lokerId: { in: semuaLokerIds },
+            statusBayar: 'PAID',
+            createdAt: { gte: filter.tanggalMulai, lte: filter.tanggalSelesai },
+          },
+          select: { id: true, lokerId: true, nominal: true, createdAt: true },
+        })
+      : [];
+
+    const transaksiPerMl = new Map<string, typeof semuaTransaksi>();
+    for (const t of semuaTransaksi) {
+      const ml = lokerIdKeMl.get(t.lokerId);
+      if (!ml) continue;
+      const list = transaksiPerMl.get(ml.id) ?? [];
+      list.push(t);
+      transaksiPerMl.set(ml.id, list);
+    }
+
     const hasil = [];
 
     for (const ml of mitraLokasiList) {
       const lokerIds = ml.lokasi.units.flatMap((u) => u.lokers.map((l) => l.id));
       if (lokerIds.length === 0) continue;
 
-      const transaksiList = await this.prisma.db.sesiTransaksi.findMany({
-        where: {
-          lokerId: { in: lokerIds },
-          statusBayar: 'PAID',
-          createdAt: { gte: filter.tanggalMulai, lte: filter.tanggalSelesai },
-        },
-        select: { id: true, nominal: true, createdAt: true },
-      });
+      const transaksiList = transaksiPerMl.get(ml.id) ?? [];
 
       let totalNominal = 0;
       let totalBagiHasilMitra = 0;

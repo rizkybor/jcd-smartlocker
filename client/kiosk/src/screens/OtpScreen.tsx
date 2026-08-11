@@ -11,6 +11,7 @@ export function OtpScreen({
   onKembali,
   valid,
   errorMessage,
+  loading = false,
 }: {
   kode: string;
   onChange: (value: string) => void;
@@ -19,12 +20,26 @@ export function OtpScreen({
   onKembali: () => void;
   valid: boolean;
   errorMessage: string | null;
+  /** Kirim/verifikasi OTP sedang diproses backend — kunci tombol supaya tidak dobel-kirim/verifikasi. */
+  loading?: boolean;
 }) {
   const { t } = useTranslation();
   return (
     <KioskShell step={1} steps={ambilSteps()} title={t('otp.title')} subtitle={t('otp.subtitle')}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 'var(--sl-space-6)' }}>
         <Numpad value={kode} onChange={onChange} length={6} />
+        {loading ? (
+          <div
+            style={{
+              textAlign: 'center',
+              color: 'var(--sl-text-muted)',
+              fontFamily: 'var(--sl-font-body)',
+              fontSize: 'var(--sl-kiosk-fs-caption)',
+            }}
+          >
+            {t('otp.memproses')}
+          </div>
+        ) : null}
         {errorMessage ? (
           <div
             style={{
@@ -38,14 +53,14 @@ export function OtpScreen({
           </div>
         ) : null}
         <div style={{ display: 'flex', gap: 'var(--sl-space-4)' }}>
-          <KioskButton tone="neutral" size="md" onClick={onKembali}>
+          <KioskButton tone="neutral" size="md" disabled={loading} onClick={onKembali}>
             {t('common.kembali')}
           </KioskButton>
-          <KioskButton tone="primary" size="lg" disabled={!valid} onClick={onVerifikasi}>
+          <KioskButton tone="primary" size="lg" disabled={!valid || loading} onClick={onVerifikasi}>
             {t('otp.verifikasi')}
           </KioskButton>
         </div>
-        <KioskButton tone="neutral" size="md" onClick={onKirimUlang}>
+        <KioskButton tone="neutral" size="md" disabled={loading} onClick={onKirimUlang}>
           {t('otp.kirimUlang')}
         </KioskButton>
       </div>

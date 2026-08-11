@@ -1,9 +1,10 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomBytes } from 'node:crypto';
-import { LogKategori, LokerStatus, StatusBayar } from '@prisma/client';
+import { LogKategori, LokerStatus, StatusBayar, TipeSkema } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { MqttClientService } from '../gateway/mqtt-client.service';
+import { LokasiService } from '../lokasi/lokasi.service';
 import { computeOverdueStatus, tarifPerJamTermurah } from '../common/overdue.util';
 import type { AuthenticatedInternalUser } from '../auth/types';
 import type { CreateUnitDto } from './dto/create-unit.dto';
@@ -29,8 +30,14 @@ function nomorLokerFromIndex(index: number): string {
   return String(index + 1).padStart(LEBAR_NOMOR_LOKER, '0');
 }
 
-/** Sertakan lokasi + mitra pemilik (via MitraLokasi) — dashboard perlu tahu "unit ini milik siapa". */
+/**
+ * `mitra` di-include LANGSUNG (owner, di luar cakupan PRD awal) — bukan
+ * lagi diturunkan tidak langsung lewat `lokasi.mitraLokasi[].mitra` (itu
+ * ambigu kalau 1 Lokasi dipakai lebih dari 1 mitra). `lokasi` sekarang
+ * murni "di mana unit ini ditempatkan secara fisik".
+ */
 const unitListInclude = {
+  mitra: true,
   lokasi: {
     include: {
       mitraLokasi: { include: { mitra: true } },
@@ -51,6 +58,7 @@ export class UnitService {
     private readonly prisma: PrismaService,
     private readonly activityLog: ActivityLogService,
     private readonly mqttClient: MqttClientService,
+    private readonly lokasiService: LokasiService,
   ) {}
 
   async list(page: number, pageSize: number) {
@@ -153,13 +161,35 @@ export class UnitService {
    * nomorLoker])`).
    */
   async create(dto: CreateUnitDto) {
+    const mitra = await this.prisma.db.mitra.findUnique({ where: { id: dto.mitraId } });
+    if (!mitra) {
+      throw new NotFoundException({ error: { code: 'MITRA_TIDAK_DITEMUKAN', message: 'Mitra (owner) tidak ditemukan.' } });
+    }
+
+    const lokasi = await this.lokasiService.resolveOrCreateLokasi(dto);
+
+    // Pastikan baris MitraLokasi(mitraId, lokasiId) ada — supaya revenue-
+    // sharing & isolasi Dashboard Mitra (AkunMitraLokasi->Lokasi) tetap
+    // jalan otomatis tanpa langkah manual terpisah (§ konfirmasi bisnis,
+    // di luar cakupan PRD awal). Default FIXED_RENTAL kalau baru dibuat —
+    // Super Admin bisa ubah skema-nya lewat alur Partner/skema-histori.
+    const mitraLokasiAda = await this.prisma.db.mitraLokasi.findFirst({
+      where: { mitraId: dto.mitraId, lokasiId: lokasi.id },
+    });
+    if (!mitraLokasiAda) {
+      await this.prisma.db.mitraLokasi.create({
+        data: { mitraId: dto.mitraId, lokasiId: lokasi.id, tipeSkema: TipeSkema.FIXED_RENTAL },
+      });
+    }
+
     const unitKey = generateUnitKey();
     const totalLoker = dto.kategori.reduce((sum, k) => sum + k.jumlahLoker, 0);
 
     return this.prisma.db.$transaction(async (tx) => {
       const unit = await tx.unit.create({
         data: {
-          lokasiId: dto.lokasiId,
+          mitraId: dto.mitraId,
+          lokasiId: lokasi.id,
           kodeUnit: dto.kodeUnit,
           unitKey,
           varianKompartemen: dto.varianKompartemen,

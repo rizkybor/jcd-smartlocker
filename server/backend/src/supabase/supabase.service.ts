@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import type { EnvConfig } from '../config/env.validation';
+import { getOrCreateSupabaseUser } from './supabase-user.util';
 
 /**
  * Wrapper Supabase Admin client — pakai SERVICE_ROLE_KEY (bypass RLS,
@@ -57,6 +58,17 @@ export class SupabaseService {
       );
     }
     return data.user;
+  }
+
+  /**
+   * Provisioning akun DENGAN password eksplisit (bukan invite/reset-link)
+   * — dipakai `MitraService.create()` saat Super Admin bikin akun login
+   * Mitra sekaligus (§ konfirmasi bisnis, di luar cakupan PRD awal — dulu
+   * cuma bisa lewat seed script). Lihat `supabase-user.util.ts` untuk
+   * kenapa password harus disertakan sejak `createUser`, bukan belakangan.
+   */
+  async createAuthUserWithPassword(email: string, password: string) {
+    return getOrCreateSupabaseUser(this.client, email, password);
   }
 
   async deleteAuthUser(supabaseAuthUid: string) {

@@ -162,6 +162,7 @@ export default function App() {
           onPilih={(durasi) => send({ type: 'PILIH_DURASI', durasi })}
           onKembali={() => send({ type: 'KEMBALI' })}
           errorMessage={state.context.errorMessage}
+          loading={state.matches('memulaiSewa')}
         />
       );
     }
@@ -228,6 +229,7 @@ export default function App() {
           onKembali={() => send({ type: 'KEMBALI' })}
           valid={/^\d{6}$/.test(state.context.kodeOtp)}
           errorMessage={state.context.errorMessage}
+          loading={state.matches('ambilKirimOtp') || state.matches('ambilVerifikasi')}
         />
       );
     }
