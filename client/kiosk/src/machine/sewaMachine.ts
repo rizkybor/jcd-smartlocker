@@ -7,6 +7,7 @@ import {
   type BayarDendaResult,
   type BuatPembayaranResult,
   type KategoriLoker,
+  type RfidScanResult,
   type SesiTransaksi,
   type StrukResult,
   type UnitDurasiHarga,
@@ -34,6 +35,13 @@ export type SewaContext = {
   kodeOtp: string;
   // --- Denda keterlambatan (fitur overdue/suspend, di luar PRD awal) ---
   pembayaranDenda: BayarDendaResult | null;
+  // --- Member RFID (di luar cakupan PRD awal) ---
+  rfidKode: string;
+  rfidHasilEksklusif: Extract<RfidScanResult, { jenis: 'EKSKLUSIF' }> | null;
+  memberId: string | null;
+  memberNama: string;
+  memberDiskonPersen: number;
+  ambilViaRfid: boolean;
 };
 
 const initialContext: SewaContext = {
@@ -51,11 +59,23 @@ const initialContext: SewaContext = {
   ambilSesi: null,
   kodeOtp: '',
   pembayaranDenda: null,
+  rfidKode: '',
+  rfidHasilEksklusif: null,
+  memberId: null,
+  memberNama: '',
+  memberDiskonPersen: 0,
+  ambilViaRfid: false,
 };
 
 function errorMessageOf(err: unknown): string {
   if (err instanceof ApiError) return err.message;
   return i18n.t('errors.jaringan');
+}
+
+/** Hasil `UMUM_SESI_AKTIF` scan RFID punya bentuk sama seperti `AmbilSesi` + `jenis` — buang `jenis`, tandai `ambilViaRfid` supaya buka pintu lanjut lewat tap ulang (bukan OTP). */
+function ambilSesiDariRfid(hasil: RfidScanResult): Partial<SewaContext> {
+  const { jenis: _jenis, ...ambilSesi } = hasil as Extract<RfidScanResult, { jenis: 'UMUM_SESI_AKTIF' }>;
+  return { ambilSesi, ambilViaRfid: true };
 }
 
 export const sewaMachine = setup({
@@ -80,17 +100,24 @@ export const sewaMachine = setup({
       | { type: 'LANJUT_AMBIL_NOMOR_HP' }
       | { type: 'SET_KODE_OTP'; value: string }
       | { type: 'VERIFIKASI_OTP' }
-      | { type: 'KIRIM_ULANG_OTP' };
+      | { type: 'KIRIM_ULANG_OTP' }
+      | { type: 'RFID_TAP'; kode: string };
   },
   actors: {
     muatStatusUnit: fromPromise(async () => {
       const res = await kioskApi.statusUnit();
       return res.data;
     }),
-    mulaiSewa: fromPromise(async ({ input }: { input: { nomorHp: string; email: string; unitDurasiHargaId: string } }) => {
-      const res = await kioskApi.mulaiSewa(input.nomorHp, input.email, input.unitDurasiHargaId);
-      return res.data;
-    }),
+    mulaiSewa: fromPromise(
+      async ({
+        input,
+      }: {
+        input: { unitDurasiHargaId: string } & ({ nomorHp: string; email: string } | { memberId: string });
+      }) => {
+        const res = await kioskApi.mulaiSewa(input);
+        return res.data;
+      },
+    ),
     buatPembayaran: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
       const res = await kioskApi.buatPembayaran(input.sesiId);
       return res.data;
@@ -143,6 +170,14 @@ export const sewaMachine = setup({
       }
       return 'EXPIRED' as const;
     }),
+    rfidScan: fromPromise(async ({ input }: { input: { kode: string } }) => {
+      const res = await kioskApi.rfidScan(input.kode);
+      return res.data;
+    }),
+    bukaPintuRfid: fromPromise(async ({ input }: { input: { sesiId: string } }) => {
+      const res = await kioskApi.rfidBukaPintu(input.sesiId);
+      return res.data;
+    }),
   },
 }).createMachine({
   id: 'sewa',
@@ -159,7 +194,13 @@ export const sewaMachine = setup({
       // muatUnit.onError (mis. unit key salah/belum dibuat) tetap terlihat
       // di IdleScreen, bukan langsung hilang begitu masuk state ini.
       entry: assign(({ context }) => ({ ...initialContext, errorMessage: context.errorMessage })),
-      on: { SENTUH: { target: 'muatUnit', actions: assign({ errorMessage: null }) } },
+      on: {
+        SENTUH: { target: 'muatUnit', actions: assign({ errorMessage: null }) },
+        RFID_TAP: {
+          target: 'rfidMemproses',
+          actions: assign({ errorMessage: null, rfidKode: ({ event }) => event.kode }),
+        },
+      },
     },
 
     muatUnit: {
@@ -182,7 +223,80 @@ export const sewaMachine = setup({
         PILIH_SEWA: 'nomorHp',
         PILIH_AMBIL: 'ambilNomorHp',
         KEMBALI: 'idle',
+        RFID_TAP: { target: 'rfidMemproses', actions: assign({ rfidKode: ({ event }) => event.kode }) },
       },
+    },
+
+    // === Fitur member RFID (di luar cakupan PRD awal) ===
+    //
+    // Satu tap kartu dibedakan 3 hasil (lihat api/client.ts RfidScanResult):
+    // EKSKLUSIF (loker sendiri, sudah dibuka server-side, kiosk tinggal
+    // tampilkan konfirmasi), UMUM_MEMBER_BARU (lanjut alur pilih
+    // kategori/durasi biasa TAPI pakai memberId), UMUM_SESI_AKTIF (tap
+    // AMBIL — ikut aturan denda/suspend yang sama seperti ambil biasa,
+    // tapi skip OTP karena tap = otorisasi).
+    rfidMemproses: {
+      // RFID_TAP bisa datang dari `idle` (unit belum pernah dimuat) atau
+      // `menu` (unit sudah ada) — muat dulu kalau perlu, supaya
+      // `pilihKategori` (tujuan UMUM_MEMBER_BARU) selalu punya
+      // `context.unit` siap pakai.
+      initial: 'cekUnit',
+      states: {
+        cekUnit: {
+          always: [
+            { guard: ({ context }) => context.unit !== null, target: 'scan' },
+            { target: 'muatUnit' },
+          ],
+        },
+        muatUnit: {
+          invoke: {
+            src: 'muatStatusUnit',
+            onDone: { target: 'scan', actions: assign({ unit: ({ event }) => event.output }) },
+            onError: { target: '#sewa.idle', actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }) },
+          },
+        },
+        scan: {
+          invoke: {
+            src: 'rfidScan',
+            input: ({ context }) => ({ kode: context.rfidKode }),
+            onDone: [
+              {
+                guard: ({ event }) => event.output.jenis === 'EKSKLUSIF',
+                target: '#sewa.rfidEksklusifHasil',
+                actions: assign({ rfidHasilEksklusif: ({ event }) => event.output as Extract<RfidScanResult, { jenis: 'EKSKLUSIF' }> }),
+              },
+              {
+                guard: ({ event }) => event.output.jenis === 'UMUM_MEMBER_BARU',
+                target: '#sewa.pilihKategori',
+                actions: assign(({ event }) => {
+                  const hasil = event.output as Extract<RfidScanResult, { jenis: 'UMUM_MEMBER_BARU' }>;
+                  return { memberId: hasil.memberId, memberNama: hasil.nama, memberDiskonPersen: hasil.diskonPersen };
+                }),
+              },
+              {
+                // UMUM_SESI_AKTIF — tap ambil, ikuti aturan denda/suspend sama seperti mulaiAmbil.onDone.
+                guard: ({ event }) => 'suspended' in event.output && event.output.suspended,
+                target: '#sewa.ambilSuspended',
+                actions: assign(({ event }) => ambilSesiDariRfid(event.output)),
+              },
+              {
+                guard: ({ event }) => 'overdue' in event.output && event.output.overdue,
+                target: '#sewa.ambilBayarDenda',
+                actions: assign(({ event }) => ambilSesiDariRfid(event.output)),
+              },
+              {
+                target: '#sewa.ambilBukaPintuRfid',
+                actions: assign(({ event }) => ambilSesiDariRfid(event.output)),
+              },
+            ],
+            onError: { target: '#sewa.idle', actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }) },
+          },
+        },
+      },
+    },
+
+    rfidEksklusifHasil: {
+      on: { SELESAI: 'idle', KEMBALI: 'idle' },
     },
 
     // === Alur Sewa (§5.1) ===
@@ -215,7 +329,13 @@ export const sewaMachine = setup({
     pilihKategori: {
       on: {
         PILIH_KATEGORI: 'durasi',
-        KEMBALI: 'email',
+        // Masuk lewat tap RFID (memberId sudah terisi, tidak pernah lewat
+        // nomorHp/email) -> KEMBALI ke menu, bukan ke layar email yang
+        // tidak pernah dilalui.
+        KEMBALI: [
+          { guard: ({ context }) => context.memberId !== null, target: 'menu' },
+          { target: 'email' },
+        ],
       },
       exit: assign({ pilihanKategori: ({ event }) => (event.type === 'PILIH_KATEGORI' ? event.kategori : null) }),
     },
@@ -231,11 +351,10 @@ export const sewaMachine = setup({
     memulaiSewa: {
       invoke: {
         src: 'mulaiSewa',
-        input: ({ context }) => ({
-          nomorHp: context.nomorHp,
-          email: context.email,
-          unitDurasiHargaId: context.pilihanDurasi!.id,
-        }),
+        input: ({ context }) =>
+          context.memberId !== null
+            ? { memberId: context.memberId, unitDurasiHargaId: context.pilihanDurasi!.id }
+            : { nomorHp: context.nomorHp, email: context.email, unitDurasiHargaId: context.pilihanDurasi!.id },
         onDone: { target: 'bayar', actions: assign({ sesi: ({ event }) => event.output }) },
         onError: [
           {
@@ -379,6 +498,10 @@ export const sewaMachine = setup({
             src: 'pollStatusDenda',
             input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
             onDone: [
+              {
+                guard: ({ event, context }) => event.output === 'PAID' && context.ambilViaRfid,
+                target: '#sewa.ambilBukaPintuRfid',
+              },
               { guard: ({ event }) => event.output === 'PAID', target: '#sewa.ambilKirimOtp' },
               { target: '#sewa.ambilBayarDendaGagal' },
             ],
@@ -428,6 +551,21 @@ export const sewaMachine = setup({
         onError: {
           target: 'ambilOtp',
           actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error), kodeOtp: '' }),
+        },
+      },
+    },
+
+    // Fitur member RFID (di luar cakupan PRD awal): member umum ambil
+    // barang lewat tap ulang kartu, bukan OTP — skip ambilKirimOtp/ambilOtp
+    // sepenuhnya, tap = otorisasi (lihat kiosk-ambil.service.ts::bukaPintuViaRfid).
+    ambilBukaPintuRfid: {
+      invoke: {
+        src: 'bukaPintuRfid',
+        input: ({ context }) => ({ sesiId: context.ambilSesi!.id }),
+        onDone: 'ambilSelesai',
+        onError: {
+          target: 'ambilBukaPintuRfid',
+          actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
         },
       },
     },

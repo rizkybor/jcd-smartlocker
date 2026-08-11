@@ -165,6 +165,8 @@ export type MitraFull = {
   id: string;
   nama: string;
   kontak: string | null;
+  /** Fitur member RFID (di luar cakupan PRD awal) — akses menu kelola member di Dashboard Mitra, default false. */
+  bolehKelolaMember: boolean;
   deletedAt: string | null;
   createdAt: string;
   mitraLokasi: MitraLokasiFull[];
@@ -219,6 +221,44 @@ export type AkunInternal = {
   role: AkunInternalRole;
   deletedAt: string | null;
   createdAt: string;
+};
+
+/**
+ * Fitur member RFID/kode unik (di luar cakupan PRD awal — permintaan
+ * bisnis langsung). Dibedakan lewat `lokerId`: terisi = member EKSKLUSIF 1
+ * loker (gratis, bebas buka kapan saja), null = member UMUM (diskon tarif
+ * normal) — lihat catatan model `Member` di schema.prisma backend.
+ */
+export type MemberRow = {
+  id: string;
+  mitraId: string;
+  kode: string;
+  nama: string;
+  kontak: string | null;
+  lokerId: string | null;
+  diskonPersen: number | null;
+  aktif: boolean;
+  deletedAt: string | null;
+  createdAt: string;
+  mitra: { nama: string };
+  loker: { id: string; nomorLoker: string; unit: { kodeUnit: string } } | null;
+};
+
+export type CreateMemberInput = {
+  mitraId: string;
+  kode: string;
+  nama: string;
+  kontak?: string;
+  lokerId?: string;
+  diskonPersen?: number;
+};
+
+export type UpdateMemberInput = {
+  nama?: string;
+  kontak?: string;
+  lokerId?: string | null;
+  diskonPersen?: number | null;
+  aktif?: boolean;
 };
 
 export type EmergencyUnlockLogRow = {
@@ -305,7 +345,7 @@ export const companyApi = {
     detail: (id: string) => request<{ data: MitraFull }>(`/company/mitra/${id}`),
     create: (input: CreateMitraInput) =>
       request<{ data: MitraFull }>('/company/mitra', { method: 'POST', body: JSON.stringify(input) }),
-    update: (id: string, input: { nama?: string; kontak?: string }) =>
+    update: (id: string, input: { nama?: string; kontak?: string; bolehKelolaMember?: boolean }) =>
       request<{ data: MitraFull }>(`/company/mitra/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
     remove: (id: string) => request<{ data: unknown }>(`/company/mitra/${id}`, { method: 'DELETE' }),
   },
@@ -358,5 +398,18 @@ export const companyApi = {
       request<Paginated<LogAktivitasRow>>(
         `/company/aktivitas?page=${page}&pageSize=${pageSize}${kategori ? `&kategori=${kategori}` : ''}`,
       ),
+  },
+
+  /** Fitur member RFID/kode unik (di luar cakupan PRD awal) — cuma Super Admin, lihat member.controller.ts. */
+  members: {
+    list: (page: number, pageSize = 25, mitraId?: string) =>
+      request<Paginated<MemberRow>>(
+        `/company/members?page=${page}&pageSize=${pageSize}${mitraId ? `&mitraId=${mitraId}` : ''}`,
+      ),
+    create: (input: CreateMemberInput) =>
+      request<{ data: MemberRow }>('/company/members', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, input: UpdateMemberInput) =>
+      request<{ data: MemberRow }>(`/company/members/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    remove: (id: string) => request<{ data: unknown }>(`/company/members/${id}`, { method: 'DELETE' }),
   },
 };

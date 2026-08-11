@@ -138,17 +138,60 @@ model Lokasi {
 }
 
 model Mitra {
-  id        String    @id @default(uuid()) @db.Uuid
-  nama      String
-  kontak    String?
-  deletedAt DateTime? @map("deleted_at") @db.Timestamptz
-  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+  id                String    @id @default(uuid()) @db.Uuid
+  nama              String
+  kontak            String?
+  /// Fitur member RFID (di luar cakupan PRD awal) — mitra HANYA bisa akses
+  /// menu kelola member (umum/diskon) di Dashboard Mitra kalau Super Admin
+  /// mengaktifkan ini secara eksplisit lewat `PATCH /company/mitra/:id`
+  /// (default false — akses TIDAK otomatis diberikan ke mitra baru).
+  bolehKelolaMember Boolean   @default(false) @map("boleh_kelola_member")
+  deletedAt         DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   mitraLokasi MitraLokasi[]
   akunMitra   AkunMitra[]
+  member      Member[]
 
   @@map("mitra")
+}
+
+/// Member RFID/kode unik (fitur di luar cakupan PRD awal — permintaan
+/// bisnis langsung): 2 jenis member, dibedakan lewat `lokerId`:
+/// - `lokerId` TERISI = member EKSKLUSIF 1 loker spesifik tertentu — gratis
+///   (`nominal` sesi selalu 0), bebas buka kapan saja TANPA denda (tidak
+///   ada waktuSelesai yang bisa dilanggar). Loker itu DITARIK dari pool
+///   sewa umum (mulaiSewa() memfilternya via kandidat NOT EXISTS member
+///   aktif) — hanya Super Admin yang boleh mengatur ini (bukan mitra),
+///   karena menyangkut kapasitas publik loker milik mitra.
+/// - `lokerId` NULL = member "umum" — dapat `diskonPersen` dari tarif
+///   normal kategori loker mana pun yang dia sewa (masih sewa berdurasi
+///   biasa, masih kena denda/suspend kalau telat). Mitra BOLEH kelola
+///   jenis ini untuk lokasi miliknya sendiri (lihat dashboard-mitra).
+/// `kode` (RFID/kode unik kartu) TIDAK di-hash — kepemilikan fisik kartu
+/// adalah faktor otentikasinya sendiri, sama seperti kartu akses fisik
+/// lain, bukan rahasia seperti password.
+model Member {
+  id           String    @id @default(uuid()) @db.Uuid
+  mitraId      String    @map("mitra_id") @db.Uuid
+  kode         String    @unique
+  nama         String
+  kontak       String?
+  lokerId      String?   @unique @map("loker_id") @db.Uuid
+  /// 0–100, dipakai HANYA kalau lokerId NULL. CHECK constraint lengkap ada
+  /// di prisma/sql/constraints_and_rls.sql.
+  diskonPersen Decimal?  @map("diskon_persen") @db.Decimal(5, 2)
+  aktif        Boolean   @default(true)
+  deletedAt    DateTime? @map("deleted_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  mitra         Mitra           @relation(fields: [mitraId], references: [id])
+  loker         Loker?          @relation(fields: [lokerId], references: [id])
+  sesiTransaksi SesiTransaksi[]
+
+  @@map("member")
 }
 
 /// Relasi Mitra–Lokasi: tipe skema & persentase sengaja di sini (bukan di
@@ -260,10 +303,10 @@ model UnitDurasiHarga {
   durasiJam       Int      @map("durasi_jam")
   /// Angka, bukan string berformat (§6) — presisi untuk perhitungan bagi
   /// hasil.
-  harga     Decimal  @db.Decimal(12, 2)
-  aktif     Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  harga           Decimal  @db.Decimal(12, 2)
+  aktif           Boolean  @default(true)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   unit          Unit            @relation(fields: [unitId], references: [id])
   lokerKategori LokerKategori   @relation(fields: [lokerKategoriId], references: [id])
@@ -279,15 +322,16 @@ model Loker {
   nomorLoker      String      @map("nomor_loker")
   /// Enum Postgres 5-nilai resmi (§12 poin 9) — nilai tidak valid ditolak
   /// di level database.
-  status     LokerStatus @default(TERSEDIA)
-  deletedAt  DateTime?   @map("deleted_at") @db.Timestamptz
-  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz
+  status          LokerStatus @default(TERSEDIA)
+  deletedAt       DateTime?   @map("deleted_at") @db.Timestamptz
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
   unit               Unit                 @relation(fields: [unitId], references: [id])
   lokerKategori      LokerKategori        @relation(fields: [lokerKategoriId], references: [id])
   sesiTransaksi      SesiTransaksi[]
   emergencyUnlockLog EmergencyUnlockLog[]
+  memberEksklusif    Member?
 
   @@unique([unitId, nomorLoker])
   @@map("loker")
@@ -309,6 +353,11 @@ model SesiTransaksi {
   /// poin 4) — data pribadi yang sama sensitifnya.
   email                 String?             @map("email_penyewa")
   metodeAkses           MetodeAkses         @default(NOMOR_HP) @map("metode_akses")
+  /// Diisi kalau sesi ini dibuka lewat RFID member (§ fitur member, bukan
+  /// PRD awal) — bukan alur nomorHp/email biasa. Verifikasi identitas
+  /// TERAS sesi pakai `kode` RFID member ini (tap ulang di kiosk yang
+  /// sama), bukan OTP — lihat kiosk-rfid.service.ts.
+  memberId              String?             @map("member_id") @db.Uuid
   statusBayar           StatusBayar         @default(PENDING) @map("status_bayar")
   paymentProvider       PaymentProviderType @map("payment_provider")
   paymentProviderRefId  String?             @map("payment_provider_ref_id")
@@ -331,6 +380,7 @@ model SesiTransaksi {
 
   loker           Loker           @relation(fields: [lokerId], references: [id])
   unitDurasiHarga UnitDurasiHarga @relation(fields: [unitDurasiHargaId], references: [id])
+  member          Member?         @relation(fields: [memberId], references: [id])
   sesiDenda       SesiDenda[]
 
   @@unique([paymentProvider, paymentProviderRefId])
@@ -346,16 +396,16 @@ model SesiTransaksi {
 /// retry alur sewa). Yang dianggap "lunas" adalah kalau ADA baris dengan
 /// statusBayar = PAID untuk sesiTransaksiId ini.
 model SesiDenda {
-  id                    String              @id @default(uuid()) @db.Uuid
-  sesiTransaksiId       String              @map("sesi_transaksi_id") @db.Uuid
+  id                   String              @id @default(uuid()) @db.Uuid
+  sesiTransaksiId      String              @map("sesi_transaksi_id") @db.Uuid
   /// Jam overdue dibulatkan ke atas, dihitung saat charge ini dibuat.
-  jamTerlambat          Int                 @map("jam_terlambat")
-  nominal               Decimal             @db.Decimal(12, 2)
-  statusBayar           StatusBayar         @default(PENDING) @map("status_bayar")
-  paymentProvider       PaymentProviderType @map("payment_provider")
-  paymentProviderRefId  String?             @map("payment_provider_ref_id")
-  idTransaksi           String              @unique @map("id_transaksi")
-  createdAt             DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  jamTerlambat         Int                 @map("jam_terlambat")
+  nominal              Decimal             @db.Decimal(12, 2)
+  statusBayar          StatusBayar         @default(PENDING) @map("status_bayar")
+  paymentProvider      PaymentProviderType @map("payment_provider")
+  paymentProviderRefId String?             @map("payment_provider_ref_id")
+  idTransaksi          String              @unique @map("id_transaksi")
+  createdAt            DateTime            @default(now()) @map("created_at") @db.Timestamptz
 
   sesiTransaksi SesiTransaksi @relation(fields: [sesiTransaksiId], references: [id])
 

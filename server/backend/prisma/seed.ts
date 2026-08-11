@@ -68,18 +68,28 @@ async function main() {
     // grant_type=password akan SELALU gagal "Invalid login credentials"
     // walaupun password sudah di-set setelahnya (ditemukan & diverifikasi
     // langsung terhadap Supabase saat setup Epic 3).
-    const { data, error } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-    });
-    if (error || !data.user) {
-      throw new Error(`Gagal membuat akun Supabase Auth: ${error?.message ?? 'unknown error'}`);
+    let authUser = (await supabase.auth.admin.createUser({ email, password, email_confirm: true })).data.user;
+    if (!authUser) {
+      // `prisma migrate reset` cuma mengosongkan public schema — auth.users
+      // TIDAK ikut ter-reset, jadi email ini bisa saja masih terdaftar di
+      // Supabase Auth walau baris akun_internal-nya sudah hilang. Cari user
+      // Auth existing & sinkronkan password-nya ke nilai saat ini, bukan
+      // gagal total.
+      const { data: listData, error: listError } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      if (listError) throw new Error(`Gagal mencari akun Supabase Auth existing: ${listError.message}`);
+      const existing = listData.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+      if (!existing) throw new Error(`Gagal membuat akun Supabase Auth untuk ${email} dan tidak ketemu user existing.`);
+
+      const updated = await supabase.auth.admin.updateUserById(existing.id, { password });
+      if (updated.error || !updated.data.user) {
+        throw new Error(`Gagal sinkronkan password akun Supabase Auth existing: ${updated.error?.message ?? 'unknown error'}`);
+      }
+      authUser = updated.data.user;
     }
 
     const akun = await prisma.akunInternal.create({
       data: {
-        supabaseAuthUid: data.user.id,
+        supabaseAuthUid: authUser.id,
         nama,
         email,
         role: AkunInternalRole.SUPER_ADMIN,

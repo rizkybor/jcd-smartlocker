@@ -1,4 +1,4 @@
-import { mulaiSewaSchema } from './mulai-sewa.dto';
+import { mulaiSewaSchema, mulaiSewaObjectSchema } from './mulai-sewa.dto';
 import { ambilMulaiSchema } from './ambil-mulai.dto';
 import { nomorHpSchema } from './nomor-hp.dto';
 import { verifikasiOtpSchema, sesiIdSchema } from './verifikasi-otp.dto';
@@ -19,7 +19,7 @@ describe('nomorHp regex (dipakai di mulaiSewaSchema, ambilMulaiSchema, nomorHpSc
   ];
 
   const schemas: [string, { safeParse: (v: unknown) => { success: boolean } }][] = [
-    ['mulaiSewaSchema', mulaiSewaSchema.pick({ nomorHp: true })],
+    ['mulaiSewaSchema', mulaiSewaObjectSchema.pick({ nomorHp: true })],
     ['ambilMulaiSchema', ambilMulaiSchema],
     ['nomorHpSchema', nomorHpSchema],
   ];

@@ -7,18 +7,19 @@ Legenda: ✅ selesai (ada bukti kode jelas) · ⚠️ sebagian/ada deviasi · �
 ## Ringkasan
 
 - **Total ticket MVP diperiksa: 97**
-- ✅ Selesai: **68**
+- ✅ Selesai: **71**
 - ⚠️ Sebagian/deviasi: **19**
-- ❌ Belum ada: **10**
+- ❌ Belum ada: **7**
 
 **Celah terbesar yang ditemukan:**
 
 - **Epic 5 (Gateway Hardware fisik)** — SMB-502, 503, 504, 505, 510 semua ❌/blocked. `server/gateway/package.json` isinya cuma skeleton (`"dev": "echo TODO && exit 1"`), belum ada satu baris kode service gateway fisik. Perintah `buka_pintu` dari backend (`KioskSewaService.bukaPintu()`/`KioskAmbilService.bukaPintu()`) publish MQTT **fire-and-forget tanpa menunggu ack fisik** — DB tetap jadi sumber kebenaran.
-- **Epic 11 (E2E & load test)** — SMB-1103 (Playwright kiosk), SMB-1104 (Playwright Dashboard Company), SMB-1106 (uji beban) semuanya ❌. Tidak ada folder/config Playwright maupun k6/artillery di repo manapun. Yang ada baru unit test (`*.spec.ts`, mocked Prisma) — bahkan `test:e2e` di `server/backend/package.json` menunjuk ke `test/jest-e2e.json` yang **tidak ada filenya**.
 - **Channel komunikasi eksternal belum aktif** — WhatsApp OTP (SMB-207) & Midtrans (bagian SMB-006/SMB-203 pemakaian) sudah ada kode abstraksinya tapi kredensial kosong di `.env`; sistem jalan pakai fallback (email/Brevo untuk OTP, Xendit-only untuk payment).
 - **Ekspor laporan (SMB-610)** — hanya CSV, sinkron (bukan async BullMQ seperti direkomendasikan PRD, Redis belum ada saat ticket dikerjakan), dan **tidak ada ekspor PDF sama sekali**.
 - **CI/CD gate (SMB-008/009)** — hanya ada workflow `dependency-audit.yml` (pnpm audit). Tidak ada workflow GitHub Actions yang menjalankan lint+test+build sebagai gate PR, dan tidak ada pipeline deploy production manual/approval.
 - **Setup infra eksternal (SMB-004, 005, 007, 904, 907, 908)** tidak bisa diverifikasi murni dari kode — dinilai dari jejak konfigurasi (`.env` terisi, dsb.), bukan akses langsung ke console Supabase/Sumopod/Cloudinary.
+
+> **Update 2026-08-11 (sore):** Epic 11 (SMB-1103/1104/1106 — Playwright kiosk & Dashboard Company, load test) diselesaikan sejak audit pagi — lihat tabel Epic 11 di bawah, sekarang semua ✅. Sesudahnya, satu fitur besar **di luar 97 ticket MVP** juga selesai dibangun: **Member RFID/kode unik**, lihat bagian "Fitur Tambahan Pasca-MVP" di akhir dokumen ini untuk daftar lengkapnya.
 
 ---
 
@@ -222,11 +223,26 @@ Legenda: ✅ selesai (ada bukti kode jelas) · ⚠️ sebagian/ada deviasi · �
 |---|---|---|---|
 | SMB-1101 | Unit test logic kritikal: bagi hasil, validasi sesi/timeout, assign loker atomik | ✅ | `laporan.service.spec.ts` (bagi hasil), `kiosk-sewa.service.spec.ts`/`kiosk-ambil.service.spec.ts` (assign loker, validasi sesi), `otp.service.spec.ts` |
 | SMB-1102 | Integration test endpoint: auth/RBAC per role, webhook payment, RLS isolasi mitra | ⚠️ | Ada test RBAC (`roles.guard.spec.ts`, `supabase-auth.guard.spec.ts`) dan webhook (`webhooks.service.spec.ts`) — tapi semua **unit test dengan Prisma di-mock**, bukan integration test HTTP sungguhan. `server/backend/package.json` punya script `test:e2e` menunjuk `test/jest-e2e.json`, tapi **folder `test/` tidak ada** dan `supertest` (terpasang di `devDependencies`) tidak dipakai di manapun |
-| SMB-1103 | E2E test alur kiosk penuh (Playwright, 600×1024) | ❌ | Tidak ada file/config Playwright di manapun di repo (`find -iname "playwright*"` kosong) |
-| SMB-1104 | E2E test Dashboard Company (approval, provisioning, konfigurasi unit) | ❌ | Sama seperti SMB-1103 — tidak ada Playwright |
+| SMB-1103 | E2E test alur kiosk penuh (Playwright, 600×1024) | ✅ | `client/kiosk/e2e/*.spec.ts` (sewa-berhasil, sewa-gagal-bayar, ambil-barang, ambil-overdue, pilih-kategori) + `client/kiosk/playwright.config.ts` — canvas 600×1024, backend/Supabase di-mock via `page.route()`, port E2E khusus 5273 |
+| SMB-1104 | E2E test Dashboard Company (approval, provisioning, konfigurasi unit) | ✅ | `client/dashboard-company/e2e/*.spec.ts` (approval-manager, provisioning-super-admin, konfigurasi-unit) + `playwright.config.ts` |
 | SMB-1105 | Test RLS Dashboard Mitra — tidak bisa akses data mitra lain | ✅ | `dashboard-mitra.service.spec.ts` — test IDOR eksplisit (`lempar ForbiddenException LOKASI_BUKAN_MILIK_ANDA...`, `scope WHERE ke lokasiId yang benar-benar milik actor`); isolasi ditegakkan di application layer (didokumentasikan di kode karena backend connect sebagai role `postgres`, bypass RLS Postgres) |
-| SMB-1106 | Uji beban dasar endpoint publik kiosk | ❌ | Tidak ditemukan k6/artillery/tooling load test di package.json manapun |
+| SMB-1106 | Uji beban dasar endpoint publik kiosk | ✅ | `server/backend/loadtest/concurrent-sewa.mjs` (`test:load` script) — simulasi banyak `POST /kiosk/sewa/mulai` konkuren, verifikasi tidak ada loker di-assign dobel (race condition `FOR UPDATE SKIP LOCKED`) |
 
 ---
 
-*Dokumen ini dihasilkan dengan membaca kode langsung (bukan asumsi) pada tanggal 2026-08-11. Untuk ticket yang bergantung pada aktivitas operasional murni (provisioning akun cloud, hardening server, drill backup, pentest), verifikasi terbatas pada jejak yang terlihat dari repo (isi `.env`, dokumentasi `docs/`) — bukan akses langsung ke console pihak ketiga.*
+## Fitur Tambahan Pasca-MVP (di luar 97 ticket Epic 0–11)
+
+Selain menyelesaikan tabel di atas, beberapa fitur **di luar cakupan `docs/Epics-Smartbox.md`** dibangun langsung atas permintaan bisnis — semua ditandai eksplisit di kode dengan komentar "di luar cakupan PRD awal" supaya tidak disalahartikan sebagai bagian ticket resmi. Daftar berikut menjawab "ada fitur apa saja" di luar checklist MVP formal:
+
+| Fitur | Deskripsi | Bukti kode |
+|---|---|---|
+| **Perbaikan UX Numpad kiosk** | Area tombol numpad terlalu sempit & font terlalu besar diperbaiki (flex-shrink bug) | `client/packages/ui/src/components/kiosk/Numpad.tsx` |
+| **Harga & kategori ukuran loker** | Satu unit/kios bisa punya banyak **kategori ukuran loker** (mis. Kecil/Besar), masing-masing dengan daftar durasi/harga & ketersediaan sendiri. Kiosk menampilkan langkah "pilih ukuran" sebelum "pilih durasi"; loker yang sudah penuh per kategori otomatis disabled. | Model `LokerKategori` (`schema.prisma`), `client/kiosk/src/screens/KategoriScreen.tsx`, `KioskSewaService.mulaiSewa()` (filter assignment loker per kategori) |
+| **Denda keterlambatan ambil barang & suspend loker** | Kalau penyewa telat ambil barang tapi belum 24 jam, wajib bayar denda kekurangan (dihitung dari tarif per-jam termurah kategori loker) sebelum bisa lanjut OTP/buka pintu. Kalau sudah ≥24 jam, loker **disuspend** — kiosk tidak lagi menawarkan jalur bayar sendiri, hanya Super Admin yang bisa buka. | `server/backend/src/common/overdue.util.ts`, `KioskAmbilService` (gerbang denda/suspend di `kirimOtp`/`bukaPintu`), `client/kiosk/src/screens/BayarDendaScreen.tsx`, `LokerSuspendedScreen.tsx` |
+| **Member RFID/kode unik** | Loker bisa diisi kode RFID/unik opsional (diinput Super Admin). Dua jenis member: **eksklusif** (diikat ke 1 loker spesifik, gratis, bebas buka kapan saja tanpa denda — loker ditarik dari pool sewa umum) dan **umum** (diskon persentase dari tarif normal, tetap sewa berdurasi biasa & tetap kena denda kalau telat). Identifikasi di kiosk lewat tap kartu (listener keyboard-wedge otomatis), menggantikan nomor HP/email khusus untuk member — jalur nomor HP/email biasa tetap berjalan bersamaan untuk pelanggan non-member. Lihat `docs/PRD-Smartbox.md` §4.2a. | Model `Member` (`schema.prisma`), `server/backend/src/member/`, `server/backend/src/kiosk/kiosk-rfid.service.ts`, `client/kiosk/src/hooks/useRfidListener.ts`, `client/dashboard-company/src/pages/MembersPage.tsx`, `client/dashboard-mitra/src/pages/MembersPage.tsx` |
+| **Akses "kelola member" per mitra dikunci Super Admin** | Mitra hanya bisa membuka menu "Member" di Dashboard Mitra (buat/kelola member umum miliknya sendiri) kalau Super Admin sudah mengaktifkan `Mitra.bolehKelolaMember` secara eksplisit untuk mitra itu (default nonaktif) — dicek ulang di backend pada setiap endpoint tulis+baca `/mitra/members/*`, bukan cuma disembunyikan di UI. Mitra tetap tidak pernah bisa mengikat member ke loker spesifik (member eksklusif). | `Mitra.bolehKelolaMember` (`schema.prisma`), `MemberService.assertBolehKelolaMember()`, toggle di `client/dashboard-company/src/pages/MitraDetailPage.tsx`, gating menu di `client/dashboard-mitra/src/layout/DashboardLayout.tsx` & `pages/MembersPage.tsx` |
+| **Reset migrasi & seeder demo** | Skrip `pnpm run seed:demo` bootstrap data demo lengkap (Super Admin, Mitra + akun login, 1 unit kiosk dengan 2 kategori loker, 2 contoh member RFID) setelah `prisma migrate reset` — idempotent, kredensial dibaca dari `.env`, tidak pernah di-log ke terminal. | `server/backend/prisma/seed-demo.ts`, `server/backend/prisma/seed.ts` (bootstrap Super Admin awal) |
+
+---
+
+*Dokumen ini dihasilkan dengan membaca kode langsung (bukan asumsi) pada tanggal 2026-08-11 (diperbarui sore hari yang sama setelah Epic 11 selesai dan fitur Member RFID dibangun). Untuk ticket yang bergantung pada aktivitas operasional murni (provisioning akun cloud, hardening server, drill backup, pentest), verifikasi terbatas pada jejak yang terlihat dari repo (isi `.env`, dokumentasi `docs/`) — bukan akses langsung ke console pihak ketiga.*

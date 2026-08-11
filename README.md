@@ -62,3 +62,7 @@ Lihat `docs/PRD-Smartbox.md` §14 untuk strategi Development/Staging/Production 
 curl -fsSL https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.sh | bash
 
 uninstall: npx -y github:JuliusBrussee/caveman -- --uninstall
+
+cd server/backend
+npx prisma migrate reset --force
+pnpm run seed:demo

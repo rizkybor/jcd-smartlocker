@@ -9,6 +9,8 @@ import { z } from 'zod';
 export const updateMitraSchema = z.object({
   nama: z.string().min(1, 'Nama mitra tidak boleh kosong.').optional(),
   kontak: z.string().optional(),
+  /** Fitur member RFID (di luar cakupan PRD awal) — akses menu kelola member di Dashboard Mitra, default false. */
+  bolehKelolaMember: z.boolean().optional(),
 });
 
 export type UpdateMitraDto = z.infer<typeof updateMitraSchema>;

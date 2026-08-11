@@ -19,6 +19,7 @@ import { BayarDendaScreen } from './screens/BayarDendaScreen';
 import { BayarDendaGagalScreen } from './screens/BayarDendaGagalScreen';
 import { LokerSuspendedScreen } from './screens/LokerSuspendedScreen';
 import { ambilSteps } from './screens/KioskShell';
+import { useRfidListener } from './hooks/useRfidListener';
 
 // Session timeout (PRD §5.3, SMB-307) — reset ke idle setelah tidak ada
 // interaksi. Idle sendiri dikecualikan (tidak ada apa-apa untuk di-timeout).
@@ -27,6 +28,14 @@ const SESSION_TIMEOUT_MS = 60_000;
 export default function App() {
   const [state, send] = useMachine(sewaMachine);
   const { t } = useTranslation();
+
+  // Fitur member RFID (di luar cakupan PRD awal) — listener aktif di
+  // idle/menu (sebelum pelanggan memilih jalur nomorHp/email manual),
+  // sesuai state machine yang cuma menangani event RFID_TAP di 2 state itu.
+  useRfidListener(
+    (kode) => send({ type: 'RFID_TAP', kode }),
+    state.matches('idle') || state.matches('menu'),
+  );
 
   useEffect(() => {
     if (state.matches('idle')) return;
@@ -89,6 +98,31 @@ export default function App() {
           onAmbil={() => send({ type: 'PILIH_AMBIL' })}
         />
       );
+    }
+    if (state.matches('rfidMemproses')) {
+      return <IdleScreenView onWake={() => {}} />;
+    }
+    if (state.matches('rfidEksklusifHasil')) {
+      const hasil = state.context.rfidHasilEksklusif;
+      const simpan = hasil?.aksi === 'simpan';
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <BukaPintuScreen
+              nomorLoker={hasil?.nomorLoker}
+              label={t(simpan ? 'rfid.simpan.detail' : 'rfid.ambil.detail')}
+            />
+          </div>
+          <div style={{ padding: 'var(--sl-kiosk-pad)', display: 'flex', justifyContent: 'center' }}>
+            <KioskButton tone="primary" size="lg" onClick={() => send({ type: 'SELESAI' })}>
+              {t('common.selesai')}
+            </KioskButton>
+          </div>
+        </div>
+      );
+    }
+    if (state.matches('ambilBukaPintuRfid')) {
+      return <BukaPintuScreen label={t('bukaPintu.membuka')} />;
     }
     if (state.matches('nomorHp')) {
       return (

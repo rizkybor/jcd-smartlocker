@@ -34,10 +34,27 @@ export class DashboardMitraService {
     private readonly gatewayService: GatewayService,
   ) {}
 
-  /** `GET /mitra/me` — profil login, dipakai frontend tahu "saya siapa" (§5.5, sama pola dengan ProfileController Dashboard Company). */
+  /**
+   * `GET /mitra/me` — profil login, dipakai frontend tahu "saya siapa" (§5.5,
+   * sama pola dengan ProfileController Dashboard Company). `bolehKelolaMember`
+   * (fitur member RFID, di luar cakupan PRD awal) dipakai frontend untuk
+   * menampilkan/menyembunyikan menu "Member" — bukan cuma kosmetik, backend
+   * (`member.service.ts::assertBolehKelolaMember`) tetap menegakkan ini
+   * ulang di setiap endpoint tulis, jangan andalkan sembunyi-UI saja.
+   */
   async me(actor: AuthenticatedMitraUser) {
-    const mitra = await this.prisma.db.mitra.findUnique({ where: { id: actor.mitraId }, select: { nama: true } });
-    return { id: actor.id, email: actor.email, nama: actor.nama, mitraId: actor.mitraId, mitraNama: mitra?.nama ?? '' };
+    const mitra = await this.prisma.db.mitra.findUnique({
+      where: { id: actor.mitraId },
+      select: { nama: true, bolehKelolaMember: true },
+    });
+    return {
+      id: actor.id,
+      email: actor.email,
+      nama: actor.nama,
+      mitraId: actor.mitraId,
+      mitraNama: mitra?.nama ?? '',
+      bolehKelolaMember: mitra?.bolehKelolaMember ?? false,
+    };
   }
 
   /** Lokasi yang benar-benar boleh diakses akun mitra ini — satu sumber kebenaran untuk semua method di bawah. */

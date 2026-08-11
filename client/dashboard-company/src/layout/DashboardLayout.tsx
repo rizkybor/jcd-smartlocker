@@ -16,6 +16,7 @@ function buildNavItems(t: (key: string) => string): SidebarItem[] {
     { id: '/laporan/bagi-hasil', label: t('dashboardLayout.nav.bagiHasil'), icon: 'chart-column' },
     { section: t('dashboardLayout.nav.admin') },
     { id: '/users', label: t('dashboardLayout.nav.manajemenUser'), icon: 'users' },
+    { id: '/members', label: t('dashboardLayout.nav.member'), icon: 'nfc' },
     { id: '/emergency-unlock', label: t('dashboardLayout.nav.emergencyUnlock'), icon: 'key-round' },
     { id: '/aktivitas', label: t('dashboardLayout.nav.aktivitas'), icon: 'activity' },
   ];
@@ -41,6 +42,7 @@ const ROLE_RESTRICTED: Partial<Record<string, AkunInternalRole[]>> = {
   '/laporan/transaksi': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
   '/laporan/bagi-hasil': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
   '/users': ['SUPER_ADMIN'],
+  '/members': ['SUPER_ADMIN'],
   '/emergency-unlock': ['SUPER_ADMIN', 'OPS', 'STAFF'],
   '/aktivitas': ['SUPER_ADMIN', 'OPS', 'MANAGER'],
 };

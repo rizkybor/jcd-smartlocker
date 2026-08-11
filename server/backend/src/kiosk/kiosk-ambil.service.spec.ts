@@ -350,6 +350,68 @@ describe('KioskAmbilService', () => {
     });
   });
 
+  describe('bukaPintuViaRfid — fitur member RFID, tap ulang gantikan OTP', () => {
+    it('TIDAK mensyaratkan otpVerifiedAt (tap kartu = otorisasi langsung)', async () => {
+      const sesi = sesiDefault({ otpVerifiedAt: null });
+      const { service, mqttClient, updateLoker } = buildService({ sesiAktif: sesi });
+
+      await service.bukaPintuViaRfid('sesi-1');
+
+      expect(mqttClient.publishPerintahBukaPintu).toHaveBeenCalledWith('UNIT-01', '01', 'sesi-1');
+      expect(updateLoker).toHaveBeenCalledWith({ where: { id: 'loker-1' }, data: { status: LokerStatus.TERSEDIA } });
+    });
+
+    it('tetap menolak kalau overdue & denda belum lunas, meski lewat RFID', async () => {
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
+      const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }), sesiDendaPaid: false });
+
+      await expect(service.bukaPintuViaRfid('sesi-1')).rejects.toMatchObject({
+        response: { error: { code: 'DENDA_BELUM_DIBAYAR' } },
+      });
+    });
+
+    it('tetap menolak kalau sudah disuspend (>= 24 jam), meski lewat RFID', async () => {
+      const waktuSelesai = new Date(Date.now() - (25 * 60 - 30) * 60 * 1000);
+      const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
+
+      await expect(service.bukaPintuViaRfid('sesi-1')).rejects.toMatchObject({
+        response: { error: { code: 'LOKER_DISUSPEND' } },
+      });
+    });
+
+    it('idempotent — loker sudah TERSEDIA, tidak publish/ubah DB lagi', async () => {
+      const sesi = sesiDefault({ loker: { status: LokerStatus.TERSEDIA, nomorLoker: '01', unit: { kodeUnit: 'UNIT-01' } } });
+      const { service, mqttClient, updateLoker } = buildService({ sesiAktif: sesi });
+
+      const result = await service.bukaPintuViaRfid('sesi-1');
+
+      expect(result).toBe(sesi);
+      expect(mqttClient.publishPerintahBukaPintu).not.toHaveBeenCalled();
+      expect(updateLoker).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cariSesiAktifMember — dipakai KioskRfidService saat tap kartu member umum', () => {
+    it('kembalikan null kalau tidak ada sesi aktif untuk member ini', async () => {
+      const { service, prisma } = buildService();
+      (prisma.db.sesiTransaksi.findFirst as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(service.cariSesiAktifMember(unit, 'member-1')).resolves.toBeNull();
+    });
+
+    it('kembalikan id sesi + status overdue kalau ada sesi aktif', async () => {
+      const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai: null }) });
+
+      await expect(service.cariSesiAktifMember(unit, 'member-1')).resolves.toEqual({
+        id: 'sesi-1',
+        overdue: false,
+        suspended: false,
+        jamTerlambat: 0,
+        dendaNominal: 0,
+      });
+    });
+  });
+
   describe('statusDenda', () => {
     it('lempar NotFoundException DENDA_BELUM_DIBUAT kalau belum pernah ada tagihan denda', async () => {
       const { service, prisma } = buildService();

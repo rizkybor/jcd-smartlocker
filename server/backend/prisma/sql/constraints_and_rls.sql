@@ -19,6 +19,18 @@ ALTER TABLE mitra_lokasi_skema_histori
   ADD CONSTRAINT chk_skema_histori_persentase_range
   CHECK (persentase >= 0 AND persentase <= 100);
 
+-- Member RFID/kode unik (fitur di luar cakupan PRD awal) — diskon_persen
+-- 0-100 kalau diisi, DAN saling eksklusif dengan loker_id (member terikat
+-- loker spesifik = gratis, tidak boleh sekaligus punya diskon; member umum
+-- = wajib py diskon, tidak boleh terikat loker) — lihat catatan schema.prisma.
+ALTER TABLE member
+  ADD CONSTRAINT chk_member_diskon_persen_range
+  CHECK (diskon_persen IS NULL OR (diskon_persen >= 0 AND diskon_persen <= 100));
+
+ALTER TABLE member
+  ADD CONSTRAINT chk_member_loker_xor_diskon
+  CHECK ((loker_id IS NOT NULL AND diskon_persen IS NULL) OR (loker_id IS NULL));
+
 -- ---------------------------------------------------------------------------
 -- 2. Proteksi append-only (§7.1) — TIDAK diterapkan lewat REVOKE Postgres.
 --

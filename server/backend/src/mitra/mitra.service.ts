@@ -46,7 +46,7 @@ export class MitraService {
 
     return this.prisma.db.mitra.update({
       where: { id },
-      data: { nama: dto.nama, kontak: dto.kontak },
+      data: { nama: dto.nama, kontak: dto.kontak, bolehKelolaMember: dto.bolehKelolaMember },
       include: mitraInclude,
     });
   }

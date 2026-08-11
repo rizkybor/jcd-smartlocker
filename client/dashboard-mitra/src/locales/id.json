@@ -1,7 +1,11 @@
 {
   "common": {
     "memuat": "Memuat...",
-    "keluar": "Keluar"
+    "keluar": "Keluar",
+    "simpan": "Simpan",
+    "aktif": "Aktif",
+    "nonaktif": "Nonaktif",
+    "nonaktifkan": "Nonaktifkan"
   },
   "app": {
     "akunTidakDikenali": "Akun tidak dikenali."
@@ -22,7 +26,8 @@
     "utama": "Utama",
     "overview": "Overview",
     "unitLocker": "Unit Locker",
-    "laporan": "Laporan"
+    "laporan": "Laporan",
+    "member": "Member RFID"
   },
   "overviewPage": {
     "judul": "Overview",
@@ -77,5 +82,32 @@
       "nominal": "Nominal",
       "status": "Status"
     }
+  },
+  "membersPage": {
+    "judul": "Member RFID",
+    "tambahMember": "+ Tambah Member",
+    "tambahMemberDeskripsi": "Member umum dapat diskon tarif sewa normal — kartu RFID/kode unik dibuat di sini, dipakai lewat tap di kiosk (bukan nomor HP/email).",
+    "gagalMuat": "Gagal memuat daftar member.",
+    "gagalSimpan": "Gagal menyimpan member.",
+    "validasiForm": "Lengkapi kode, nama, dan diskon (0-100) dulu.",
+    "belumAdaMember": "Belum ada member untuk lokasi Anda.",
+    "belumDiberiAkses": "Anda belum diberi akses mengelola member RFID. Hubungi Super Admin untuk mengaktifkannya.",
+    "itemLabel": "member",
+    "toastDibuat": "Member ditambahkan",
+    "toastDinonaktifkan": "Member dinonaktifkan",
+    "gagalNonaktifkan": "Gagal menonaktifkan member.",
+    "kolomKode": "Kode RFID",
+    "kolomNama": "Nama",
+    "kolomDiskon": "Diskon",
+    "kolomStatus": "Status",
+    "kode": "Kode RFID/Unik",
+    "kodeHint": "Dibaca listener kiosk saat kartu di-tap — masukkan sesuai kode fisik kartu.",
+    "nama": "Nama",
+    "kontak": "Kontak (opsional)",
+    "diskonPersen": "Diskon (%)",
+    "diskonHint": "Persentase potongan dari tarif normal kategori loker yang disewa member ini.",
+    "diskonDetail": "{{persen}}%",
+    "nonaktifkanTitle": "Nonaktifkan {{nama}}?",
+    "nonaktifkanDeskripsi": "Kartu member ini tidak bisa dipakai lagi sampai diaktifkan ulang."
   }
 }

@@ -20,6 +20,7 @@ describe('KioskSewaService', () => {
   function buildService(overrides: {
     queryRawResult?: { id: string }[];
     durasiHarga?: unknown;
+    member?: unknown;
   } = {}) {
     const txQueryRaw = jest.fn().mockResolvedValue(overrides.queryRawResult ?? [{ id: 'loker-1' }]);
     const txLokerUpdate = jest.fn().mockResolvedValue({});
@@ -38,6 +39,11 @@ describe('KioskSewaService', () => {
             overrides.durasiHarga !== undefined
               ? overrides.durasiHarga
               : { id: 'durasi-1', durasiJam: 3, harga: 15_000, lokerKategoriId: 'kategori-1' },
+          ),
+        },
+        member: {
+          findFirst: jest.fn().mockResolvedValue(
+            overrides.member !== undefined ? overrides.member : { id: 'member-1', diskonPersen: 20, lokerId: null, aktif: true },
           ),
         },
         $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
@@ -146,6 +152,45 @@ describe('KioskSewaService', () => {
 
       const queryRawArgs = (tx.$queryRaw as jest.Mock).mock.calls[0];
       expect(queryRawArgs).toContain('kategori-besar');
+    });
+
+    it('query kandidat loker WAJIB mengecualikan loker yang diikat eksklusif ke member (NOT EXISTS member)', async () => {
+      const { service, tx } = buildService();
+
+      await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1' });
+
+      const sqlParts = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { join: (s: string) => string };
+      const sql = sqlParts.join(' ');
+      expect(sql).toContain('NOT EXISTS');
+      expect(sql).toContain('member');
+    });
+
+    describe('fitur member RFID — sewa via memberId (diskon, bukan nomorHp/email)', () => {
+      it('lempar NotFoundException MEMBER_TIDAK_DITEMUKAN kalau member tidak ada/tidak berlaku di unit ini', async () => {
+        const { service } = buildService({ member: null });
+
+        await expect(
+          service.mulaiSewa(unit, { memberId: 'member-x', unitDurasiHargaId: 'durasi-1' }),
+        ).rejects.toBeInstanceOf(NotFoundException);
+      });
+
+      it('hitung nominal terdiskon & simpan memberId + metodeAkses RFID, TANPA nomorHp/email', async () => {
+        const { service, tx } = buildService({ member: { id: 'member-1', diskonPersen: 20, lokerId: null, aktif: true } });
+
+        await service.mulaiSewa(unit, { memberId: 'member-1', unitDurasiHargaId: 'durasi-1' });
+
+        expect(tx.sesiTransaksi.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({
+              memberId: 'member-1',
+              metodeAkses: 'RFID',
+              nominal: 12_000, // 15.000 - 20% = 12.000
+              nomorHp: null,
+              email: null,
+            }),
+          }),
+        );
+      });
     });
   });
 

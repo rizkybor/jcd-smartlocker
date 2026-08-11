@@ -18,7 +18,8 @@
     "prisma:validate": "prisma validate",
     "prisma:format": "prisma format",
     "migrate": "prisma migrate dev",
-    "seed:super-admin": "ts-node -r dotenv/config prisma/seed.ts"
+    "seed:super-admin": "ts-node -r dotenv/config prisma/seed.ts",
+    "seed:demo": "ts-node -r dotenv/config prisma/seed-demo.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",

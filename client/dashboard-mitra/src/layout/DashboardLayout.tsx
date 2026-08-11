@@ -5,8 +5,16 @@ import { useAuth } from '../auth/AuthContext';
 
 /**
  * Tidak ada filter per-role di sini seperti Dashboard Company — cuma satu
- * jenis akun (AkunMitra), semua route sama-sama read-only & terbuka untuk
- * mitra yang login (§5.5).
+ * jenis akun (AkunMitra), semua route sama-sama terbuka untuk mitra yang
+ * login (§5.5). Sebagian besar route read-only KECUALI `/members` (fitur
+ * member RFID, di luar cakupan PRD awal) — satu-satunya endpoint tulis
+ * yang dipunyai Dashboard Mitra (§ revisi kebijakan SMB-704, lihat
+ * dashboard-mitra.controller.ts backend). Menu "Member" itu sendiri cuma
+ * tampil kalau `profile.bolehKelolaMember` true — Super Admin yang
+ * mengaktifkan per-mitra (default false, lihat `Mitra.bolehKelolaMember`
+ * di schema.prisma). Backend menegakkan ini ulang di setiap endpoint
+ * (member.service.ts::assertBolehKelolaMember), jadi ini murni UX, bukan
+ * satu-satunya lapisan proteksi.
  */
 export function DashboardLayout() {
   const { t } = useTranslation();
@@ -19,6 +27,7 @@ export function DashboardLayout() {
     { id: '/', label: t('sidebar.overview'), icon: 'layout-grid' },
     { id: '/units', label: t('sidebar.unitLocker'), icon: 'package' },
     { id: '/laporan', label: t('sidebar.laporan'), icon: 'receipt' },
+    ...(profile?.bolehKelolaMember ? [{ id: '/members', label: t('sidebar.member'), icon: 'nfc' } as SidebarItem] : []),
   ];
 
   return (

@@ -11,6 +11,7 @@ import { MitraDetailPage } from './pages/MitraDetailPage';
 import { LaporanTransaksiPage } from './pages/LaporanTransaksiPage';
 import { LaporanBagiHasilPage } from './pages/LaporanBagiHasilPage';
 import { UsersPage } from './pages/UsersPage';
+import { MembersPage } from './pages/MembersPage';
 import { EmergencyUnlockPage } from './pages/EmergencyUnlockPage';
 import { AktivitasPage } from './pages/AktivitasPage';
 
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/laporan/transaksi" element={<LaporanTransaksiPage />} />
           <Route path="/laporan/bagi-hasil" element={<LaporanBagiHasilPage />} />
           <Route path="/users" element={<UsersPage />} />
+          <Route path="/members" element={<MembersPage />} />
           <Route path="/emergency-unlock" element={<EmergencyUnlockPage />} />
           <Route path="/aktivitas" element={<AktivitasPage />} />
         </Route>

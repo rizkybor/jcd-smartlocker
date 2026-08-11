@@ -7,10 +7,12 @@ import { KioskSewaController } from './kiosk-sewa.controller';
 import { KioskSewaService } from './kiosk-sewa.service';
 import { KioskAmbilController } from './kiosk-ambil.controller';
 import { KioskAmbilService } from './kiosk-ambil.service';
+import { KioskRfidController } from './kiosk-rfid.controller';
+import { KioskRfidService } from './kiosk-rfid.service';
 
 @Module({
   imports: [PaymentModule, OtpModule, GatewayModule],
-  controllers: [KioskSewaController, KioskAmbilController],
-  providers: [UnitKeyGuard, KioskSewaService, KioskAmbilService],
+  controllers: [KioskSewaController, KioskAmbilController, KioskRfidController],
+  providers: [UnitKeyGuard, KioskSewaService, KioskAmbilService, KioskRfidService],
 })
 export class KioskModule {}

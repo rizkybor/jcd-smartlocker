@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Unit } from '@prisma/client';
-import { LokerStatus, StatusBayar } from '@prisma/client';
+import { LokerStatus, MetodeAkses, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
@@ -40,10 +40,18 @@ export class KioskSewaService {
         orderBy: { createdAt: 'asc' },
         include: {
           durasiHarga: { where: { aktif: true }, orderBy: { durasiJam: 'asc' } },
-          _count: { select: { lokers: { where: { status: LokerStatus.TERSEDIA, deletedAt: null } } } },
+          _count: {
+            select: {
+              lokers: {
+                where: { status: LokerStatus.TERSEDIA, deletedAt: null, memberEksklusif: null },
+              },
+            },
+          },
         },
       }),
-      this.prisma.db.loker.count({ where: { unitId: unit.id, status: LokerStatus.TERSEDIA } }),
+      this.prisma.db.loker.count({
+        where: { unitId: unit.id, status: LokerStatus.TERSEDIA, memberEksklusif: null },
+      }),
       this.prisma.db.loker.count({ where: { unitId: unit.id } }),
     ]);
 
@@ -79,6 +87,12 @@ export class KioskSewaService {
    * ke `loker_kategori_id` milik `durasiHarga` yang dipilih pelanggan —
    * bukan loker mana pun yang tersedia di unit itu — supaya pelanggan yang
    * pilih & bayar loker "Besar" tidak pernah di-assign ke loker "Kecil".
+   *
+   * Fitur member RFID (di luar cakupan PRD awal): loker yang sudah diikat
+   * EKSKLUSIF ke member tertentu (`member.loker_id`) DITARIK dari pool
+   * sewa umum sepenuhnya — bukan cuma saat member-nya sedang memakainya
+   * (§ konfirmasi bisnis) — supaya pelanggan umum tidak pernah di-assign
+   * ke loker yang seharusnya cuma bisa dibuka gratis oleh member itu.
    */
   async mulaiSewa(unit: Unit, dto: MulaiSewaDto) {
     const durasiHarga = await this.prisma.db.unitDurasiHarga.findFirst({
@@ -93,6 +107,29 @@ export class KioskSewaService {
       });
     }
 
+    // Fitur member RFID: member "umum" dapat diskon dari tarif normal
+    // kategori yang dia sewa — tetap sewa berdurasi biasa (kena denda kalau
+    // telat), cuma identitasnya lewat memberId (dari tap kartu), bukan
+    // nomorHp/email (§ konfirmasi bisnis, lihat mulai-sewa.dto.ts).
+    let nominal = Number(durasiHarga.harga);
+    if (dto.memberId) {
+      const member = await this.prisma.db.member.findFirst({
+        where: {
+          id: dto.memberId,
+          aktif: true,
+          lokerId: null,
+          mitra: { mitraLokasi: { some: { lokasiId: unit.lokasiId } } },
+        },
+      });
+      if (!member) {
+        throw new NotFoundException({
+          error: { code: 'MEMBER_TIDAK_DITEMUKAN', message: 'Member tidak ditemukan atau tidak berlaku di kiosk ini.' },
+        });
+      }
+      const diskonPersen = Number(member.diskonPersen ?? 0);
+      nominal = Math.round(nominal * (1 - diskonPersen / 100));
+    }
+
     return this.prisma.db.$transaction(async (tx) => {
       const kandidat = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM loker
@@ -100,6 +137,10 @@ export class KioskSewaService {
           AND loker_kategori_id = ${durasiHarga.lokerKategoriId}::uuid
           AND status = 'tersedia'
           AND deleted_at IS NULL
+          AND NOT EXISTS (
+            SELECT 1 FROM member m
+            WHERE m.loker_id = loker.id AND m.aktif = true AND m.deleted_at IS NULL
+          )
         ORDER BY LENGTH(nomor_loker), nomor_loker
         LIMIT 1
         FOR UPDATE SKIP LOCKED
@@ -121,9 +162,11 @@ export class KioskSewaService {
         data: {
           lokerId: loker.id,
           unitDurasiHargaId: durasiHarga.id,
-          nomorHp: dto.nomorHp,
-          email: dto.email,
-          nominal: durasiHarga.harga,
+          nomorHp: dto.memberId ? null : dto.nomorHp,
+          email: dto.memberId ? null : dto.email,
+          memberId: dto.memberId,
+          metodeAkses: dto.memberId ? MetodeAkses.RFID : MetodeAkses.NOMOR_HP,
+          nominal,
           idTransaksi: generateIdTransaksi(),
           paymentProvider: this.paymentProvider.name,
         },

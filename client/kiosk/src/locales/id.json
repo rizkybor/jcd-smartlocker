@@ -91,5 +91,15 @@
   },
   "errors": {
     "jaringan": "Terjadi kesalahan jaringan. Silakan coba lagi."
+  },
+  "rfid": {
+    "simpan": {
+      "judul": "Loker {{nomor}} Terbuka",
+      "detail": "Silakan simpan barang Anda. Tap kartu lagi kapan saja untuk mengambilnya."
+    },
+    "ambil": {
+      "judul": "Loker {{nomor}} Terbuka",
+      "detail": "Silakan ambil barang Anda."
+    }
   }
 }

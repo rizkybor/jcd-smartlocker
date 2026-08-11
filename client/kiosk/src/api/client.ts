@@ -100,6 +100,24 @@ export type AmbilSesi = {
 export type BayarDendaResult = { qrString: string; expiredAt: string; nominal: number; jamTerlambat: number };
 export type StatusDendaResult = { statusBayar: SesiTransaksi['statusBayar'] };
 
+/**
+ * Fitur member RFID/kode unik (di luar cakupan PRD awal — permintaan
+ * bisnis langsung, lihat catatan model `Member` di schema.prisma backend).
+ * Satu endpoint tap dibedakan 3 jenis hasil:
+ * - `EKSKLUSIF`: loker sendiri member ini — pintu SUDAH dibuka server-side,
+ *   kiosk tinggal tampilkan konfirmasi (`aksi` simpan/ambil).
+ * - `UMUM_MEMBER_BARU`: member umum, belum ada sesi aktif — kiosk lanjut
+ *   alur pilih kategori/durasi seperti biasa TAPI pakai `memberId` (bukan
+ *   nomorHp/email) saat panggil `mulaiSewa`.
+ * - `UMUM_SESI_AKTIF`: member umum sudah punya sesi aktif — ini tap AMBIL,
+ *   kiosk ikut alur denda/suspend yang sama seperti ambil biasa, tapi buka
+ *   pintu lewat `rfidBukaPintu` (skip OTP — tap = otorisasi).
+ */
+export type RfidScanResult =
+  | { jenis: 'EKSKLUSIF'; aksi: 'simpan' | 'ambil'; nomorLoker: string }
+  | { jenis: 'UMUM_MEMBER_BARU'; memberId: string; nama: string; diskonPersen: number }
+  | ({ jenis: 'UMUM_SESI_AKTIF' } & AmbilSesi);
+
 export const kioskApi = {
   statusUnit: () => request<{ data: UnitStatus }>('/kiosk/unit/status'),
 
@@ -109,10 +127,12 @@ export const kioskApi = {
       body: JSON.stringify({ nomorHp }),
     }),
 
-  mulaiSewa: (nomorHp: string, email: string, unitDurasiHargaId: string) =>
+  mulaiSewa: (
+    payload: { unitDurasiHargaId: string } & ({ nomorHp: string; email: string } | { memberId: string }),
+  ) =>
     request<{ data: SesiTransaksi }>('/kiosk/sewa/mulai', {
       method: 'POST',
-      body: JSON.stringify({ nomorHp, email, unitDurasiHargaId }),
+      body: JSON.stringify(payload),
     }),
 
   buatPembayaran: (sesiId: string) =>
@@ -152,4 +172,12 @@ export const kioskApi = {
     request<{ data: BayarDendaResult }>(`/kiosk/ambil/${sesiId}/bayar-denda`, { method: 'POST' }),
 
   cekStatusDenda: (sesiId: string) => request<{ data: StatusDendaResult }>(`/kiosk/ambil/${sesiId}/status-denda`),
+
+  // --- Member RFID (di luar cakupan PRD awal) ---
+
+  rfidScan: (kode: string) =>
+    request<{ data: RfidScanResult }>('/kiosk/rfid/scan', { method: 'POST', body: JSON.stringify({ kode }) }),
+
+  rfidBukaPintu: (sesiId: string) =>
+    request<{ data: SesiTransaksi }>(`/kiosk/rfid/${sesiId}/buka-pintu`, { method: 'POST' }),
 };

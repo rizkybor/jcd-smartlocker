@@ -13,6 +13,7 @@ export function MitraDetailPage() {
 
   const [nama, setNama] = useState('');
   const [kontak, setKontak] = useState('');
+  const [bolehKelolaMember, setBolehKelolaMember] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -25,6 +26,7 @@ export function MitraDetailPage() {
         setMitra(res.data);
         setNama(res.data.nama);
         setKontak(res.data.kontak ?? '');
+        setBolehKelolaMember(res.data.bolehKelolaMember);
       })
       .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('mitraDetailPage.gagalMuat')));
   }
@@ -37,7 +39,7 @@ export function MitraDetailPage() {
     setSaveError(null);
     setSaved(false);
     try {
-      await companyApi.mitra.update(id, { nama: nama.trim(), kontak: kontak.trim() || undefined });
+      await companyApi.mitra.update(id, { nama: nama.trim(), kontak: kontak.trim() || undefined, bolehKelolaMember });
       setSaved(true);
       reload();
     } catch (err) {
@@ -67,6 +69,22 @@ export function MitraDetailPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-4)', maxWidth: 420 }}>
             <Field label={t('mitraDetailPage.namaMitra')} required value={nama} onChange={(e) => setNama(e.target.value)} />
             <Field label={t('mitraDetailPage.kontak')} value={kontak} onChange={(e) => setKontak(e.target.value)} />
+            <label style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sl-space-2)', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={bolehKelolaMember}
+                onChange={(e) => setBolehKelolaMember(e.target.checked)}
+                style={{ marginTop: 3 }}
+              />
+              <span>
+                <span style={{ display: 'block', fontSize: 'var(--sl-fs-14)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-strong)' }}>
+                  {t('mitraDetailPage.bolehKelolaMember')}
+                </span>
+                <span style={{ display: 'block', fontSize: 'var(--sl-fs-12)', color: 'var(--sl-text-muted)' }}>
+                  {t('mitraDetailPage.bolehKelolaMemberHint')}
+                </span>
+              </span>
+            </label>
             {saveError ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{saveError}</div> : null}
             {saved ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-available-strong)' }}>{t('common.tersimpan')}</div> : null}
             <div>

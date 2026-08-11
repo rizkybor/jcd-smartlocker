@@ -6,6 +6,7 @@ import { DashboardLayout } from './layout/DashboardLayout';
 import { OverviewPage } from './pages/OverviewPage';
 import { UnitsPage } from './pages/UnitsPage';
 import { LaporanPage } from './pages/LaporanPage';
+import { MembersPage } from './pages/MembersPage';
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const { t } = useTranslation();
@@ -41,6 +42,7 @@ export default function App() {
           <Route path="/" element={<OverviewPage />} />
           <Route path="/units" element={<UnitsPage />} />
           <Route path="/laporan" element={<LaporanPage />} />
+          <Route path="/members" element={<MembersPage />} />
         </Route>
       </Routes>
     </AuthProvider>

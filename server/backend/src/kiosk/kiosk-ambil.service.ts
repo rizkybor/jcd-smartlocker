@@ -78,6 +78,30 @@ export class KioskAmbilService {
     return { id: sesi.id, ...overdue };
   }
 
+  /**
+   * Fitur member RFID (di luar cakupan PRD awal): dipakai `KioskRfidService`
+   * saat tap kartu — cek apakah member ini sedang punya sesi aktif di unit
+   * ini (berarti tap-nya adalah AMBIL barang), sebelum menyimpulkan tap
+   * itu SEWA baru. Return `null` (bukan throw) kalau tidak ada, supaya
+   * caller bisa cabang alur dengan bersih.
+   */
+  async cariSesiAktifMember(unit: Unit, memberId: string) {
+    const sesi = await this.prisma.db.sesiTransaksi.findFirst({
+      where: {
+        memberId,
+        statusBayar: StatusBayar.PAID,
+        waktuMulai: { not: null },
+        loker: { status: LokerStatus.TERISI, unitId: unit.id },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { id: true },
+    });
+    if (!sesi) return null;
+
+    const overdue = await this.overdueStatusOf(sesi.id);
+    return { id: sesi.id, ...overdue };
+  }
+
   /** Denda kekurangan (jam overdue x tarif per-jam termurah KATEGORI loker sesi ini) — lihat overdue.util.ts. */
   private async overdueStatusOf(sesiId: string) {
     const sesi = await this.prisma.db.sesiTransaksi.findUniqueOrThrow({
@@ -234,6 +258,22 @@ export class KioskAmbilService {
       });
     }
 
+    return this.bukaPintuInternal(sesi);
+  }
+
+  /**
+   * Fitur member RFID (di luar cakupan PRD awal): member "umum" ambil
+   * barang lewat TAP ULANG kartu di kiosk, bukan OTP — tap itu sendiri
+   * SUDAH jadi identifikasi + otorisasi (fisik kartu = faktor auth-nya),
+   * jadi TIDAK ada pengecekan `otpVerifiedAt` di sini. Aturan denda/suspend
+   * tetap berlaku sama seperti alur OTP biasa (`getSesiAktifOrThrow`).
+   */
+  async bukaPintuViaRfid(sesiId: string) {
+    const sesi = await this.getSesiAktifOrThrow(sesiId);
+    return this.bukaPintuInternal(sesi);
+  }
+
+  private async bukaPintuInternal(sesi: Awaited<ReturnType<KioskAmbilService['getSesiAktifOrThrow']>>) {
     if (sesi.loker.status === LokerStatus.TERSEDIA) {
       // Idempotent — sudah pernah dibuka/selesai sebelumnya.
       return sesi;

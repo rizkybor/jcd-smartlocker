@@ -15,7 +15,8 @@ type SoftDeleteModelKey =
   | 'unit'
   | 'loker'
   | 'akunInternal'
-  | 'akunMitra';
+  | 'akunMitra'
+  | 'member';
 
 /**
  * Wrapper PrismaClient sebagai provider NestJS.
@@ -56,7 +57,7 @@ export class PrismaService implements OnModuleInit, OnModuleDestroy {
   }
 
   /**
-   * Soft delete eksplisit — WAJIB dipakai untuk 7 model yang punya kolom
+   * Soft delete eksplisit — WAJIB dipakai untuk 8 model yang punya kolom
    * `deletedAt` (docs/ERD-Smartbox.md, docs/PRD-Smartbox.md §6), bukan
    * `db.<model>.delete()`/`deleteMany()` langsung (itu tetap hard delete
    * kalau dipanggil — jangan dipakai untuk model-model ini).

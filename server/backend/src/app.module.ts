@@ -30,6 +30,7 @@ import { OverviewModule } from './overview/overview.module';
 import { LaporanModule } from './laporan/laporan.module';
 import { AktivitasModule } from './aktivitas/aktivitas.module';
 import { DashboardMitraModule } from './dashboard-mitra/dashboard-mitra.module';
+import { MemberModule } from './member/member.module';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { DashboardMitraModule } from './dashboard-mitra/dashboard-mitra.module';
     LaporanModule,
     AktivitasModule,
     DashboardMitraModule,
+    MemberModule,
     MetricsModule,
   ],
   controllers: [AppController, HealthController],

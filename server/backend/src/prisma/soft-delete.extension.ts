@@ -12,6 +12,7 @@ const SOFT_DELETE_MODELS = new Set([
   'Loker',
   'AkunInternal',
   'AkunMitra',
+  'Member',
 ]);
 
 const READ_ACTIONS = new Set([
@@ -26,7 +27,7 @@ const READ_ACTIONS = new Set([
  * pertama adalah RLS Postgres, prisma/sql/constraints_and_rls.sql). Lihat
  * docs/PRD-Smartbox.md §6, §7, §9.2 dan docs/ERD-Smartbox.md.
  *
- * Query baca (`findMany`/`findFirst`/`count`) pada 7 model soft-delete
+ * Query baca (`findMany`/`findFirst`/`count`) pada 8 model soft-delete
  * otomatis memfilter `deletedAt: null`, kecuali caller eksplisit
  * menyertakan `deletedAt` sendiri di `where` (mis. untuk fitur "lihat data
  * terhapus" di masa depan).
@@ -35,7 +36,7 @@ const READ_ACTIONS = new Set([
  * Client Extensions tidak punya cara aman meredirect hanya sebagian model
  * tanpa risiko rekursi tak terhingga di komponen `model`. Sebagai gantinya,
  * pakai `PrismaService.softDelete()` secara eksplisit (lihat prisma.service.ts)
- * untuk 7 model ini — didokumentasikan & mudah ditinjau saat code review,
+ * untuk 8 model ini — didokumentasikan & mudah ditinjau saat code review,
  * bukan mengandalkan override implisit yang gampang salah kaprah.
  */
 export const softDeleteExtension = Prisma.defineExtension({

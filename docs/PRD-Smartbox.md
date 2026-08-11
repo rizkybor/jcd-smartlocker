@@ -62,6 +62,17 @@ Prototipe ini murni tampilan (data dummy, tanpa backend/hardware nyata) dan menj
 - **Dikonfirmasi masuk roadmap**: metode akses tambahan selain nomor HP + OTP WA — **RFID card, face recognition, PIN code**. MVP tetap fokus ke QR/OTP WA agar tanpa aplikasi & tanpa kartu fisik; metode lain didesain untuk Fase 2, terutama use case member tetap (mis. penitipan barang pribadi jangka panjang di apartemen/kampus). **RFID & PIN Code punya dasar hardware yang jelas** (§8.1: modul RFID reader ada, PIN bisa lewat touch screen). **Face recognition masih perlu verifikasi vendor** — komponen kamera tidak ada di BOM company profile (§8.1); jangan dikomit ke roadmap Fase 2 sebagai kepastian sampai dikonfirmasi unit final punya modul kamera atau vendor menyediakannya sebagai add-on (lihat §12 poin 6). Implikasi arsitektur: modul autentikasi kiosk tetap perlu dirancang **multi-metode sejak awal** (interface umum "verifikasi identitas", bukan hardcode single-path nomor HP) supaya penambahan RFID/PIN — dan Face Recognition jika jadi terverifikasi — di Fase 2 tidak perlu rombak alur inti.
 - Skenario non-sewa (penitipan sesaat tanpa pembayaran per transaksi, parcel/paket locker untuk kurir menitipkan tanpa bertemu penerima) — lihat §4.4a, **dikonfirmasi masuk cakupan produk**.
 
+### 4.2a Fitur Ditarik Maju dari Fase 2: Member RFID/Kode Unik — Dikonfirmasi Masuk Produk
+
+Sebagian dari roadmap Fase 2 di §4.2 ("RFID card... terutama use case member tetap") **sudah diimplementasikan lebih awal** atas permintaan bisnis langsung, sebelum WhatsApp OTP/notifikasi otomatis Fase 2 lainnya. Ringkasan fitur (detail teknis di kode: `server/backend/prisma/schema.prisma` model `Member`, `server/backend/src/kiosk/kiosk-rfid.service.ts`):
+
+- **Setiap loker punya id sendiri** (sudah ada sejak MVP) dan **bisa diisi nomor RFID/kode unik opsional** — diinput oleh **Super Admin** di level konfigurasi loker.
+- **Dua jenis member**, dibedakan lewat apakah member diikat ke 1 loker spesifik:
+  1. **Member eksklusif** (`lokerId` terisi) — gratis, bebas buka loker itu kapan saja tanpa denda (loker ini otomatis **ditarik dari pool sewa umum**, tidak bisa disewa pelanggan lain). Pengaturan ini **hanya Super Admin** yang boleh melakukan, karena menyangkut kapasitas publik loker milik mitra.
+  2. **Member umum** (`lokerId` kosong) — dapat **diskon persentase** dari tarif sewa normal kategori loker mana pun yang disewa, tetap sewa berdurasi biasa (tetap kena denda/suspend kalau telat ambil).
+- **Identifikasi di kiosk via tap kartu RFID** (listener otomatis/keyboard-wedge, bukan layar input manual) — menggantikan nomor HP/email untuk member (kedua jalur tetap berjalan bersamaan untuk pelanggan non-member).
+- **Mitra bisa mengelola member "umum" miliknya sendiri** (bukan cuma Super Admin) lewat Dashboard Mitra — **tapi HANYA kalau Super Admin memberi akses eksplisit** per mitra (`Mitra.bolehKelolaMember`, default **tidak aktif**). Ini satu-satunya pengecualian terhadap prinsip "Dashboard Mitra read-only" di §5.5, dan sengaja dibuat sebagai flag yang bisa dicabut kapan saja, bukan hak permanen begitu diberikan. Mitra **tidak pernah** bisa membuat/mengubah member eksklusif (ikat loker) — itu tetap murni domain Super Admin.
+
 ### 4.3 Eksplisit di luar cakupan
 - Pembuatan hardware fisik locker (rangka, solenoid) — Smartbox mengintegrasikan, bukan memproduksi dari nol (lihat §8 rekomendasi vendor).
 - Sistem pembayaran non-QRIS (kartu kredit, VA) di fase awal.
@@ -109,6 +120,7 @@ Selain sewa berbayar per transaksi, produk perlu mendukung mode **penitipan tanp
 - **Laporan**: laporan transaksi & bagi hasil lintas mitra, ekspor (CSV/PDF berdasar prototipe `useExport`). — *Super Admin, Ops, Manager*
 - **Manajemen User**: buat akun internal & tetapkan/ubah role — **Manager**, **Staff**, **Ops**, maupun Super Admin lain. — ***Hanya Super Admin*** **yang boleh mengakses menu ini dan memberi/mencabut akses role apa pun**. Manager, Staff, dan Ops tidak bisa membuat akun baru atau mengubah role siapa pun (termasuk role sendiri) — mereka murni penerima akses, bukan pemberi akses. Ini mencegah eskalasi hak akses dari dalam (mis. Manager tidak bisa menaikkan diri sendiri jadi Super Admin, Staff tidak bisa memberi akses ke orang lain tanpa sepengetahuan Super Admin).
 - **Log Emergency Unlock**: riwayat pemakaian kunci fisik oleh Staff di lapangan (§5.3, §8.1), disinkronkan manual ke sistem. — *Super Admin, Ops (lihat), Staff (input setelah kejadian)*
+- **Member RFID** *(§4.2a, ditarik maju dari Fase 2)*: kelola member eksklusif (ikat loker) & member umum (diskon) lintas semua mitra, plus tombol aktif/nonaktifkan akses "kelola member" per mitra. — ***Hanya Super Admin***
 
 Staff pada praktiknya lebih banyak beraktivitas fisik di lokasi unit (§5.3) daripada di dashboard — akses dashboardnya kemungkinan terbatas ke pencatatan Emergency Unlock, bukan menu konfigurasi.
 
@@ -122,6 +134,8 @@ Staff pada praktiknya lebih banyak beraktivitas fisik di lokasi unit (§5.3) dar
 
 Implikasi teknis: ini bukan sekadar batasan UI — endpoint API yang dipakai `AkunMitra` (§6) harus **tidak punya operasi tulis (write)** untuk entitas `Unit`/`Mitra`/konfigurasi harga sama sekali di level backend/RLS (§7, §9.2), bukan hanya disembunyikan di frontend.
 
+**Pengecualian tunggal (§4.2a, fitur di luar cakupan PRD awal):** menu **Member RFID** — mitra boleh membuat/mengelola member "umum" (diskon) miliknya sendiri, tapi **hanya kalau Super Admin sudah mengaktifkan akses ini secara eksplisit** per mitra (flag `bolehKelolaMember`, default nonaktif). Mitra tetap **tidak pernah** bisa mengikat member ke loker spesifik (member eksklusif) — itu murni domain Super Admin karena menyangkut kapasitas publik loker. Kalau akses belum diberikan, menu ini tidak tampil sama sekali di Dashboard Mitra.
+
 ### 5.6 Prinsip UX Dashboard (Company & Mitra)
 
 Standar interaksi berikut berlaku di **kedua** dashboard (§5.4, §5.5), supaya terasa satu produk yang konsisten, bukan kualitas seadanya:
@@ -134,7 +148,7 @@ Standar interaksi berikut berlaku di **kedua** dashboard (§5.4, §5.5), supaya 
 
 ## 6. Model Data Inti (level konsep)
 
-`Lokasi` (punya **timezone eksplisit** — IANA name, mis. `Asia/Jakarta`/`Asia/Makassar`/`Asia/Jayapura`, lihat §7.2) — `Mitra` (relasi bagi hasil ke Lokasi, punya **tipe skema** `fixed_rental`/`revenue_sharing` dan — khusus `revenue_sharing` — **persentase split per mitra, 0–100** dengan approval Manager, lihat §10, §12 poin 2) — `Unit` (perangkat fisik, punya konfigurasi harga/durasi) — `Loker` (slot individual dalam Unit, **status enum resmi: `tersedia` · `terisi` · `maintenance` · `offline` · `nonaktif`** — standar dikunci §12 poin 9, konsisten dengan `docs/design_reference/` §13.1, bukan lagi 3 nilai versi lama) — `Sesi/Transaksi` (nomor HP penyewa, loker, durasi, status bayar, waktu mulai/selesai — **disimpan UTC**, ditampilkan sesuai timezone `Lokasi` §7.2 — ID transaksi) — `AkunInternal` (Super Admin/Ops/Manager/Staff, role-based) — `AkunMitra` (login dashboard mitra, terikat ke 1+ lokasi).
+`Lokasi` (punya **timezone eksplisit** — IANA name, mis. `Asia/Jakarta`/`Asia/Makassar`/`Asia/Jayapura`, lihat §7.2) — `Mitra` (relasi bagi hasil ke Lokasi, punya **tipe skema** `fixed_rental`/`revenue_sharing` dan — khusus `revenue_sharing` — **persentase split per mitra, 0–100** dengan approval Manager, lihat §10, §12 poin 2; juga punya flag `boleh_kelola_member`, §4.2a) — `Unit` (perangkat fisik, punya konfigurasi harga/durasi) — `Loker` (slot individual dalam Unit, **status enum resmi: `tersedia` · `terisi` · `maintenance` · `offline` · `nonaktif`** — standar dikunci §12 poin 9, konsisten dengan `docs/design_reference/` §13.1, bukan lagi 3 nilai versi lama) — `Sesi/Transaksi` (nomor HP penyewa **atau** member RFID §4.2a, loker, durasi, status bayar, waktu mulai/selesai — **disimpan UTC**, ditampilkan sesuai timezone `Lokasi` §7.2 — ID transaksi) — `Member` (kode RFID/unik, opsional ikat ke 1 `Loker` eksklusif atau diskon persentase umum, §4.2a) — `AkunInternal` (Super Admin/Ops/Manager/Staff, role-based) — `AkunMitra` (login dashboard mitra, terikat ke 1+ lokasi).
 
 Simpan semua nominal uang sebagai angka (bukan string berformat) — sudah jadi aturan tetap di prototipe (`rpJt`) dan harus dipertahankan di backend agar perhitungan bagi hasil presisi.
 

@@ -43,7 +43,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // --- Tipe respons (docs/API-Contract-Smartbox.md §6) ---
 
-export type Me = { id: string; email: string; nama: string; mitraId: string; mitraNama: string };
+/** `bolehKelolaMember` (fitur member RFID, di luar cakupan PRD awal) — hanya true kalau Super Admin sudah mengaktifkannya untuk mitra ini. */
+export type Me = { id: string; email: string; nama: string; mitraId: string; mitraNama: string; bolehKelolaMember: boolean };
 
 export type OverviewRingkasan = {
   jumlahLokasi: number;
@@ -106,6 +107,25 @@ function laporanQuery(filter: LaporanFilter, page?: number, pageSize?: number): 
   return params.toString();
 }
 
+/**
+ * Fitur member RFID/kode unik (di luar cakupan PRD awal — permintaan
+ * bisnis langsung). Mitra HANYA boleh kelola member "umum" (diskon tarif)
+ * miliknya sendiri — TIDAK PERNAH `lokerId`, itu keputusan Super Admin
+ * (menyangkut kapasitas publik loker, lihat dashboard-mitra.controller.ts).
+ */
+export type MemberRow = {
+  id: string;
+  kode: string;
+  nama: string;
+  kontak: string | null;
+  diskonPersen: number | null;
+  aktif: boolean;
+  createdAt: string;
+};
+
+export type CreateMemberInput = { kode: string; nama: string; kontak?: string; diskonPersen: number };
+export type UpdateMemberInput = { nama?: string; kontak?: string; diskonPersen?: number; aktif?: boolean };
+
 export const mitraApi = {
   me: () => request<{ data: Me }>('/mitra/me'),
   overview: () => request<{ data: OverviewRingkasan }>('/mitra/overview'),
@@ -121,4 +141,14 @@ export const mitraApi = {
       method: 'POST',
       body: JSON.stringify(filter),
     }),
+
+  members: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<MemberRow>>(`/mitra/members?page=${page}&pageSize=${pageSize}`),
+    create: (input: CreateMemberInput) =>
+      request<{ data: MemberRow }>('/mitra/members', { method: 'POST', body: JSON.stringify(input) }),
+    update: (id: string, input: UpdateMemberInput) =>
+      request<{ data: MemberRow }>(`/mitra/members/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
+    remove: (id: string) => request<{ data: unknown }>(`/mitra/members/${id}`, { method: 'DELETE' }),
+  },
 };
