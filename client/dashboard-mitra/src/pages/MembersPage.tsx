@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, Field, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, Field, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { mitraApi, ApiError, type MemberRow } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
@@ -93,6 +93,7 @@ export function MembersPage() {
   }
 
   const columns: DataTableColumn<MemberRow>[] = [
+    { header: t('common.no'), width: 1, render: (_m, i) => nomorUrut(i, result?.meta) },
     { header: t('membersPage.kolomKode'), render: (m) => m.kode },
     { header: t('membersPage.kolomNama'), render: (m) => m.nama },
     { header: t('membersPage.kolomDiskon'), render: (m) => t('membersPage.diskonDetail', { persen: m.diskonPersen ?? 0 }) },

@@ -1,4 +1,5 @@
 import { Body, Controller, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from './guards/unit-key.guard';
 import { CurrentUnit } from './decorators/current-unit.decorator';
@@ -12,6 +13,8 @@ import { rfidScanSchema, type RfidScanDto } from './dto/rfid-scan.dto';
  * kiosk-rfid.service.ts. Publik-per-unit sama seperti controller kiosk
  * lain (UnitKeyGuard, bukan Supabase Auth).
  */
+@ApiTags('Kiosk - Member RFID')
+@ApiSecurity('unit-key')
 @Controller('kiosk/rfid')
 @UseGuards(UnitKeyGuard)
 export class KioskRfidController {

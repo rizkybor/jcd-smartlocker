@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from './guards/unit-key.guard';
 import { CurrentUnit } from './decorators/current-unit.decorator';
@@ -19,6 +20,8 @@ import { mulaiSewaSchema, type MulaiSewaDto } from './dto/mulai-sewa.dto';
  * `@Body()`, jadi request selalu gagal validasi begitu ada parameter lain
  * selain body (ditemukan & diverifikasi langsung lewat smoke test Epic 4).
  */
+@ApiTags('Kiosk - Sewa')
+@ApiSecurity('unit-key')
 @Controller('kiosk')
 @UseGuards(UnitKeyGuard)
 export class KioskSewaController {

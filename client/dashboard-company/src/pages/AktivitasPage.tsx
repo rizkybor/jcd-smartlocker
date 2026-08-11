@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, StatusBadge, Field, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, Field, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LogAktivitasRow, type LogKategori } from '../api/client';
 import { formatTanggalLokasi } from '../utils/formatTanggal';
 
@@ -19,6 +19,7 @@ export function AktivitasPage() {
   }, [page, kategori, t]);
 
   const columns: DataTableColumn<LogAktivitasRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i, result?.meta) },
     // Log aktivitas tidak terikat 1 Lokasi (aksi lintas sistem, mis.
     // provisioning user) — pakai Asia/Jakarta sebagai referensi HQ secara
     // EKSPLISIT + berlabel (bukan diam-diam ikut timezone browser staff

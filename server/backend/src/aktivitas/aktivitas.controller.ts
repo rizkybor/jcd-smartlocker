@@ -1,4 +1,5 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole, LogKategori } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -6,6 +7,8 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { AktivitasService } from './aktivitas.service';
 
 /** docs/API-Contract-Smartbox.md §5.5. */
+@ApiTags('Company - Aktivitas')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/aktivitas')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AkunInternalRole.SUPER_ADMIN, AkunInternalRole.OPS, AkunInternalRole.MANAGER)

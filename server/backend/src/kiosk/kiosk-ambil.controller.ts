@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from './guards/unit-key.guard';
 import { CurrentUnit } from './decorators/current-unit.decorator';
@@ -16,6 +17,8 @@ import { sesiIdSchema, verifikasiOtpSchema, type SesiIdDto, type VerifikasiOtpDt
  * Pipe validasi Zod per-parameter (`@Body(new ZodValidationPipe(schema))`),
  * BUKAN `@UsePipes()` method-level — lihat catatan di kiosk-sewa.controller.ts.
  */
+@ApiTags('Kiosk - Ambil Barang')
+@ApiSecurity('unit-key')
 @Controller('kiosk/ambil')
 @UseGuards(UnitKeyGuard)
 export class KioskAmbilController {

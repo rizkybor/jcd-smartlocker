@@ -40,7 +40,7 @@ export type { StatCardProps, StatCardAccent } from './components/dashboard/StatC
 export { StatusBadge } from './components/dashboard/StatusBadge';
 export type { StatusBadgeProps, StatusBadgeStatus } from './components/dashboard/StatusBadge';
 
-export { DataTable } from './components/dashboard/DataTable';
+export { DataTable, nomorUrut } from './components/dashboard/DataTable';
 export type { DataTableProps, DataTableColumn, DataTablePaginationMeta, DataTablePaginationProps } from './components/dashboard/DataTable';
 
 export { ConfirmDialog } from './components/dashboard/ConfirmDialog';

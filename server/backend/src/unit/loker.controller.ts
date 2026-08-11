@@ -1,4 +1,5 @@
 import { Body, Controller, Param, Patch, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -14,6 +15,8 @@ import { lokerStatusSchema, type LokerStatusDto } from './dto/loker-status.dto';
  * Resource terpisah dari /company/units meski logic-nya di UnitService
  * (loker milik unit, tapi endpoint-nya sendiri sesuai kontrak).
  */
+@ApiTags('Company - Loker')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/lokers')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class LokerController {

@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,6 +20,8 @@ import { bukaPaksaSchema, type BukaPaksaDto } from './dto/buka-paksa.dto';
  * Pipe Zod per-parameter, bukan `@UsePipes()` method-level — lihat catatan
  * bug di kiosk/kiosk-sewa.controller.ts.
  */
+@ApiTags('Company - Unit')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/units')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class UnitController {

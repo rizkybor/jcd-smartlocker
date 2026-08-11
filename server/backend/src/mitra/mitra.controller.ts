@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -25,6 +26,8 @@ import { updateMitraSchema, type UpdateMitraDto } from './dto/update-mitra.dto';
  * Pipe Zod per-parameter, bukan `@UsePipes()` method-level — lihat catatan
  * bug di kiosk/kiosk-sewa.controller.ts.
  */
+@ApiTags('Company - Mitra')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/mitra')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 export class MitraController {

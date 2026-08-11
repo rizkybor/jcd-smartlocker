@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Panel, Button, Field, StatusBadge, DataTable, ConfirmDialog, type DataTableColumn } from '@smartbox/ui';
+import { Panel, Button, Field, StatusBadge, DataTable, ConfirmDialog, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type UnitDetail, type Loker, type LokerKategori, type LokerStatus, type SesiTransaksiRingkas } from '../api/client';
 import { formatTanggalLokasi } from '../utils/formatTanggal';
 import { useAuth } from '../auth/AuthContext';
@@ -202,6 +202,7 @@ export function UnitDetailPage() {
   const kategoriById = new Map<string, LokerKategori>(unit.lokerKategori.map((k) => [k.id, k]));
 
   const lokerColumns: DataTableColumn<Loker>[] = [
+    { header: t('common.no'), width: 1, render: (_l, i) => nomorUrut(i) },
     { header: t('unitDetailPage.kolomNomor'), render: (l) => l.nomorLoker },
     { header: t('unitDetailPage.kolomKategori'), render: (l) => kategoriById.get(l.lokerKategoriId)?.nama ?? '—' },
     {
@@ -257,6 +258,7 @@ export function UnitDetailPage() {
   ];
 
   const riwayatColumns: DataTableColumn<SesiTransaksiRingkas>[] = [
+    { header: t('common.no'), width: 1, render: (_s, i) => nomorUrut(i) },
     { header: t('unitDetailPage.kolomIdTransaksi'), render: (s) => s.idTransaksi },
     { header: t('unitDetailPage.kolomLoker'), render: (s) => s.loker.nomorLoker },
     {

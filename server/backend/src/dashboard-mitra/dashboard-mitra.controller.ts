@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { MitraOnlyGuard } from '../auth/guards/mitra-only.guard';
 import { CurrentMitra } from '../auth/decorators/current-mitra.decorator';
@@ -24,6 +25,8 @@ import {
  * tulis mitra yang ada, dan sengaja terbatas (tidak pernah bisa mengikat
  * loker spesifik — itu tetap hak Super Admin, lihat member.controller.ts).
  */
+@ApiTags('Dashboard Mitra')
+@ApiBearerAuth('supabase-auth')
 @Controller('mitra')
 @UseGuards(SupabaseAuthGuard, MitraOnlyGuard)
 export class DashboardMitraController {

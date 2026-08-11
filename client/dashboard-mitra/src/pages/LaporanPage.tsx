@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, Field, StatCard, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, Field, StatCard, StatusBadge, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { mitraApi, ApiError, type Lokasi, type LaporanFilter, type LaporanResult, type LaporanTransaksiRow } from '../api/client';
 
 function formatRupiah(nominal: number): string {
@@ -62,6 +62,7 @@ export function LaporanPage() {
   }
 
   const columns: DataTableColumn<LaporanTransaksiRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i, result?.meta) },
     { header: t('laporanPage.kolom.idTransaksi'), render: (r) => r.idTransaksi },
     { header: t('laporanPage.kolom.tanggal'), render: (r) => r.tanggal },
     { header: t('laporanPage.kolom.lokasi'), render: (r) => r.lokasiNama },

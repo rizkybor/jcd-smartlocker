@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { mitraApi, ApiError, type Unit } from '../api/client';
 
 export function UnitsPage() {
@@ -17,6 +17,7 @@ export function UnitsPage() {
   }, [page, t]);
 
   const columns: DataTableColumn<Unit>[] = [
+    { header: t('common.no'), width: 1, render: (_u, i) => nomorUrut(i, result?.meta) },
     { header: t('unitsPage.kodeUnit'), render: (u) => u.kodeUnit },
     { header: t('unitsPage.lokasi'), render: (u) => u.lokasi.nama },
     {

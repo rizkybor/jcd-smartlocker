@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, StatusBadge, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LaporanFilter, type LaporanTransaksiRow } from '../api/client';
 import { LaporanFilterBar } from './laporan/LaporanFilterBar';
 
@@ -49,6 +49,7 @@ export function LaporanTransaksiPage() {
   }
 
   const columns: DataTableColumn<LaporanTransaksiRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i, result?.meta) },
     { header: t('laporanTransaksiPage.kolomIdTransaksi'), render: (r) => r.idTransaksi },
     { header: t('laporanTransaksiPage.kolomTanggal'), render: (r) => r.tanggal },
     { header: t('laporanTransaksiPage.kolomLokasi'), render: (r) => r.lokasiNama },

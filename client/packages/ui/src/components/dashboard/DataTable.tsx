@@ -8,10 +8,15 @@ export type DataTableColumn<T> = {
   width?: string | number;
   numeric?: boolean;
   wrap?: boolean;
-  render?: (row: T) => ReactNode;
+  render?: (row: T, index: number) => ReactNode;
 };
 
 export type DataTablePaginationMeta = { page: number; pageSize: number; totalItems: number; totalPages: number };
+
+/** Nomor urut baris — offset ke halaman saat ini kalau tabelnya dipaginasi, cuma `index + 1` kalau tidak. */
+export function nomorUrut(index: number, meta?: Pick<DataTablePaginationMeta, 'page' | 'pageSize'>): number {
+  return meta ? (meta.page - 1) * meta.pageSize + index + 1 : index + 1;
+}
 
 export type DataTablePaginationProps = {
   meta: DataTablePaginationMeta;
@@ -145,7 +150,7 @@ function DataTableRow<T>({
             whiteSpace: c.wrap ? 'normal' : 'nowrap',
           }}
         >
-          {c.render ? c.render(row) : c.key ? String(row[c.key] ?? '') : null}
+          {c.render ? c.render(row, rowIndex) : c.key ? String(row[c.key] ?? '') : null}
         </td>
       ))}
     </tr>

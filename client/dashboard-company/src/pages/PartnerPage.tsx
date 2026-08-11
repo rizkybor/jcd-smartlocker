@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, StatusBadge, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type MitraFull } from '../api/client';
 import { CreateMitraDialog } from './partner/CreateMitraDialog';
 
@@ -24,6 +24,7 @@ export function PartnerPage() {
   useEffect(reload, [page, t]);
 
   const columns: DataTableColumn<MitraFull>[] = [
+    { header: t('common.no'), width: 1, render: (_m, i) => nomorUrut(i, result?.meta) },
     { header: t('partnerPage.kolomNamaMitra'), render: (m) => m.nama },
     { header: t('partnerPage.kolomKontak'), render: (m) => m.kontak || <span style={{ color: 'var(--sl-text-faint)' }}>—</span> },
     { header: t('partnerPage.kolomLokasi'), render: (m) => m.mitraLokasi.map((ml) => ml.lokasi.nama).join(', ') || '—' },

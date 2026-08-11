@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -19,6 +20,8 @@ import {
  * hanya lewat Super Admin, lihat catatan model `Member` di schema.prisma.
  * Jalur mitra (member umum/diskon saja) ada di dashboard-mitra.controller.ts.
  */
+@ApiTags('Company - Member RFID')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/members')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AkunInternalRole.SUPER_ADMIN)

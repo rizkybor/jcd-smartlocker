@@ -1,4 +1,5 @@
 import { Body, Controller, ForbiddenException, Param, Post, UseGuards } from '@nestjs/common';
+import { ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Unit } from '@prisma/client';
 import { UnitKeyGuard } from '../kiosk/guards/unit-key.guard';
 import { CurrentUnit } from '../kiosk/decorators/current-unit.decorator';
@@ -12,6 +13,8 @@ import { statusLokerSchema, type StatusLokerDto } from './dto/status-loker.dto';
  * MqttClientService). Auth `X-Unit-Key` sama seperti Kiosk API (§1.2) —
  * kredensial per-unit yang sama, bukan Bearer Supabase.
  */
+@ApiTags('Gateway (Hardware)')
+@ApiSecurity('unit-key')
 @Controller('gateway')
 @UseGuards(UnitKeyGuard)
 export class GatewayController {

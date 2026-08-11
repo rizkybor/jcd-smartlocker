@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, Field, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, Field, StatusBadge, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type MitraLokasiFull, type SkemaHistoriRow } from '../../api/client';
 import { useAuth } from '../../auth/AuthContext';
 import { formatTanggalLokasi } from '../../utils/formatTanggal';
@@ -72,6 +72,7 @@ export function SkemaHistoriPanel({ mitraLokasi }: { mitraLokasi: MitraLokasiFul
   const adaPending = rows?.some((r) => r.statusApproval === 'PENDING') ?? false;
 
   const columns: DataTableColumn<SkemaHistoriRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i) },
     { header: t('skemaHistoriPanel.kolomPersentase'), align: 'right', numeric: true, render: (r) => `${r.persentase}%` },
     {
       header: t('skemaHistoriPanel.kolomStatus'),

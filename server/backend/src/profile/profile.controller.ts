@@ -1,4 +1,5 @@
 import { Controller, ForbiddenException, Get, UseGuards } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/types';
@@ -11,6 +12,8 @@ import type { AuthenticatedUser } from '../auth/types';
  * UI di sisi client (di luar penegakan sungguhan yang tetap di guard
  * backend tiap endpoint, §7).
  */
+@ApiTags('Company - Profile')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/me')
 @UseGuards(SupabaseAuthGuard)
 export class ProfileController {

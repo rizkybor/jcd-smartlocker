@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, ConfirmDialog, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type AkunInternal, type AkunInternalRole } from '../api/client';
 import { CreateUserDialog } from './users/CreateUserDialog';
 
@@ -60,6 +60,7 @@ export function UsersPage() {
   }
 
   const columns: DataTableColumn<AkunInternal>[] = [
+    { header: t('common.no'), width: 1, render: (_u, i) => nomorUrut(i, result?.meta) },
     { header: t('usersPage.kolomNama'), render: (u) => u.nama },
     { header: t('usersPage.kolomEmail'), render: (u) => u.email },
     {

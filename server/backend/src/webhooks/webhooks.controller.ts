@@ -6,6 +6,7 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { XenditProvider } from '../payment/providers/xendit.provider';
 import { MidtransProvider } from '../payment/providers/midtrans.provider';
 import { WebhooksService } from './webhooks.service';
@@ -22,6 +23,7 @@ import type { PaymentProvider } from '../payment/payment-provider.interface';
  * response non-200 di luar kasus auth memicu retry provider yang tidak
  * perlu.
  */
+@ApiTags('Webhooks')
 @Controller('webhooks')
 export class WebhooksController {
   constructor(

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, StatusBadge, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type Unit } from '../api/client';
 import { CreateUnitDialog } from './units/CreateUnitDialog';
 
@@ -23,6 +23,7 @@ export function UnitsPage() {
   useEffect(reload, [page, t]);
 
   const columns: DataTableColumn<Unit>[] = [
+    { header: t('common.no'), width: 1, render: (_u, i) => nomorUrut(i, result?.meta) },
     { header: t('unitsPage.kolomKodeUnit'), render: (u) => u.kodeUnit },
     { header: t('unitsPage.kolomLokasi'), render: (u) => u.lokasi.nama },
     {

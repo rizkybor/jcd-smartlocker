@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StatCard, Panel, DataTable, Field, StatusBadge, type DataTableColumn } from '@smartbox/ui';
+import { StatCard, Panel, DataTable, Field, StatusBadge, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import {
   companyApi,
   type OverviewRingkasan,
@@ -57,6 +57,7 @@ export function OverviewPage() {
   const mitraTop = mitraRows ? [...mitraRows].sort((a, b) => b.okupansiPersen - a.okupansiPersen).slice(0, 8) : [];
 
   const mitraColumns: DataTableColumn<OverviewMitraRow>[] = [
+    { header: t('common.no'), width: 1, render: (_m, i) => nomorUrut(i) },
     { header: t('overviewPage.kolomMitra'), render: (m) => m.mitraNama },
     { header: t('overviewPage.kolomJumlahUnit'), align: 'center', render: (m) => m.jumlahUnit },
     { header: t('overviewPage.kolomOkupansi'), align: 'right', render: (m) => `${m.okupansiPersen}%` },
@@ -64,6 +65,7 @@ export function OverviewPage() {
   ];
 
   const lokerColumns: DataTableColumn<OverviewLokerRow>[] = [
+    { header: t('common.no'), width: 1, render: (_l, i) => nomorUrut(i, lokerResult?.meta) },
     { header: t('overviewPage.kolomLoker'), render: (l) => l.nomorLoker },
     { header: t('overviewPage.kolomUnit'), render: (l) => l.kodeUnit },
     { header: t('overviewPage.kolomLokasi'), render: (l) => l.lokasiNama },

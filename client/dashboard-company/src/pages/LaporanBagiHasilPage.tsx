@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type LaporanFilter, type LaporanBagiHasilRow } from '../api/client';
 import { LaporanFilterBar } from './laporan/LaporanFilterBar';
 
@@ -41,6 +41,7 @@ export function LaporanBagiHasilPage() {
   }
 
   const columns: DataTableColumn<LaporanBagiHasilRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i) },
     { header: t('laporanBagiHasilPage.kolomMitra'), render: (r) => r.mitraNama },
     { header: t('laporanBagiHasilPage.kolomLokasi'), render: (r) => r.lokasiNama },
     { header: t('laporanBagiHasilPage.kolomPersentase'), align: 'right', render: (r) => (r.persentaseAktif !== null ? `${r.persentaseAktif}%` : '—') },

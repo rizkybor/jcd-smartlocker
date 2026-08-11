@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -13,6 +14,8 @@ import { updateLokasiSchema, type UpdateLokasiDto } from './dto/update-lokasi.dt
  * docs/Epics-Smartbox.md, dibuat minimal di sini karena MitraLokasi (SMB-108)
  * butuh lokasiId yang valid untuk ditest end-to-end.
  */
+@ApiTags('Company - Lokasi')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/lokasi')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AkunInternalRole.SUPER_ADMIN)

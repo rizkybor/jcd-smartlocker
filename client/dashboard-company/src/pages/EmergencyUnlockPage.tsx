@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Panel, DataTable, Button, useToast, type DataTableColumn } from '@smartbox/ui';
+import { Panel, DataTable, Button, useToast, nomorUrut, type DataTableColumn } from '@smartbox/ui';
 import { companyApi, ApiError, type EmergencyUnlockLogRow } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { CatatEmergencyUnlockDialog } from './emergency-unlock/CatatEmergencyUnlockDialog';
@@ -31,6 +31,7 @@ export function EmergencyUnlockPage() {
   useEffect(reload, [page, bolehLihatRiwayat, t]);
 
   const columns: DataTableColumn<EmergencyUnlockLogRow>[] = [
+    { header: t('common.no'), width: 1, render: (_r, i) => nomorUrut(i, result?.meta) },
     { header: t('emergencyUnlockPage.kolomWaktuKejadian'), render: (r) => r.waktuKejadianLokal },
     { header: t('emergencyUnlockPage.kolomLokasi'), render: (r) => r.lokasiNama },
     { header: t('emergencyUnlockPage.kolomUnit'), render: (r) => r.kodeUnit },

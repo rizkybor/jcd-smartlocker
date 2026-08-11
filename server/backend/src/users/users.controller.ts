@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -30,6 +31,8 @@ import { updateUserRoleSchema, type UpdateUserRoleDto } from './dto/update-user-
  * kiosk/kiosk-sewa.controller.ts (method-level pipe ikut memvalidasi
  * `@CurrentUser()`/`@Param()`, bukan cuma body, dan selalu gagal).
  */
+@ApiTags('Company - Users')
+@ApiBearerAuth('supabase-auth')
 @Controller('company/users')
 @UseGuards(SupabaseAuthGuard, RolesGuard)
 @Roles(AkunInternalRole.SUPER_ADMIN)
