@@ -133,10 +133,11 @@ export async function mockUnitConfigFlow(page: Page) {
     createdAt: new Date().toISOString(),
     lokasi: { ...lokasiE2E, mitraLokasi: [{ id: 'ml-1', mitraId: 'mitra-1', tipeSkema: 'REVENUE_SHARING', mitra: { id: 'mitra-1', nama: 'Mitra E2E', kontak: null } }] },
     lokers: [
-      { id: 'loker-1', unitId: 'unit-1', nomorLoker: '01', status: 'TERSEDIA' },
-      { id: 'loker-2', unitId: 'unit-1', nomorLoker: '02', status: 'TERISI', overdueStatus: null },
+      { id: 'loker-1', unitId: 'unit-1', lokerKategoriId: 'kategori-1', nomorLoker: '01', status: 'TERSEDIA' },
+      { id: 'loker-2', unitId: 'unit-1', lokerKategoriId: 'kategori-1', nomorLoker: '02', status: 'TERISI', overdueStatus: null },
     ],
-    durasiHarga: [{ id: 'durasi-1', unitId: 'unit-1', durasiJam: 1, harga: 5000, aktif: true }],
+    durasiHarga: [{ id: 'durasi-1', unitId: 'unit-1', lokerKategoriId: 'kategori-1', durasiJam: 1, harga: 5000, aktif: true }],
+    lokerKategori: [{ id: 'kategori-1', unitId: 'unit-1', nama: 'Standar', ukuranWMm: null, ukuranHMm: null, aktif: true }],
   };
 
   await page.route(`${API_BASE}/company/units?**`, (route) => route.fulfill({ json: paginated([unitList]) }));

@@ -17,7 +17,7 @@ export function DurasiScreen({
 }) {
   const { t } = useTranslation();
   return (
-    <KioskShell step={2} title={t('durasi.title')}>
+    <KioskShell step={3} title={t('durasi.title')}>
       <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)', flexWrap: 'wrap', justifyContent: 'center' }}>
         {pilihan.map((d) => (
           <KioskButton key={d.id} tone="secondary" size="xl" onClick={() => onPilih(d)}>

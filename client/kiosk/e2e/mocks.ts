@@ -20,9 +20,26 @@ export async function mockUnitStatus(page: Page) {
         unitPenuh: false,
         jumlahTersedia: 3,
         jumlahTotal: 6,
-        durasiHarga: [
-          { id: 'durasi-1', durasiJam: 1, harga: 5000 },
-          { id: 'durasi-3', durasiJam: 3, harga: 12000 },
+        kategori: [
+          {
+            id: 'kategori-kecil',
+            nama: 'Kecil',
+            ukuranWMm: 300,
+            ukuranHMm: 430,
+            jumlahTersedia: 3,
+            durasiHarga: [
+              { id: 'durasi-1', durasiJam: 1, harga: 5000 },
+              { id: 'durasi-3', durasiJam: 3, harga: 12000 },
+            ],
+          },
+          {
+            id: 'kategori-besar',
+            nama: 'Besar',
+            ukuranWMm: 400,
+            ukuranHMm: 860,
+            jumlahTersedia: 0,
+            durasiHarga: [{ id: 'durasi-besar-1', durasiJam: 1, harga: 15000 }],
+          },
         ],
       }),
     }),

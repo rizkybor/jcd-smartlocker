@@ -6,6 +6,7 @@ import {
   type AmbilSesi,
   type BayarDendaResult,
   type BuatPembayaranResult,
+  type KategoriLoker,
   type SesiTransaksi,
   type StrukResult,
   type UnitDurasiHarga,
@@ -19,6 +20,8 @@ export type SewaContext = {
   unit: UnitStatus | null;
   nomorHp: string;
   email: string;
+  // --- Kategori ukuran loker (fitur harga & pilihan per ukuran, di luar PRD awal) ---
+  pilihanKategori: KategoriLoker | null;
   pilihanDurasi: UnitDurasiHarga | null;
   sesi: SesiTransaksi | null;
   pembayaran: BuatPembayaranResult | null;
@@ -37,6 +40,7 @@ const initialContext: SewaContext = {
   unit: null,
   nomorHp: '',
   email: '',
+  pilihanKategori: null,
   pilihanDurasi: null,
   sesi: null,
   pembayaran: null,
@@ -70,6 +74,7 @@ export const sewaMachine = setup({
       | { type: 'LANJUT_NOMOR_HP' }
       | { type: 'SET_EMAIL'; value: string }
       | { type: 'LANJUT_EMAIL' }
+      | { type: 'PILIH_KATEGORI'; kategori: KategoriLoker }
       | { type: 'PILIH_DURASI'; durasi: UnitDurasiHarga }
       | { type: 'SET_AMBIL_NOMOR_HP'; value: string }
       | { type: 'LANJUT_AMBIL_NOMOR_HP' }
@@ -198,16 +203,27 @@ export const sewaMachine = setup({
         SET_EMAIL: { actions: assign({ email: ({ event }) => event.value }) },
         LANJUT_EMAIL: {
           guard: ({ context }) => /^\S+@\S+\.\S+$/.test(context.email),
-          target: 'durasi',
+          target: 'pilihKategori',
         },
         KEMBALI: 'nomorHp',
       },
     },
 
+    // Fitur harga & pilihan per ukuran loker (di luar PRD awal) — pelanggan
+    // pilih KATEGORI ukuran dulu, baru durasi/harga YANG BERLAKU UNTUK
+    // KATEGORI ITU ditampilkan di layar berikutnya (§ konfirmasi bisnis).
+    pilihKategori: {
+      on: {
+        PILIH_KATEGORI: 'durasi',
+        KEMBALI: 'email',
+      },
+      exit: assign({ pilihanKategori: ({ event }) => (event.type === 'PILIH_KATEGORI' ? event.kategori : null) }),
+    },
+
     durasi: {
       on: {
         PILIH_DURASI: 'memulaiSewa',
-        KEMBALI: 'email',
+        KEMBALI: 'pilihKategori',
       },
       exit: assign({ pilihanDurasi: ({ event }) => (event.type === 'PILIH_DURASI' ? event.durasi : null) }),
     },

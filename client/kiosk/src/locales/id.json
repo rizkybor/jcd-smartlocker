@@ -6,7 +6,7 @@
     "selesai": "Selesai"
   },
   "steps": {
-    "sewa": ["Nomor HP", "Email", "Durasi", "Bayar", "Ambil Barang"],
+    "sewa": ["Nomor HP", "Email", "Ukuran", "Durasi", "Bayar", "Ambil Barang"],
     "ambil": ["Nomor HP", "Verifikasi OTP", "Buka Pintu"]
   },
   "idle": {
@@ -32,6 +32,12 @@
     "title": "Masukkan Email Anda",
     "subtitle": "Dipakai untuk kirim kode OTP saat ambil barang nanti.",
     "placeholder": "nama@email.com"
+  },
+  "kategori": {
+    "title": "Pilih Ukuran Loker",
+    "ukuran": "{{w}} × {{h}} mm",
+    "tersedia": "{{jumlah}} tersedia",
+    "penuh": "Penuh"
   },
   "durasi": {
     "title": "Pilih Durasi Sewa",

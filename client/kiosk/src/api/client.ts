@@ -45,13 +45,27 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type UnitDurasiHarga = { id: string; durasiJam: number; harga: number };
 
+/**
+ * Kategori ukuran loker (fitur harga & pilihan per ukuran, di luar PRD
+ * awal) — satu unit fisik bisa punya beberapa kategori, masing-masing
+ * dengan daftar durasi/harga & ketersediaan SENDIRI.
+ */
+export type KategoriLoker = {
+  id: string;
+  nama: string;
+  ukuranWMm: number | null;
+  ukuranHMm: number | null;
+  jumlahTersedia: number;
+  durasiHarga: UnitDurasiHarga[];
+};
+
 export type UnitStatus = {
   kodeUnit: string;
   modePemakaian: 'BERBAYAR' | 'GRATIS';
   unitPenuh: boolean;
   jumlahTersedia: number;
   jumlahTotal: number;
-  durasiHarga: UnitDurasiHarga[];
+  kategori: KategoriLoker[];
 };
 
 export type SesiTransaksi = {

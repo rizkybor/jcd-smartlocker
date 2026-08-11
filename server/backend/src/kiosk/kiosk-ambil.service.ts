@@ -62,7 +62,7 @@ export class KioskAmbilService {
         loker: { status: LokerStatus.TERISI, unitId: unit.id },
       },
       orderBy: { createdAt: 'desc' },
-      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
+      select: { id: true },
     });
 
     if (!sesi) {
@@ -78,14 +78,14 @@ export class KioskAmbilService {
     return { id: sesi.id, ...overdue };
   }
 
-  /** Denda kekurangan (jam overdue x tarif per-jam termurah unit ini) — lihat overdue.util.ts. */
+  /** Denda kekurangan (jam overdue x tarif per-jam termurah KATEGORI loker sesi ini) — lihat overdue.util.ts. */
   private async overdueStatusOf(sesiId: string) {
     const sesi = await this.prisma.db.sesiTransaksi.findUniqueOrThrow({
       where: { id: sesiId },
-      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
+      include: { unitDurasiHarga: { include: { lokerKategori: { include: { durasiHarga: true } } } } },
     });
     const tarifPerJam = tarifPerJamTermurah(
-      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+      sesi.unitDurasiHarga.lokerKategori.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
     );
     return computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
   }
@@ -280,14 +280,14 @@ export class KioskAmbilService {
         loker: { status: LokerStatus.TERISI },
       },
       include: {
-        unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } },
+        unitDurasiHarga: { include: { lokerKategori: { include: { durasiHarga: true } } } },
         loker: { include: { unit: true } },
       },
     });
     if (!sesi) throw this.sesiTidakDitemukan();
 
     const tarifPerJam = tarifPerJamTermurah(
-      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+      sesi.unitDurasiHarga.lokerKategori.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
     );
     const overdue = computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
 

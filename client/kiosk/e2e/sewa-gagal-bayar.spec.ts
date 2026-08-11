@@ -17,6 +17,7 @@ test('QR kedaluwarsa -> layar gagal bayar -> coba lagi kembali ke durasi', async
   await page.getByRole('button', { name: 'Lanjut' }).click();
   await page.getByPlaceholder('nama@email.com').fill('penyewa@example.com');
   await page.getByRole('button', { name: 'Lanjut' }).click();
+  await page.getByRole('button', { name: /Kecil/ }).click();
   await page.getByText('1 jam').click();
 
   await expect(page.getByText('Scan untuk Bayar')).toBeVisible();
@@ -39,6 +40,7 @@ test('QR kedaluwarsa -> Batalkan kembali ke idle', async ({ page }) => {
   await page.getByRole('button', { name: 'Lanjut' }).click();
   await page.getByPlaceholder('nama@email.com').fill('penyewa@example.com');
   await page.getByRole('button', { name: 'Lanjut' }).click();
+  await page.getByRole('button', { name: /Kecil/ }).click();
   await page.getByText('1 jam').click();
 
   await expect(page.getByText('QR Sudah Kedaluwarsa')).toBeVisible({ timeout: 15_000 });

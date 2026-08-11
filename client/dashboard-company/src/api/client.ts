@@ -72,13 +72,28 @@ export type OverdueStatus = { overdue: boolean; suspended: boolean; jamTerlambat
 export type Loker = {
   id: string;
   unitId: string;
+  lokerKategoriId: string;
   nomorLoker: string;
   status: LokerStatus;
   /** Cuma diisi di response detail unit (findOneOrThrow), bukan list. */
   overdueStatus?: OverdueStatus | null;
 };
 
-export type UnitDurasiHarga = { id: string; unitId: string; durasiJam: number; harga: number; aktif: boolean };
+export type UnitDurasiHarga = { id: string; unitId: string; lokerKategoriId: string; durasiJam: number; harga: number; aktif: boolean };
+
+/**
+ * Kategori ukuran loker (fitur harga & pilihan per ukuran, di luar cakupan
+ * PRD awal) — satu Unit fisik bisa punya beberapa kategori, masing-masing
+ * dengan loker & daftar durasi/harga SENDIRI.
+ */
+export type LokerKategori = {
+  id: string;
+  unitId: string;
+  nama: string;
+  ukuranWMm: number | null;
+  ukuranHMm: number | null;
+  aktif: boolean;
+};
 
 export type Unit = {
   id: string;
@@ -93,6 +108,7 @@ export type Unit = {
   lokasi: LokasiDenganMitra;
   lokers: Loker[];
   durasiHarga: UnitDurasiHarga[];
+  lokerKategori: LokerKategori[];
 };
 
 export type SesiTransaksiRingkas = {
@@ -108,20 +124,29 @@ export type UnitDetail = Unit & { riwayatTransaksi: SesiTransaksiRingkas[] };
 
 export type Paginated<T> = { data: T[]; meta: { page: number; pageSize: number; totalItems: number; totalPages: number } };
 
+export type KategoriInput = {
+  id?: string;
+  nama: string;
+  ukuranWMm?: number;
+  ukuranHMm?: number;
+  /** Wajib untuk kategori baru (tanpa `id`) — diabaikan kalau kategori sudah ada. */
+  jumlahLoker?: number;
+  durasiHarga: { id?: string; durasiJam: number; harga: number }[];
+};
+
 export type CreateUnitInput = {
   lokasiId: string;
   kodeUnit: string;
   varianKompartemen?: string;
-  jumlahLoker: number;
   modePemakaian: 'BERBAYAR' | 'GRATIS';
-  durasiHarga: { durasiJam: number; harga: number }[];
+  kategori: (KategoriInput & { jumlahLoker: number })[];
 };
 
 export type UpdateUnitInput = {
   varianKompartemen?: string;
   modePemakaian?: 'BERBAYAR' | 'GRATIS';
   aktif?: boolean;
-  durasiHarga?: { id?: string; durasiJam: number; harga: number }[];
+  kategori?: KategoriInput[];
 };
 
 export type TipeSkema = 'FIXED_RENTAL' | 'REVENUE_SHARING';

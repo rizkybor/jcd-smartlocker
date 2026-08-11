@@ -15,9 +15,18 @@ function generateUnitKey(): string {
   return `uk_${randomBytes(24).toString('hex')}`;
 }
 
-function nomorLokerFromIndex(index: number, total: number): string {
-  const width = String(total).length;
-  return String(index + 1).padStart(Math.max(2, width), '0');
+/**
+ * Lebar padding TETAP (bukan dihitung dari total saat ini) — unit bisa
+ * bertambah loker/kategori belakangan lewat update() (fitur kategori
+ * ukuran), jadi kalau lebar ikut jumlah saat itu saja, nomor loker lama
+ * ("01") & baru ("001") bisa beda lebar dalam satu unit -> `ORDER BY
+ * nomor_loker` (string, bukan numerik, di mulaiSewa()) jadi salah urut.
+ * 3 digit cukup untuk 999 loker per unit, jauh di atas kebutuhan realistis.
+ */
+const LEBAR_NOMOR_LOKER = 3;
+
+function nomorLokerFromIndex(index: number): string {
+  return String(index + 1).padStart(LEBAR_NOMOR_LOKER, '0');
 }
 
 /** Sertakan lokasi + mitra pemilik (via MitraLokasi) — dashboard perlu tahu "unit ini milik siapa". */
@@ -29,6 +38,7 @@ const unitListInclude = {
   },
   lokers: true,
   durasiHarga: true,
+  lokerKategori: true,
 } as const;
 
 function omitUnitKey<T extends { unitKey: string }>({ unitKey: _unitKey, ...rest }: T) {
@@ -90,10 +100,23 @@ export class UnitService {
    * Company bisa tampilkan badge "Disuspend" & tombol buka khusus Super
    * Admin tanpa panggilan API terpisah.
    */
-  private async lokersDenganOverdueStatus(unit: { durasiHarga: { harga: unknown; durasiJam: number; aktif: boolean }[]; lokers: { id: string; status: LokerStatus }[] }) {
-    const tarifPerJam = tarifPerJamTermurah(
-      unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
-    );
+  private async lokersDenganOverdueStatus(unit: {
+    durasiHarga: { harga: unknown; durasiJam: number; aktif: boolean; lokerKategoriId: string }[];
+    lokers: { id: string; status: LokerStatus; lokerKategoriId: string }[];
+  }) {
+    // Tarif per jam dihitung PER KATEGORI (bukan dirata unit) — kategori
+    // beda harga bisa jauh beda, jangan salah kenakan denda loker "Besar"
+    // pakai tarif loker "Kecil" atau sebaliknya.
+    const durasiHargaPerKategori = new Map<string, { harga: number; durasiJam: number; aktif: boolean }[]>();
+    for (const d of unit.durasiHarga) {
+      const list = durasiHargaPerKategori.get(d.lokerKategoriId) ?? [];
+      list.push({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif });
+      durasiHargaPerKategori.set(d.lokerKategoriId, list);
+    }
+    const tarifPerJamPerKategori = new Map<string, number | null>();
+    for (const [kategoriId, list] of durasiHargaPerKategori) {
+      tarifPerJamPerKategori.set(kategoriId, tarifPerJamTermurah(list));
+    }
 
     const lokerTerisiIds = unit.lokers.filter((l) => l.status === LokerStatus.TERISI).map((l) => l.id);
     const sesiAktifList = lokerTerisiIds.length
@@ -111,7 +134,9 @@ export class UnitService {
 
     return unit.lokers.map((l) => ({
       ...l,
-      overdueStatus: waktuSelesaiPerLoker.has(l.id) ? computeOverdueStatus(waktuSelesaiPerLoker.get(l.id) ?? null, tarifPerJam) : null,
+      overdueStatus: waktuSelesaiPerLoker.has(l.id)
+        ? computeOverdueStatus(waktuSelesaiPerLoker.get(l.id) ?? null, tarifPerJamPerKategori.get(l.lokerKategoriId) ?? null)
+        : null,
     }));
   }
 
@@ -119,9 +144,17 @@ export class UnitService {
    * `unitKey` HANYA muncul di response create ini — tidak pernah
    * dikembalikan lagi oleh endpoint lain (list/detail), selaras perlakuan
    * secret di §7.1.
+   *
+   * Fitur harga & pilihan per ukuran loker (di luar cakupan PRD awal):
+   * satu Unit fisik dibuat sekaligus dengan >=1 LokerKategori, masing-
+   * masing punya loker & daftar durasi/harga SENDIRI. Nomor loker
+   * diberikan BERURUTAN LINTAS kategori (001, 002, ... dst.), bukan
+   * reset per kategori, supaya tetap unik per unit (`@@unique([unitId,
+   * nomorLoker])`).
    */
   async create(dto: CreateUnitDto) {
     const unitKey = generateUnitKey();
+    const totalLoker = dto.kategori.reduce((sum, k) => sum + k.jumlahLoker, 0);
 
     return this.prisma.db.$transaction(async (tx) => {
       const unit = await tx.unit.create({
@@ -130,36 +163,47 @@ export class UnitService {
           kodeUnit: dto.kodeUnit,
           unitKey,
           varianKompartemen: dto.varianKompartemen,
-          jumlahLoker: dto.jumlahLoker,
+          jumlahLoker: totalLoker,
           modePemakaian: dto.modePemakaian,
         },
       });
 
-      await tx.loker.createMany({
-        data: Array.from({ length: dto.jumlahLoker }, (_, i) => ({
-          unitId: unit.id,
-          nomorLoker: nomorLokerFromIndex(i, dto.jumlahLoker),
-        })),
-      });
+      let nomorMulai = 0;
+      for (const k of dto.kategori) {
+        const kategoriRow = await tx.lokerKategori.create({
+          data: { unitId: unit.id, nama: k.nama, ukuranWMm: k.ukuranWMm, ukuranHMm: k.ukuranHMm },
+        });
 
-      await tx.unitDurasiHarga.createMany({
-        data: dto.durasiHarga.map((d) => ({
-          unitId: unit.id,
-          durasiJam: d.durasiJam,
-          harga: d.harga,
-        })),
-      });
+        await tx.loker.createMany({
+          data: Array.from({ length: k.jumlahLoker }, (_, i) => ({
+            unitId: unit.id,
+            lokerKategoriId: kategoriRow.id,
+            nomorLoker: nomorLokerFromIndex(nomorMulai + i),
+          })),
+        });
+        nomorMulai += k.jumlahLoker;
+
+        await tx.unitDurasiHarga.createMany({
+          data: k.durasiHarga.map((d) => ({
+            unitId: unit.id,
+            lokerKategoriId: kategoriRow.id,
+            durasiJam: d.durasiJam,
+            harga: d.harga,
+          })),
+        });
+      }
 
       const lokers = await tx.loker.findMany({ where: { unitId: unit.id } });
       const durasiHarga = await tx.unitDurasiHarga.findMany({ where: { unitId: unit.id } });
+      const lokerKategori = await tx.lokerKategori.findMany({ where: { unitId: unit.id } });
 
-      return { ...unit, lokers, durasiHarga };
+      return { ...unit, lokers, durasiHarga, lokerKategori };
     });
   }
 
   /**
    * docs/API-Contract-Smartbox.md §5.1 — PATCH /company/units/:id.
-   * `durasiHarga`, kalau dikirim, di-sync (lihat catatan di
+   * `kategori`, kalau dikirim, di-sync per kategori (lihat catatan di
    * update-unit.dto.ts) — bukan replace destruktif.
    */
   async update(id: string, dto: UpdateUnitDto, actor: AuthenticatedInternalUser) {
@@ -176,24 +220,46 @@ export class UnitService {
         },
       });
 
-      if (dto.durasiHarga) {
-        const dikirimIds = dto.durasiHarga.filter((d) => d.id).map((d) => d.id!);
+      if (dto.kategori) {
+        for (const k of dto.kategori) {
+          const kategoriId = k.id
+            ? (await tx.lokerKategori.update({ where: { id: k.id }, data: { nama: k.nama, ukuranWMm: k.ukuranWMm, ukuranHMm: k.ukuranHMm } })).id
+            : (
+                await tx.lokerKategori.create({
+                  data: { unitId: id, nama: k.nama, ukuranWMm: k.ukuranWMm, ukuranHMm: k.ukuranHMm },
+                })
+              ).id;
 
-        await tx.unitDurasiHarga.updateMany({
-          where: { unitId: id, id: { notIn: dikirimIds } },
-          data: { aktif: false },
-        });
+          if (!k.id) {
+            // Kategori baru — provisikan loker fisiknya sekalian (jumlahLoker wajib divalidasi Zod untuk kasus ini).
+            const nomorTerpakai = await tx.loker.findMany({ where: { unitId: id }, select: { nomorLoker: true } });
+            const nomorTerbesar = nomorTerpakai.reduce((max, l) => Math.max(max, Number(l.nomorLoker) || 0), 0);
+            await tx.loker.createMany({
+              data: Array.from({ length: k.jumlahLoker ?? 0 }, (_, i) => ({
+                unitId: id,
+                lokerKategoriId: kategoriId,
+                nomorLoker: nomorLokerFromIndex(nomorTerbesar + i),
+              })),
+            });
+            await tx.unit.update({ where: { id }, data: { jumlahLoker: { increment: k.jumlahLoker ?? 0 } } });
+          }
 
-        for (const d of dto.durasiHarga) {
-          if (d.id) {
-            await tx.unitDurasiHarga.update({
-              where: { id: d.id },
-              data: { durasiJam: d.durasiJam, harga: d.harga, aktif: true },
-            });
-          } else {
-            await tx.unitDurasiHarga.create({
-              data: { unitId: id, durasiJam: d.durasiJam, harga: d.harga },
-            });
+          const dikirimIds = k.durasiHarga.filter((d) => d.id).map((d) => d.id!);
+          await tx.unitDurasiHarga.updateMany({
+            where: { unitId: id, lokerKategoriId: kategoriId, id: { notIn: dikirimIds } },
+            data: { aktif: false },
+          });
+          for (const d of k.durasiHarga) {
+            if (d.id) {
+              await tx.unitDurasiHarga.update({
+                where: { id: d.id },
+                data: { durasiJam: d.durasiJam, harga: d.harga, aktif: true },
+              });
+            } else {
+              await tx.unitDurasiHarga.create({
+                data: { unitId: id, lokerKategoriId: kategoriId, durasiJam: d.durasiJam, harga: d.harga },
+              });
+            }
           }
         }
       }
@@ -294,7 +360,7 @@ export class UnitService {
     const sesi = await this.prisma.db.sesiTransaksi.findFirst({
       where: { lokerId: loker.id, statusBayar: StatusBayar.PAID, loker: { status: LokerStatus.TERISI } },
       orderBy: { createdAt: 'desc' },
-      include: { unitDurasiHarga: { include: { unit: { include: { durasiHarga: true } } } } },
+      include: { unitDurasiHarga: { include: { lokerKategori: { include: { durasiHarga: true } } } } },
     });
     if (!sesi) {
       throw new NotFoundException({
@@ -302,8 +368,10 @@ export class UnitService {
       });
     }
 
+    // Tarif per jam dari kategori loker SESI INI saja (bukan dirata unit) —
+    // konsisten dengan lokersDenganOverdueStatus() & kiosk-ambil.service.ts.
     const tarifPerJam = tarifPerJamTermurah(
-      sesi.unitDurasiHarga.unit.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
+      sesi.unitDurasiHarga.lokerKategori.durasiHarga.map((d) => ({ harga: Number(d.harga), durasiJam: d.durasiJam, aktif: d.aktif })),
     );
     const overdue = computeOverdueStatus(sesi.waktuSelesai, tarifPerJam);
     if (!overdue.suspended) {

@@ -3,22 +3,41 @@ import { ModePemakaian } from '@prisma/client';
 
 /**
  * docs/API-Contract-Smartbox.md §5.1 — PATCH /company/units/:id.
- * `durasiHarga`, kalau dikirim, di-SYNC (bukan replace destruktif): entri
- * dengan `id` yang cocok di-update, entri tanpa `id` dibuat baru, entri
- * lama yang tidak disebutkan lagi di-nonaktifkan (`aktif: false`) —
- * BUKAN dihapus, karena `SesiTransaksi` historis masih mereferensikan
- * baris itu (§6, integritas riwayat transaksi/laporan).
+ *
+ * `kategori`, kalau dikirim, di-SYNC per kategori (bukan replace
+ * destruktif) — sama seperti pola lama untuk `durasiHarga` sebelum fitur
+ * kategori ukuran ditambahkan:
+ * - Kategori dengan `id` yang cocok: update nama/ukuran, lalu `durasiHarga`
+ *   di dalamnya di-sync (entri ber-`id` di-update, tanpa `id` dibuat baru,
+ *   entri lama yang tidak disebut lagi di-nonaktifkan `aktif: false` —
+ *   BUKAN dihapus, `SesiTransaksi` historis masih mereferensikan baris itu).
+ * - Kategori TANPA `id`: kategori BARU, dibuat lengkap dengan `jumlahLoker`
+ *   loker baru + `durasiHarga` awal. Menambah loker fisik ke kategori yang
+ *   SUDAH ADA tidak didukung lewat endpoint ini (provisioning hardware
+ *   lanjutan di luar cakupan form ini) — kalau perlu, buat kategori baru.
  */
 export const updateUnitSchema = z.object({
   varianKompartemen: z.string().optional(),
   modePemakaian: z.nativeEnum(ModePemakaian).optional(),
   aktif: z.boolean().optional(),
-  durasiHarga: z
+  kategori: z
     .array(
       z.object({
         id: z.string().uuid().optional(),
-        durasiJam: z.number().int().min(1),
-        harga: z.number().nonnegative(),
+        nama: z.string().min(1, 'Nama kategori (ukuran loker) wajib diisi.'),
+        ukuranWMm: z.number().positive().optional(),
+        ukuranHMm: z.number().positive().optional(),
+        /** Wajib kalau kategori baru (tanpa `id`) — diabaikan kalau kategori sudah ada. */
+        jumlahLoker: z.number().int().min(1).max(100).optional(),
+        durasiHarga: z
+          .array(
+            z.object({
+              id: z.string().uuid().optional(),
+              durasiJam: z.number().int().min(1),
+              harga: z.number().nonnegative(),
+            }),
+          )
+          .min(1, 'Minimal satu pilihan durasi & harga per kategori.'),
       }),
     )
     .optional(),

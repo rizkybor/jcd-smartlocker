@@ -31,7 +31,7 @@ describe('KioskAmbilService', () => {
       otpVerifiedAt: null,
       waktuSelesai: null, // default: belum overdue
       lokerId: 'loker-1',
-      unitDurasiHarga: { unit: { durasiHarga: durasiHargaUnit } },
+      unitDurasiHarga: { lokerKategori: { durasiHarga: durasiHargaUnit } },
       loker: { status: LokerStatus.TERISI, nomorLoker: '01', unit: { kodeUnit: 'UNIT-01' } },
       ...overrides,
     };
@@ -112,7 +112,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('mengembalikan overdue=true + dendaNominal saat terlambat 3 jam (studi kasus dari permintaan)', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
 
       const result = await service.mulaiAmbil(unit, { nomorHp: '081234567890' });
@@ -121,7 +121,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('mengembalikan suspended=true saat terlambat >= 24 jam', async () => {
-      const waktuSelesai = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (25 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
 
       const result = await service.mulaiAmbil(unit, { nomorHp: '081234567890' });
@@ -140,7 +140,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('lempar ConflictException LOKER_DISUSPEND kalau sudah >= 24 jam (tidak bisa bayar sendiri lagi)', async () => {
-      const waktuSelesai = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (25 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
 
       await expect(service.bayarDenda('sesi-1')).rejects.toMatchObject({
@@ -149,7 +149,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('lempar ConflictException DENDA_SUDAH_LUNAS kalau sudah ada SesiDenda PAID', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }), sesiDendaPaid: true });
 
       await expect(service.bayarDenda('sesi-1')).rejects.toMatchObject({
@@ -158,7 +158,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('buat charge QRIS & simpan SesiDenda baru kalau overdue & belum lunas', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service, paymentProvider, createDenda } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
 
       const result = await service.bayarDenda('sesi-1');
@@ -213,7 +213,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('lempar ConflictException DENDA_BELUM_DIBAYAR kalau overdue & denda belum lunas', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }), sesiDendaPaid: false });
 
       await expect(service.kirimOtp('sesi-1')).rejects.toMatchObject({
@@ -222,7 +222,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('boleh lanjut kirim OTP kalau overdue TAPI denda sudah lunas', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service, otpService } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }), sesiDendaPaid: true });
 
       await expect(service.kirimOtp('sesi-1')).resolves.toEqual({ terkirim: true });
@@ -230,7 +230,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('lempar ConflictException LOKER_DISUSPEND kalau >= 24 jam, walau ada percobaan bayar denda', async () => {
-      const waktuSelesai = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (25 * 60 - 30) * 60 * 1000);
       const { service } = buildService({ sesiAktif: sesiDefault({ waktuSelesai }) });
 
       await expect(service.kirimOtp('sesi-1')).rejects.toMatchObject({
@@ -314,7 +314,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('tetap menolak buka pintu kalau overdue & denda belum lunas, walau OTP sudah terverifikasi', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service } = buildService({
         sesiAktif: sesiDefault({ waktuSelesai, otpVerifiedAt: new Date() }),
         sesiDendaPaid: false,
@@ -326,7 +326,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('boleh buka pintu kalau overdue TAPI denda sudah lunas & OTP terverifikasi', async () => {
-      const waktuSelesai = new Date(Date.now() - 3 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (3 * 60 - 30) * 60 * 1000);
       const { service, mqttClient } = buildService({
         sesiAktif: sesiDefault({ waktuSelesai, otpVerifiedAt: new Date() }),
         sesiDendaPaid: true,
@@ -338,7 +338,7 @@ describe('KioskAmbilService', () => {
     });
 
     it('tetap menolak buka pintu kalau sudah >= 24 jam (suspend), walau OTP sudah terverifikasi & ada percobaan bayar', async () => {
-      const waktuSelesai = new Date(Date.now() - 25 * 60 * 60 * 1000);
+      const waktuSelesai = new Date(Date.now() - (25 * 60 - 30) * 60 * 1000);
       const { service } = buildService({
         sesiAktif: sesiDefault({ waktuSelesai, otpVerifiedAt: new Date() }),
         sesiDendaPaid: true, // walau seandainya ada baris denda lunas, tetap harus ditolak begitu masuk zona suspend

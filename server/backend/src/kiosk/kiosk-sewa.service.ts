@@ -26,11 +26,22 @@ export class KioskSewaService {
     private readonly mqttClient: MqttClientService,
   ) {}
 
+  /**
+   * Fitur harga & pilihan per ukuran loker (di luar cakupan PRD awal —
+   * permintaan bisnis langsung): durasi/harga dikelompokkan PER KATEGORI
+   * ukuran loker unit ini, masing-masing dengan hitungan tersedia sendiri
+   * — kiosk menampilkan ini sebagai langkah "pilih ukuran" sebelum "pilih
+   * durasi" (lihat client/kiosk/src/screens/KategoriScreen.tsx).
+   */
   async statusUnit(unit: Unit) {
-    const [durasiHarga, jumlahTersedia, jumlahTotal] = await Promise.all([
-      this.prisma.db.unitDurasiHarga.findMany({
+    const [kategoriList, jumlahTersedia, jumlahTotal] = await Promise.all([
+      this.prisma.db.lokerKategori.findMany({
         where: { unitId: unit.id, aktif: true },
-        orderBy: { durasiJam: 'asc' },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          durasiHarga: { where: { aktif: true }, orderBy: { durasiJam: 'asc' } },
+          _count: { select: { lokers: { where: { status: LokerStatus.TERSEDIA, deletedAt: null } } } },
+        },
       }),
       this.prisma.db.loker.count({ where: { unitId: unit.id, status: LokerStatus.TERSEDIA } }),
       this.prisma.db.loker.count({ where: { unitId: unit.id } }),
@@ -42,10 +53,17 @@ export class KioskSewaService {
       unitPenuh: jumlahTersedia === 0,
       jumlahTersedia,
       jumlahTotal,
-      durasiHarga: durasiHarga.map((d) => ({
-        id: d.id,
-        durasiJam: d.durasiJam,
-        harga: Number(d.harga),
+      kategori: kategoriList.map((k) => ({
+        id: k.id,
+        nama: k.nama,
+        ukuranWMm: k.ukuranWMm ? Number(k.ukuranWMm) : null,
+        ukuranHMm: k.ukuranHMm ? Number(k.ukuranHMm) : null,
+        jumlahTersedia: k._count.lokers,
+        durasiHarga: k.durasiHarga.map((d) => ({
+          id: d.id,
+          durasiJam: d.durasiJam,
+          harga: Number(d.harga),
+        })),
       })),
     };
   }
@@ -56,6 +74,11 @@ export class KioskSewaService {
    * transaksi supaya dua request bersamaan tidak pernah mengklaim loker
    * `tersedia` yang sama. Prisma query builder tidak punya row-locking
    * eksplisit, jadi baris ini pakai raw SQL yang scoped ke transaksi.
+   *
+   * Fitur harga & pilihan per ukuran loker: kandidat loker WAJIB difilter
+   * ke `loker_kategori_id` milik `durasiHarga` yang dipilih pelanggan —
+   * bukan loker mana pun yang tersedia di unit itu — supaya pelanggan yang
+   * pilih & bayar loker "Besar" tidak pernah di-assign ke loker "Kecil".
    */
   async mulaiSewa(unit: Unit, dto: MulaiSewaDto) {
     const durasiHarga = await this.prisma.db.unitDurasiHarga.findFirst({
@@ -74,9 +97,10 @@ export class KioskSewaService {
       const kandidat = await tx.$queryRaw<{ id: string }[]>`
         SELECT id FROM loker
         WHERE unit_id = ${unit.id}::uuid
+          AND loker_kategori_id = ${durasiHarga.lokerKategoriId}::uuid
           AND status = 'tersedia'
           AND deleted_at IS NULL
-        ORDER BY nomor_loker
+        ORDER BY LENGTH(nomor_loker), nomor_loker
         LIMIT 1
         FOR UPDATE SKIP LOCKED
       `;

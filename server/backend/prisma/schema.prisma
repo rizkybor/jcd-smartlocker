@@ -219,17 +219,45 @@ model Unit {
   createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt         DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  lokasi      Lokasi            @relation(fields: [lokasiId], references: [id])
-  lokers      Loker[]
-  durasiHarga UnitDurasiHarga[]
+  lokasi        Lokasi            @relation(fields: [lokasiId], references: [id])
+  lokers        Loker[]
+  durasiHarga   UnitDurasiHarga[]
+  lokerKategori LokerKategori[]
 
   @@map("unit")
 }
 
-model UnitDurasiHarga {
+/// Kategori ukuran loker DALAM SATU unit fisik (fitur harga & pilihan per
+/// ukuran, di luar cakupan PRD awal — permintaan bisnis langsung). Satu
+/// unit bisa punya beberapa kategori ("Kecil"/"Sedang"/"Besar", bebas per
+/// unit — jangan hardcode enum tertutup, sama seperti alasan
+/// `varianKompartemen` bebas teks, §8.3) — setiap Loker & setiap
+/// UnitDurasiHarga WAJIB terikat ke satu kategori, supaya harga & assignment
+/// otomatis saat sewa (kiosk-sewa.service.ts::mulaiSewa()) bisa di-filter
+/// per kategori, bukan campur rata seluruh unit.
+model LokerKategori {
   id        String   @id @default(uuid()) @db.Uuid
   unitId    String   @map("unit_id") @db.Uuid
-  durasiJam Int      @map("durasi_jam")
+  nama      String
+  ukuranWMm Decimal? @map("ukuran_w_mm") @db.Decimal(8, 2)
+  ukuranHMm Decimal? @map("ukuran_h_mm") @db.Decimal(8, 2)
+  aktif     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  unit        Unit              @relation(fields: [unitId], references: [id])
+  lokers      Loker[]
+  durasiHarga UnitDurasiHarga[]
+
+  @@unique([unitId, nama])
+  @@map("loker_kategori")
+}
+
+model UnitDurasiHarga {
+  id              String   @id @default(uuid()) @db.Uuid
+  unitId          String   @map("unit_id") @db.Uuid
+  lokerKategoriId String   @map("loker_kategori_id") @db.Uuid
+  durasiJam       Int      @map("durasi_jam")
   /// Angka, bukan string berformat (§6) — presisi untuk perhitungan bagi
   /// hasil.
   harga     Decimal  @db.Decimal(12, 2)
@@ -238,17 +266,17 @@ model UnitDurasiHarga {
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   unit          Unit            @relation(fields: [unitId], references: [id])
+  lokerKategori LokerKategori   @relation(fields: [lokerKategoriId], references: [id])
   sesiTransaksi SesiTransaksi[]
 
   @@map("unit_durasi_harga")
 }
 
 model Loker {
-  id         String      @id @default(uuid()) @db.Uuid
-  unitId     String      @map("unit_id") @db.Uuid
-  nomorLoker String      @map("nomor_loker")
-  ukuranWMm  Decimal?    @map("ukuran_w_mm") @db.Decimal(8, 2)
-  ukuranHMm  Decimal?    @map("ukuran_h_mm") @db.Decimal(8, 2)
+  id              String      @id @default(uuid()) @db.Uuid
+  unitId          String      @map("unit_id") @db.Uuid
+  lokerKategoriId String      @map("loker_kategori_id") @db.Uuid
+  nomorLoker      String      @map("nomor_loker")
   /// Enum Postgres 5-nilai resmi (§12 poin 9) — nilai tidak valid ditolak
   /// di level database.
   status     LokerStatus @default(TERSEDIA)
@@ -257,6 +285,7 @@ model Loker {
   updatedAt  DateTime    @updatedAt @map("updated_at") @db.Timestamptz
 
   unit               Unit                 @relation(fields: [unitId], references: [id])
+  lokerKategori      LokerKategori        @relation(fields: [lokerKategoriId], references: [id])
   sesiTransaksi      SesiTransaksi[]
   emergencyUnlockLog EmergencyUnlockLog[]
 

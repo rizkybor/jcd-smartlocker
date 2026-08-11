@@ -22,6 +22,10 @@ test('alur sewa loker berhasil sampai struk', async ({ page }) => {
   await page.getByPlaceholder('nama@email.com').fill('penyewa@example.com');
   await page.getByRole('button', { name: 'Lanjut' }).click();
 
+  // Kategori ukuran loker (fitur harga & pilihan per ukuran)
+  await expect(page.getByText('Pilih Ukuran Loker')).toBeVisible();
+  await page.getByRole('button', { name: /Kecil/ }).click();
+
   // Durasi
   await expect(page.getByText('Pilih Durasi Sewa')).toBeVisible();
   await page.getByText('1 jam').click();

@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Panel, Button, Field, StatusBadge, DataTable, ConfirmDialog, type DataTableColumn } from '@smartbox/ui';
-import { companyApi, ApiError, type UnitDetail, type Loker, type LokerStatus, type SesiTransaksiRingkas } from '../api/client';
+import { companyApi, ApiError, type UnitDetail, type Loker, type LokerKategori, type LokerStatus, type SesiTransaksiRingkas } from '../api/client';
 import { formatTanggalLokasi } from '../utils/formatTanggal';
 import { useAuth } from '../auth/AuthContext';
 
 type DurasiRow = { id?: string; durasiJam: string; harga: string };
+type KategoriConfigRow = { id?: string; nama: string; ukuranWMm: string; ukuranHMm: string; jumlahLoker: string; durasiHarga: DurasiRow[] };
+
+function kategoriBaruKosong(): KategoriConfigRow {
+  return { nama: '', ukuranWMm: '', ukuranHMm: '', jumlahLoker: '6', durasiHarga: [{ durasiJam: '1', harga: '5000' }] };
+}
 
 function formatRupiah(nominal: number): string {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(nominal);
@@ -30,7 +35,7 @@ export function UnitDetailPage() {
   // --- Form konfigurasi ---
   const [varianKompartemen, setVarianKompartemen] = useState('');
   const [modePemakaian, setModePemakaian] = useState<'BERBAYAR' | 'GRATIS'>('BERBAYAR');
-  const [durasiRows, setDurasiRows] = useState<DurasiRow[]>([]);
+  const [kategoriRows, setKategoriRows] = useState<KategoriConfigRow[]>([]);
   const [savingConfig, setSavingConfig] = useState(false);
   const [configError, setConfigError] = useState<string | null>(null);
   const [configSaved, setConfigSaved] = useState(false);
@@ -61,10 +66,19 @@ export function UnitDetailPage() {
         setUnit(res.data);
         setVarianKompartemen(res.data.varianKompartemen ?? '');
         setModePemakaian(res.data.modePemakaian);
-        setDurasiRows(
-          res.data.durasiHarga
-            .filter((d) => d.aktif)
-            .map((d) => ({ id: d.id, durasiJam: String(d.durasiJam), harga: String(d.harga) })),
+        setKategoriRows(
+          res.data.lokerKategori
+            .filter((k) => k.aktif)
+            .map((k) => ({
+              id: k.id,
+              nama: k.nama,
+              ukuranWMm: k.ukuranWMm ? String(k.ukuranWMm) : '',
+              ukuranHMm: k.ukuranHMm ? String(k.ukuranHMm) : '',
+              jumlahLoker: String(res.data.lokers.filter((l) => l.lokerKategoriId === k.id).length),
+              durasiHarga: res.data.durasiHarga
+                .filter((d) => d.aktif && d.lokerKategoriId === k.id)
+                .map((d) => ({ id: d.id, durasiJam: String(d.durasiJam), harga: String(d.harga) })),
+            })),
         );
       })
       .catch((err) => setLoadError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalMuat')));
@@ -72,8 +86,18 @@ export function UnitDetailPage() {
 
   useEffect(reload, [id, t]);
 
-  function updateDurasi(index: number, field: 'durasiJam' | 'harga', value: string) {
-    setDurasiRows((rows) => rows.map((r, i) => (i === index ? { ...r, [field]: value } : r)));
+  function updateKategori(index: number, patch: Partial<KategoriConfigRow>) {
+    setKategoriRows((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
+  }
+
+  function updateDurasi(kategoriIndex: number, durasiIndex: number, field: 'durasiJam' | 'harga', value: string) {
+    setKategoriRows((rows) =>
+      rows.map((r, i) =>
+        i === kategoriIndex
+          ? { ...r, durasiHarga: r.durasiHarga.map((d, di) => (di === durasiIndex ? { ...d, [field]: value } : d)) }
+          : r,
+      ),
+    );
   }
 
   async function handleSaveConfig() {
@@ -85,10 +109,17 @@ export function UnitDetailPage() {
       await companyApi.units.update(id, {
         varianKompartemen: varianKompartemen.trim() || undefined,
         modePemakaian,
-        durasiHarga: durasiRows.map((r) => ({
-          id: r.id,
-          durasiJam: Number(r.durasiJam),
-          harga: Number(r.harga),
+        kategori: kategoriRows.map((k) => ({
+          id: k.id,
+          nama: k.nama.trim(),
+          ukuranWMm: k.ukuranWMm ? Number(k.ukuranWMm) : undefined,
+          ukuranHMm: k.ukuranHMm ? Number(k.ukuranHMm) : undefined,
+          jumlahLoker: k.id ? undefined : Number(k.jumlahLoker),
+          durasiHarga: k.durasiHarga.map((d) => ({
+            id: d.id,
+            durasiJam: Number(d.durasiJam),
+            harga: Number(d.harga),
+          })),
         })),
       });
       setConfigSaved(true);
@@ -164,8 +195,11 @@ export function UnitDetailPage() {
   }
   if (!unit) return <div style={{ color: 'var(--sl-text-muted)' }}>{t('common.memuat')}</div>;
 
+  const kategoriById = new Map<string, LokerKategori>(unit.lokerKategori.map((k) => [k.id, k]));
+
   const lokerColumns: DataTableColumn<Loker>[] = [
     { header: t('unitDetailPage.kolomNomor'), render: (l) => l.nomorLoker },
+    { header: t('unitDetailPage.kolomKategori'), render: (l) => kategoriById.get(l.lokerKategoriId)?.nama ?? '—' },
     {
       header: t('unitDetailPage.kolomStatus'),
       render: (l) => (
@@ -252,19 +286,57 @@ export function UnitDetailPage() {
             />
             <div>
               <span style={{ display: 'block', marginBottom: 6, fontSize: 'var(--sl-fs-13)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-body)' }}>
-                {t('unitDetailPage.durasiHarga')}
+                {t('unitDetailPage.kategoriUkuran')}
               </span>
-              {durasiRows.map((row, i) => (
-                <div key={row.id ?? i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(i, 'durasiJam', e.target.value)} placeholder={t('unitDetailPage.placeholderJam')} />
-                  <Field type="number" value={row.harga} onChange={(e) => updateDurasi(i, 'harga', e.target.value)} placeholder={t('unitDetailPage.placeholderHarga')} />
-                  <Button tone="ghost" size="sm" onClick={() => setDurasiRows((rows) => rows.filter((_, ri) => ri !== i))}>
-                    {t('common.hapus')}
+              {kategoriRows.map((k, ki) => (
+                <div
+                  key={k.id ?? `baru-${ki}`}
+                  style={{ border: 'var(--sl-border-w) solid var(--sl-border-strong)', borderRadius: 'var(--sl-radius-md)', padding: 'var(--sl-space-3)', marginBottom: 'var(--sl-space-3)' }}
+                >
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <Field
+                      value={k.nama}
+                      onChange={(e) => updateKategori(ki, { nama: e.target.value })}
+                      placeholder={t('createUnitDialog.namaKategoriPlaceholder')}
+                    />
+                  </div>
+                  {!k.id ? (
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <Field type="number" value={k.ukuranWMm} onChange={(e) => updateKategori(ki, { ukuranWMm: e.target.value })} placeholder={t('createUnitDialog.ukuranWPlaceholder')} />
+                      <Field type="number" value={k.ukuranHMm} onChange={(e) => updateKategori(ki, { ukuranHMm: e.target.value })} placeholder={t('createUnitDialog.ukuranHPlaceholder')} />
+                      <Field type="number" required value={k.jumlahLoker} onChange={(e) => updateKategori(ki, { jumlahLoker: e.target.value })} placeholder={t('createUnitDialog.jumlahLoker')} />
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-text-muted)', marginTop: 0 }}>
+                      {t('unitDetailPage.jumlahLokerKategori', { jumlah: k.jumlahLoker })}
+                      {k.ukuranWMm && k.ukuranHMm ? ` · ${k.ukuranWMm} × ${k.ukuranHMm} mm` : ''}
+                    </p>
+                  )}
+
+                  <span style={{ display: 'block', marginBottom: 6, fontSize: 'var(--sl-fs-13)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-body)' }}>
+                    {t('unitDetailPage.durasiHarga')}
+                  </span>
+                  {k.durasiHarga.map((row, di) => (
+                    <div key={row.id ?? di} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <Field type="number" value={row.durasiJam} onChange={(e) => updateDurasi(ki, di, 'durasiJam', e.target.value)} placeholder={t('unitDetailPage.placeholderJam')} />
+                      <Field type="number" value={row.harga} onChange={(e) => updateDurasi(ki, di, 'harga', e.target.value)} placeholder={t('unitDetailPage.placeholderHarga')} />
+                      <Button
+                        tone="ghost"
+                        size="sm"
+                        disabled={k.durasiHarga.length <= 1}
+                        onClick={() => updateKategori(ki, { durasiHarga: k.durasiHarga.filter((_, ri) => ri !== di) })}
+                      >
+                        {t('common.hapus')}
+                      </Button>
+                    </div>
+                  ))}
+                  <Button tone="outline" size="sm" onClick={() => updateKategori(ki, { durasiHarga: [...k.durasiHarga, { durasiJam: '', harga: '' }] })}>
+                    {t('unitDetailPage.tambahDurasi')}
                   </Button>
                 </div>
               ))}
-              <Button tone="outline" size="sm" onClick={() => setDurasiRows((rows) => [...rows, { durasiJam: '', harga: '' }])}>
-                {t('unitDetailPage.tambahDurasi')}
+              <Button tone="outline" size="sm" onClick={() => setKategoriRows((rows) => [...rows, kategoriBaruKosong()])}>
+                {t('createUnitDialog.tambahKategori')}
               </Button>
             </div>
             {configError ? <div style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-status-offline-strong)' }}>{configError}</div> : null}

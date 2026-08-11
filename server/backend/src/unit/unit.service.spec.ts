@@ -54,7 +54,7 @@ describe('UnitService.bukaLokerSuspended', () => {
     return {
       id: 'sesi-1',
       waktuSelesai: new Date(Date.now() - (jamOverdue * 60 - 30) * 60 * 1000),
-      unitDurasiHarga: { unit: { durasiHarga: durasiHargaUnit } },
+      unitDurasiHarga: { lokerKategori: { durasiHarga: durasiHargaUnit } },
     };
   }
 
@@ -114,7 +114,8 @@ describe('UnitService.bukaLokerSuspended', () => {
 });
 
 describe('UnitService.findOneOrThrow — sisipkan overdueStatus per loker', () => {
-  const durasiHargaUnit = [{ harga: 5_000, durasiJam: 1, aktif: true }];
+  const KATEGORI_ID = 'kategori-1';
+  const durasiHargaUnit = [{ harga: 5_000, durasiJam: 1, aktif: true, lokerKategoriId: KATEGORI_ID }];
 
   function buildService(opts: {
     unit?: Record<string, unknown> | null;
@@ -128,9 +129,9 @@ describe('UnitService.findOneOrThrow — sisipkan overdueStatus per loker', () =
             unitKey: 'rahasia',
             durasiHarga: durasiHargaUnit,
             lokers: [
-              { id: 'loker-tersedia', status: LokerStatus.TERSEDIA },
-              { id: 'loker-terisi-ontime', status: LokerStatus.TERISI },
-              { id: 'loker-terisi-overdue', status: LokerStatus.TERISI },
+              { id: 'loker-tersedia', status: LokerStatus.TERSEDIA, lokerKategoriId: KATEGORI_ID },
+              { id: 'loker-terisi-ontime', status: LokerStatus.TERISI, lokerKategoriId: KATEGORI_ID },
+              { id: 'loker-terisi-overdue', status: LokerStatus.TERISI, lokerKategoriId: KATEGORI_ID },
             ],
           },
     );

@@ -37,7 +37,7 @@ describe('KioskSewaService', () => {
           findFirst: jest.fn().mockResolvedValue(
             overrides.durasiHarga !== undefined
               ? overrides.durasiHarga
-              : { id: 'durasi-1', durasiJam: 3, harga: 15_000 },
+              : { id: 'durasi-1', durasiJam: 3, harga: 15_000, lokerKategoriId: 'kategori-1' },
           ),
         },
         $transaction: jest.fn().mockImplementation((cb: (tx: unknown) => unknown) => cb(tx)),
@@ -50,6 +50,49 @@ describe('KioskSewaService', () => {
 
     return { service: new KioskSewaService(prisma, paymentProvider, mqttClient), prisma, mqttClient, tx };
   }
+
+  describe('statusUnit — kategori ukuran dengan harga & ketersediaan sendiri', () => {
+    it('mengelompokkan durasiHarga per kategori, masing-masing dengan jumlahTersedia sendiri', async () => {
+      const lokerKategoriFindMany = jest.fn().mockResolvedValue([
+        {
+          id: 'kategori-kecil',
+          nama: 'Kecil',
+          ukuranWMm: 300,
+          ukuranHMm: 300,
+          durasiHarga: [{ id: 'dh-1', durasiJam: 1, harga: 5_000 }],
+          _count: { lokers: 2 },
+        },
+        {
+          id: 'kategori-besar',
+          nama: 'Besar',
+          ukuranWMm: 400,
+          ukuranHMm: 860,
+          durasiHarga: [{ id: 'dh-2', durasiJam: 1, harga: 12_000 }],
+          _count: { lokers: 0 },
+        },
+      ]);
+      const prisma = {
+        db: {
+          lokerKategori: { findMany: lokerKategoriFindMany },
+          loker: {
+            count: jest
+              .fn()
+              .mockResolvedValueOnce(2) // jumlahTersedia keseluruhan unit
+              .mockResolvedValueOnce(6), // jumlahTotal keseluruhan unit
+          },
+        },
+      } as unknown as PrismaService;
+      const service = new KioskSewaService(prisma, { name: 'xendit' } as unknown as PaymentProvider, {} as MqttClientService);
+
+      const result = await service.statusUnit(unit);
+
+      expect(result.kategori).toEqual([
+        { id: 'kategori-kecil', nama: 'Kecil', ukuranWMm: 300, ukuranHMm: 300, jumlahTersedia: 2, durasiHarga: [{ id: 'dh-1', durasiJam: 1, harga: 5_000 }] },
+        { id: 'kategori-besar', nama: 'Besar', ukuranWMm: 400, ukuranHMm: 860, jumlahTersedia: 0, durasiHarga: [{ id: 'dh-2', durasiJam: 1, harga: 12_000 }] },
+      ]);
+      expect(result.unitPenuh).toBe(false);
+    });
+  });
 
   describe('mulaiSewa — assign loker atomik', () => {
     it('lempar NotFoundException DURASI_TIDAK_DITEMUKAN kalau durasiHarga tidak ada/tidak aktif', async () => {
@@ -92,6 +135,17 @@ describe('KioskSewaService', () => {
         }),
       );
       expect((result as { idTransaksi: string }).idTransaksi).toMatch(/^SB-[0-9A-Z]+-[0-9A-F]{6}$/);
+    });
+
+    it('kandidat loker WAJIB difilter ke kategori durasiHarga yang dipilih — tidak boleh assign lintas kategori ukuran', async () => {
+      const { service, tx } = buildService({
+        durasiHarga: { id: 'durasi-1', durasiJam: 3, harga: 15_000, lokerKategoriId: 'kategori-besar' },
+      });
+
+      await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1' });
+
+      const queryRawArgs = (tx.$queryRaw as jest.Mock).mock.calls[0];
+      expect(queryRawArgs).toContain('kategori-besar');
     });
   });
 
