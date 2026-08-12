@@ -7,6 +7,9 @@ export type { KioskButtonProps, KioskButtonTone, KioskButtonSize } from './compo
 export { KioskButtonGrid } from './components/kiosk/KioskButtonGrid';
 export type { KioskButtonGridProps } from './components/kiosk/KioskButtonGrid';
 
+export { StatusScreen } from './components/kiosk/StatusScreen';
+export type { StatusScreenProps, StatusScreenTone } from './components/kiosk/StatusScreen';
+
 export { Numpad } from './components/kiosk/Numpad';
 export type { NumpadProps } from './components/kiosk/Numpad';
 

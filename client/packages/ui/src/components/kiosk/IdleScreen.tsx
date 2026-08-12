@@ -1,4 +1,5 @@
 import type { CSSProperties, MouseEventHandler } from 'react';
+import { Icon } from '../icons/Icon';
 
 export type IdleScreenStat = { value: string; label: string };
 
@@ -46,7 +47,13 @@ export function IdleScreen({ headline, subline, logoSrc, logoHeight = 96, stats 
             'repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 88px),repeating-linear-gradient(0deg,rgba(255,255,255,.05) 0 1px,transparent 1px 88px)',
         }}
       />
-      {logoSrc ? <img src={logoSrc} alt="Sewa Smart Locker" style={{ height: logoHeight, position: 'relative' }} /> : null}
+      {logoSrc ? (
+        <img
+          src={logoSrc}
+          alt="Sewa Smart Locker"
+          style={{ height: logoHeight, position: 'relative', animation: 'sl-idle-float 4s ease-in-out infinite' }}
+        />
+      ) : null}
       <div style={{ position: 'relative' }}>
         <div
           style={{
@@ -70,6 +77,39 @@ export function IdleScreen({ headline, subline, logoSrc, logoHeight = 96, stats 
         >
           {subline || 'Tanpa aplikasi. Tanpa kunci. Bayar dengan QRIS.'}
         </div>
+      </div>
+      {/* Afordansi "sentuh untuk mulai" (§ "experience design yang menarik")
+          — cincin pulsa di belakang ikon tangan, supaya screen idle tidak
+          terasa statis/mati dan customer langsung tahu ini bisa disentuh. */}
+      <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 96, height: 96 }}>
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: 'var(--sl-radius-pill)',
+            border: '2px solid rgba(255,255,255,.55)',
+            animation: 'sl-ring-out 1.8s var(--sl-ease-out) infinite',
+          }}
+        />
+        <span
+          aria-hidden="true"
+          style={{
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 72,
+            height: 72,
+            borderRadius: 'var(--sl-radius-pill)',
+            background: 'rgba(255,255,255,.14)',
+            border: '1px solid rgba(255,255,255,.3)',
+            backdropFilter: 'blur(8px)',
+            animation: 'sl-pulse 1.8s ease-in-out infinite',
+          }}
+        >
+          <Icon name="hand" size={34} color="#fff" />
+        </span>
       </div>
       {stats.length > 0 ? (
         <div style={{ position: 'relative', display: 'flex', gap: 'var(--sl-space-4)', flexWrap: 'wrap', justifyContent: 'center' }}>

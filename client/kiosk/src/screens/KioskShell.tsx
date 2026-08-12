@@ -45,18 +45,41 @@ export function KioskShell({
         height: '100%',
         padding: 'var(--sl-kiosk-pad)',
         boxSizing: 'border-box',
-        gap: 'var(--sl-space-4)',
+        gap: 'var(--sl-space-6)',
         background: 'var(--sl-surface-kiosk)',
+        // Transisi masuk halus per pindah layar (§ "experience design yang
+        // menarik") — screen di-remount tiap state machine pindah state
+        // (App.tsx render kondisional per `state.matches(...)`), jadi
+        // animasi ini otomatis muncul sekali per pindah langkah, bukan
+        // berulang tiap re-render biasa (mis. tiap ketik Numpad).
+        animation: 'sl-fade-up var(--sl-dur-slow) var(--sl-ease-out) both',
       }}
     >
       {typeof step === 'number' ? <StepProgress steps={steps} current={step} compact /> : null}
       {title ? (
         <div>
-          <div style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-kiosk-fs-title)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)' }}>
+          <div
+            style={{
+              fontFamily: 'var(--sl-font-display)',
+              fontSize: 'var(--sl-kiosk-fs-title)',
+              fontWeight: 'var(--sl-fw-bold)',
+              color: 'var(--sl-text-strong)',
+              letterSpacing: 'var(--sl-ls-tight)',
+              lineHeight: 'var(--sl-lh-tight)',
+            }}
+          >
             {title}
           </div>
           {subtitle ? (
-            <div style={{ fontFamily: 'var(--sl-font-body)', fontSize: 'var(--sl-kiosk-fs-caption)', color: 'var(--sl-text-muted)', marginTop: 4 }}>
+            <div
+              style={{
+                fontFamily: 'var(--sl-font-body)',
+                fontSize: 'var(--sl-kiosk-fs-caption)',
+                color: 'var(--sl-text-muted)',
+                marginTop: 'var(--sl-space-2)',
+                lineHeight: 'var(--sl-lh-snug)',
+              }}
+            >
               {subtitle}
             </div>
           ) : null}

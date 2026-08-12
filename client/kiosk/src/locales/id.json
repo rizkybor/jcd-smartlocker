@@ -73,7 +73,7 @@
   },
   "struk": {
     "judul": "Loker Siap Dipakai",
-    "loker": "Loker {{nomor}}",
+    "lokerLabel": "Nomor Loker Anda",
     "idTransaksi": "ID Transaksi: {{id}}",
     "durasi": "Durasi: {{jam}} jam · {{nominal}}",
     "berlakuSampai": "Berlaku sampai: {{waktu}}"

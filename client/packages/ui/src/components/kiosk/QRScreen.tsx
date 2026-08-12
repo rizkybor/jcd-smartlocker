@@ -79,6 +79,9 @@ export function QRScreen({ title, subtitle, qrSrc, qrSize = 360, amount, seconds
         </div>
       ) : null}
       {typeof secondsLeft === 'number' ? (
+        // Makin genting makin merah & berdenyut (§ "experience design yang
+        // menarik") — customer sadar QR mau kedaluwarsa TANPA harus
+        // membaca angka detiknya baik-baik dulu.
         <div
           style={{
             display: 'flex',
@@ -86,10 +89,13 @@ export function QRScreen({ title, subtitle, qrSrc, qrSize = 360, amount, seconds
             gap: 'var(--sl-space-3)',
             padding: 'var(--sl-space-3) var(--sl-space-6)',
             borderRadius: 'var(--sl-radius-pill)',
-            background: 'var(--sl-status-occupied-tint)',
-            color: 'var(--sl-status-occupied-strong)',
+            background: secondsLeft <= 30 ? 'var(--sl-status-offline-tint)' : 'var(--sl-status-occupied-tint)',
+            color: secondsLeft <= 30 ? 'var(--sl-status-offline-strong)' : 'var(--sl-status-occupied-strong)',
             fontSize: 'var(--sl-kiosk-fs-caption)',
             fontWeight: 'var(--sl-fw-semibold)',
+            fontVariantNumeric: 'tabular-nums',
+            animation: secondsLeft <= 30 ? 'sl-pulse 1s ease-in-out infinite' : undefined,
+            transition: 'background var(--sl-dur-base) var(--sl-ease-standard),color var(--sl-dur-base) var(--sl-ease-standard)',
           }}
         >
           Berlaku {Math.floor(secondsLeft / 60)}:{String(secondsLeft % 60).padStart(2, '0')}

@@ -3,12 +3,18 @@ import { useState, type CSSProperties, type MouseEventHandler, type ReactNode } 
 export type KioskButtonTone = 'primary' | 'secondary' | 'neutral' | 'danger' | 'success';
 export type KioskButtonSize = 'md' | 'lg' | 'xl';
 
-const TONE: Record<KioskButtonTone, { bg: string; fg: string; border: string; lift: string }> = {
-  primary: { bg: 'var(--sl-primary)', fg: '#fff', border: 'var(--sl-primary)', lift: 'var(--sl-primary-press)' },
-  secondary: { bg: 'var(--sl-secondary)', fg: '#fff', border: 'var(--sl-secondary)', lift: 'var(--sl-secondary-press)' },
+/**
+ * `bgHi` = stop atas gradient (bikin efek "physical key" — sedikit lebih
+ * terang di atas, warna tone asli di bawah — bukan flat fill polos), cuma
+ * dipakai tone berwarna (bukan `neutral`, yang tetap flat putih supaya
+ * kontras rendah/tidak menarik perhatian sebagai tombol sekunder).
+ */
+const TONE: Record<KioskButtonTone, { bg: string; bgHi?: string; fg: string; border: string; lift: string }> = {
+  primary: { bg: 'var(--sl-primary)', bgHi: 'var(--sl-secondary)', fg: '#fff', border: 'var(--sl-primary)', lift: 'var(--sl-primary-press)' },
+  secondary: { bg: 'var(--sl-secondary)', bgHi: '#3B82F6', fg: '#fff', border: 'var(--sl-secondary)', lift: 'var(--sl-secondary-press)' },
   neutral: { bg: '#fff', fg: 'var(--sl-text-strong)', border: 'var(--sl-border-kiosk)', lift: 'var(--sl-n-200)' },
-  danger: { bg: 'var(--sl-status-offline)', fg: '#fff', border: 'var(--sl-status-offline)', lift: 'var(--sl-status-offline-strong)' },
-  success: { bg: 'var(--sl-status-available)', fg: '#fff', border: 'var(--sl-status-available)', lift: 'var(--sl-status-available-strong)' },
+  danger: { bg: 'var(--sl-status-offline)', bgHi: '#EF4444', fg: '#fff', border: 'var(--sl-status-offline)', lift: 'var(--sl-status-offline-strong)' },
+  success: { bg: 'var(--sl-status-available)', bgHi: '#22C55E', fg: '#fff', border: 'var(--sl-status-available)', lift: 'var(--sl-status-available-strong)' },
 };
 
 const SIZE: Record<KioskButtonSize, { h: string; fs: string; px: string }> = {
@@ -69,13 +75,17 @@ export function KioskButton({
         font: `var(--sl-fw-semibold) ${sizeStyle.fs}/1 var(--sl-font-display)`,
         letterSpacing: 'var(--sl-ls-normal)',
         color: disabled ? 'var(--sl-text-faint)' : toneStyle.fg,
-        background: disabled ? 'var(--sl-n-100)' : toneStyle.bg,
+        background: disabled
+          ? 'var(--sl-n-100)'
+          : toneStyle.bgHi
+            ? `linear-gradient(180deg,${toneStyle.bgHi} 0%,${toneStyle.bg} 100%)`
+            : toneStyle.bg,
         border: `var(--sl-border-w-kiosk) solid ${disabled ? 'var(--sl-n-200)' : toneStyle.border}`,
         borderRadius: 'var(--sl-radius-lg)',
         boxShadow: disabled || !lifted ? 'none' : `0 ${pressed ? '2px' : '8px'} 0 ${toneStyle.lift}`,
-        transform: pressed ? 'translateY(6px)' : 'translateY(0)',
+        transform: pressed ? 'translateY(6px) scale(.99)' : 'translateY(0) scale(1)',
         transition:
-          'transform var(--sl-dur-instant) var(--sl-ease-standard),box-shadow var(--sl-dur-instant) var(--sl-ease-standard),background var(--sl-dur-fast) var(--sl-ease-standard)',
+          'transform var(--sl-dur-instant) var(--sl-ease-standard),box-shadow var(--sl-dur-instant) var(--sl-ease-standard),background var(--sl-dur-fast) var(--sl-ease-standard),filter var(--sl-dur-fast) var(--sl-ease-standard)',
         cursor: disabled ? 'not-allowed' : 'pointer',
         WebkitTapHighlightColor: 'transparent',
         touchAction: 'manipulation',
