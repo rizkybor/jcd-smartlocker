@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UsePipes } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -39,5 +39,11 @@ export class LokasiController {
   @UsePipes(new ZodValidationPipe(updateLokasiSchema))
   update(@Param('id') id: string, @Body() dto: UpdateLokasiDto) {
     return this.lokasiService.update(id, dto);
+  }
+
+  /** Ditolak (409) kalau masih dipakai Unit/MitraLokasi aktif — lihat lokasi.service.ts::remove(). */
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.lokasiService.remove(id);
   }
 }

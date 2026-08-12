@@ -15,19 +15,23 @@ import type { GatewayService } from '../gateway/gateway.service';
 describe('OverviewService', () => {
   function buildService(overrides: {
     mitraList?: unknown[];
+    mitraDetail?: unknown;
     sesiTransaksiFindMany?: unknown[];
+    sesiTransaksiGroupBy?: unknown[];
     lokerFindMany?: unknown[];
     lokerCount?: number;
   } = {}) {
     const sesiTransaksiFindMany = jest.fn().mockResolvedValue(overrides.sesiTransaksiFindMany ?? []);
+    const sesiTransaksiGroupBy = jest.fn().mockResolvedValue(overrides.sesiTransaksiGroupBy ?? []);
     const mitraFindMany = jest.fn().mockResolvedValue(overrides.mitraList ?? []);
+    const mitraFindUnique = jest.fn().mockResolvedValue(overrides.mitraDetail ?? null);
     const lokerFindMany = jest.fn().mockResolvedValue(overrides.lokerFindMany ?? []);
     const lokerCount = jest.fn().mockResolvedValue(overrides.lokerCount ?? 0);
 
     const prisma = {
       db: {
-        mitra: { findMany: mitraFindMany },
-        sesiTransaksi: { findMany: sesiTransaksiFindMany },
+        mitra: { findMany: mitraFindMany, findUnique: mitraFindUnique },
+        sesiTransaksi: { findMany: sesiTransaksiFindMany, groupBy: sesiTransaksiGroupBy },
         loker: { findMany: lokerFindMany, count: lokerCount, groupBy: jest.fn() },
         lokasi: { count: jest.fn() },
         unit: { findMany: jest.fn() },
@@ -35,7 +39,14 @@ describe('OverviewService', () => {
     } as unknown as PrismaService;
     const gatewayService = { isOnline: jest.fn().mockReturnValue(false) } as unknown as GatewayService;
 
-    return { service: new OverviewService(prisma, gatewayService), sesiTransaksiFindMany, mitraFindMany, lokerFindMany };
+    return {
+      service: new OverviewService(prisma, gatewayService),
+      sesiTransaksiFindMany,
+      sesiTransaksiGroupBy,
+      mitraFindMany,
+      mitraFindUnique,
+      lokerFindMany,
+    };
   }
 
   describe('tren', () => {
@@ -65,7 +76,7 @@ describe('OverviewService', () => {
   });
 
   describe('mitraRingkasan — batched, bukan N+1', () => {
-    it('SATU query sesiTransaksi.findMany walau ada banyak mitra', async () => {
+    it('DUA query sesiTransaksi.findMany (bulan ini + total), bukan 1 per mitra', async () => {
       const mlA = { id: 'mitra-a', nama: 'Mitra A', createdAt: new Date(), units: [{ id: 'unit-a', lokers: [{ id: 'loker-a', status: LokerStatus.TERISI }] }] };
       const mlB = { id: 'mitra-b', nama: 'Mitra B', createdAt: new Date(), units: [{ id: 'unit-b', lokers: [{ id: 'loker-b', status: LokerStatus.TERSEDIA }] }] };
       const { service, sesiTransaksiFindMany } = buildService({
@@ -78,9 +89,19 @@ describe('OverviewService', () => {
 
       const { data } = await service.mitraRingkasan();
 
-      expect(sesiTransaksiFindMany).toHaveBeenCalledTimes(1);
-      expect(data.find((d) => d.mitraId === 'mitra-a')).toMatchObject({ jumlahUnit: 1, okupansiPersen: 100, pendapatanBulanIni: 100_000 });
-      expect(data.find((d) => d.mitraId === 'mitra-b')).toMatchObject({ jumlahUnit: 1, okupansiPersen: 0, pendapatanBulanIni: 200_000 });
+      expect(sesiTransaksiFindMany).toHaveBeenCalledTimes(2);
+      expect(data.find((d) => d.mitraId === 'mitra-a')).toMatchObject({
+        jumlahUnit: 1,
+        okupansiPersen: 100,
+        pendapatanBulanIni: 100_000,
+        pendapatanTotal: 100_000,
+      });
+      expect(data.find((d) => d.mitraId === 'mitra-b')).toMatchObject({
+        jumlahUnit: 1,
+        okupansiPersen: 0,
+        pendapatanBulanIni: 200_000,
+        pendapatanTotal: 200_000,
+      });
     });
 
     it('mitra tanpa loker sama sekali -> okupansiPersen 0, bukan NaN/error', async () => {
@@ -90,7 +111,56 @@ describe('OverviewService', () => {
 
       const { data } = await service.mitraRingkasan();
 
-      expect(data[0]).toMatchObject({ okupansiPersen: 0, pendapatanBulanIni: 0, jumlahUnit: 0 });
+      expect(data[0]).toMatchObject({ okupansiPersen: 0, pendapatanBulanIni: 0, pendapatanTotal: 0, jumlahUnit: 0 });
+    });
+  });
+
+  describe('mitraDetailPenghasilan', () => {
+    it('lempar NotFoundException kalau mitra tidak ada', async () => {
+      const { service } = buildService({ mitraDetail: null });
+
+      await expect(service.mitraDetailPenghasilan('mitra-x')).rejects.toMatchObject({
+        response: { error: { code: 'MITRA_TIDAK_DITEMUKAN' } },
+      });
+    });
+
+    it('rinci penghasilan per unit & jumlahkan jadi total mitra', async () => {
+      const { service } = buildService({
+        mitraDetail: {
+          id: 'mitra-1',
+          nama: 'Mitra Satu',
+          units: [
+            {
+              id: 'unit-a',
+              kodeUnit: 'UNIT-A',
+              lokasi: { nama: 'Lokasi A' },
+              lokers: [{ id: 'loker-a1', status: LokerStatus.TERISI }, { id: 'loker-a2', status: LokerStatus.TERSEDIA }],
+            },
+            {
+              id: 'unit-b',
+              kodeUnit: 'UNIT-B',
+              lokasi: { nama: 'Lokasi B' },
+              lokers: [{ id: 'loker-b1', status: LokerStatus.TERSEDIA }],
+            },
+          ],
+        },
+        sesiTransaksiGroupBy: [
+          { lokerId: 'loker-a1', _sum: { nominal: 150_000 } },
+          { lokerId: 'loker-b1', _sum: { nominal: 50_000 } },
+        ],
+      });
+
+      const result = await service.mitraDetailPenghasilan('mitra-1');
+
+      expect(result.pendapatanTotal).toBe(200_000);
+      expect(result.units.find((u) => u.unitId === 'unit-a')).toMatchObject({
+        kodeUnit: 'UNIT-A',
+        lokasiNama: 'Lokasi A',
+        jumlahLoker: 2,
+        okupansiPersen: 50,
+        pendapatanTotal: 150_000,
+      });
+      expect(result.units.find((u) => u.unitId === 'unit-b')).toMatchObject({ pendapatanTotal: 50_000 });
     });
   });
 

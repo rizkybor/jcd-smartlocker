@@ -123,3 +123,51 @@ describe('MitraService.create', () => {
     );
   });
 });
+
+/**
+ * Fitur "hapus mitra HANYA kalau tidak ada Unit aktif" (di luar cakupan
+ * PRD awal) — mencegah `Unit.mitraId` jadi yatim (menunjuk ke Mitra yang
+ * sudah dihapus), sama pola perlindungan dengan `LokasiService.remove()`.
+ */
+describe('MitraService.softDelete', () => {
+  function buildService(opts: { mitra?: unknown; jumlahUnit?: number } = {}) {
+    const mitraFindUnique = jest.fn().mockResolvedValue(opts.mitra !== undefined ? opts.mitra : { id: 'mitra-1' });
+    const unitCount = jest.fn().mockResolvedValue(opts.jumlahUnit ?? 0);
+    const softDelete = jest.fn().mockResolvedValue({ deleted: true });
+    const prisma = {
+      db: { mitra: { findUnique: mitraFindUnique }, unit: { count: unitCount } },
+      softDelete,
+    } as unknown as PrismaService;
+    return {
+      service: new MitraService(prisma, {} as SupabaseService, {} as LokasiService),
+      unitCount,
+      softDelete,
+    };
+  }
+
+  it('lempar NotFoundException kalau mitra tidak ada', async () => {
+    const { service } = buildService({ mitra: null });
+
+    await expect(service.softDelete('mitra-x')).rejects.toMatchObject({
+      response: { error: { code: 'MITRA_TIDAK_DITEMUKAN' } },
+    });
+  });
+
+  it('lempar ConflictException MITRA_MASIH_PUNYA_UNIT kalau masih ada Unit aktif', async () => {
+    const { service, softDelete } = buildService({ jumlahUnit: 3 });
+
+    await expect(service.softDelete('mitra-1')).rejects.toMatchObject({
+      response: { error: { code: 'MITRA_MASIH_PUNYA_UNIT' } },
+    });
+    expect(softDelete).not.toHaveBeenCalled();
+  });
+
+  it('softDelete kalau tidak ada Unit aktif sama sekali', async () => {
+    const { service, softDelete } = buildService({ jumlahUnit: 0 });
+
+    const result = await service.softDelete('mitra-1');
+
+    expect(softDelete).toHaveBeenCalledWith('mitra', 'mitra-1');
+    expect(result).toEqual({ deleted: true });
+  });
+});

@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IdleScreen } from '@smartbox/ui';
+import { kioskApi } from '../api/client';
 
 export function IdleScreenView({
   onWake,
@@ -9,9 +11,19 @@ export function IdleScreenView({
   errorMessage?: string | null;
 }) {
   const { t } = useTranslation();
+  /** Nama mitra pemilik unit ini, ditampilkan sebagai footnote layar awal (di luar cakupan PRD awal). */
+  const [mitraNama, setMitraNama] = useState<string | null>(null);
+
+  useEffect(() => {
+    kioskApi
+      .statusUnit()
+      .then((res) => setMitraNama(res.data.mitraNama))
+      .catch(() => {});
+  }, []);
+
   return (
     <div style={{ position: 'relative', height: '100%' }}>
-      <IdleScreen headline={t('idle.headline')} subline={t('idle.subline')} onWake={onWake} />
+      <IdleScreen headline={t('idle.headline')} subline={t('idle.subline')} onWake={onWake} footnote={mitraNama ?? undefined} />
       {errorMessage ? (
         <div
           style={{

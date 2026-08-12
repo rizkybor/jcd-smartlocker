@@ -45,6 +45,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export type UnitDurasiHarga = { id: string; durasiJam: number; harga: number };
 
+export type LokerStatus = 'TERSEDIA' | 'TERISI' | 'MAINTENANCE' | 'OFFLINE' | 'NONAKTIF';
+
+/** Loker individual dalam 1 kategori (fitur pilih loker spesifik, di luar PRD awal) — dipakai LokerScreen. */
+export type LokerButon = { id: string; nomorLoker: string; status: LokerStatus };
+
 /**
  * Kategori ukuran loker (fitur harga & pilihan per ukuran, di luar PRD
  * awal) — satu unit fisik bisa punya beberapa kategori, masing-masing
@@ -56,11 +61,15 @@ export type KategoriLoker = {
   ukuranWMm: number | null;
   ukuranHMm: number | null;
   jumlahTersedia: number;
+  /** Daftar loker individual di kategori ini (fitur pilih loker spesifik, di luar PRD awal). */
+  lokers: LokerButon[];
   durasiHarga: UnitDurasiHarga[];
 };
 
 export type UnitStatus = {
   kodeUnit: string;
+  /** Nama mitra pemilik unit — ditampilkan di layar awal kiosk (di luar cakupan PRD awal). */
+  mitraNama: string | null;
   modePemakaian: 'BERBAYAR' | 'GRATIS';
   unitPenuh: boolean;
   jumlahTersedia: number;
@@ -128,7 +137,7 @@ export const kioskApi = {
     }),
 
   mulaiSewa: (
-    payload: { unitDurasiHargaId: string } & ({ nomorHp: string; email: string } | { memberId: string }),
+    payload: { unitDurasiHargaId: string; lokerId?: string } & ({ nomorHp: string; email: string } | { memberId: string }),
   ) =>
     request<{ data: SesiTransaksi }>('/kiosk/sewa/mulai', {
       method: 'POST',

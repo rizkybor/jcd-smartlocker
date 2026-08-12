@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import type { Unit } from '@prisma/client';
-import { LokerStatus, MetodeAkses, StatusBayar } from '@prisma/client';
+import { LokerStatus, MetodeAkses, Prisma, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { PAYMENT_PROVIDER } from '../payment/payment-provider.interface';
 import type { PaymentProvider } from '../payment/payment-provider.interface';
@@ -32,14 +32,28 @@ export class KioskSewaService {
    * ukuran loker unit ini, masing-masing dengan hitungan tersedia sendiri
    * — kiosk menampilkan ini sebagai langkah "pilih ukuran" sebelum "pilih
    * durasi" (lihat client/kiosk/src/screens/KategoriScreen.tsx).
+   *
+   * Fitur pilih loker spesifik (di luar cakupan PRD awal — permintaan
+   * bisnis langsung): tiap kategori juga menyertakan daftar loker
+   * INDIVIDUAL (nomor + status) supaya kiosk bisa menampilkan tombol per
+   * nomor loker (001, 002, dst, lihat client/kiosk/src/screens/
+   * LokerScreen.tsx), bukan cuma hitungan "3 tersedia". Loker yang diikat
+   * eksklusif ke member (`memberEksklusif`) TETAP ditarik dari daftar ini
+   * — pelanggan umum tidak boleh tahu/pilih loker yang cuma bisa dibuka
+   * member tertentu (sama alasan seperti filter di `mulaiSewa()`).
    */
   async statusUnit(unit: Unit) {
-    const [kategoriList, jumlahTersedia, jumlahTotal] = await Promise.all([
+    const [kategoriList, jumlahTersedia, jumlahTotal, mitra] = await Promise.all([
       this.prisma.db.lokerKategori.findMany({
         where: { unitId: unit.id, aktif: true },
         orderBy: { createdAt: 'asc' },
         include: {
           durasiHarga: { where: { aktif: true }, orderBy: { durasiJam: 'asc' } },
+          lokers: {
+            where: { deletedAt: null, memberEksklusif: null },
+            orderBy: { nomorLoker: 'asc' },
+            select: { id: true, nomorLoker: true, status: true },
+          },
           _count: {
             select: {
               lokers: {
@@ -53,10 +67,13 @@ export class KioskSewaService {
         where: { unitId: unit.id, status: LokerStatus.TERSEDIA, memberEksklusif: null },
       }),
       this.prisma.db.loker.count({ where: { unitId: unit.id } }),
+      /** Ditampilkan di layar awal kiosk (footnote) — di luar cakupan PRD awal. */
+      this.prisma.db.mitra.findUnique({ where: { id: unit.mitraId }, select: { nama: true } }),
     ]);
 
     return {
       kodeUnit: unit.kodeUnit,
+      mitraNama: mitra?.nama ?? null,
       modePemakaian: unit.modePemakaian,
       unitPenuh: jumlahTersedia === 0,
       jumlahTersedia,
@@ -67,6 +84,7 @@ export class KioskSewaService {
         ukuranWMm: k.ukuranWMm ? Number(k.ukuranWMm) : null,
         ukuranHMm: k.ukuranHMm ? Number(k.ukuranHMm) : null,
         jumlahTersedia: k._count.lokers,
+        lokers: k.lokers.map((l) => ({ id: l.id, nomorLoker: l.nomorLoker, status: l.status })),
         durasiHarga: k.durasiHarga.map((d) => ({
           id: d.id,
           durasiJam: d.durasiJam,
@@ -93,6 +111,14 @@ export class KioskSewaService {
    * sewa umum sepenuhnya — bukan cuma saat member-nya sedang memakainya
    * (§ konfirmasi bisnis) — supaya pelanggan umum tidak pernah di-assign
    * ke loker yang seharusnya cuma bisa dibuka gratis oleh member itu.
+   *
+   * Fitur pilih loker spesifik (di luar cakupan PRD awal): kalau
+   * `dto.lokerId` diisi (pelanggan pilih nomor loker sendiri lewat
+   * LokerScreen), kandidat di-scope KHUSUS ke loker itu — masih lewat
+   * `FOR UPDATE SKIP LOCKED` yang sama, supaya tetap atomik kalau ada 2
+   * request bersamaan (mis. dobel-tap) berebut loker yang sama persis.
+   * Kalau `lokerId` kosong, fallback ke assign otomatis kandidat pertama
+   * seperti sebelumnya (jalur lama/RFID member).
    */
   async mulaiSewa(unit: Unit, dto: MulaiSewaDto) {
     const durasiHarga = await this.prisma.db.unitDurasiHarga.findFirst({
@@ -131,12 +157,13 @@ export class KioskSewaService {
     }
 
     return this.prisma.db.$transaction(async (tx) => {
-      const kandidat = await tx.$queryRaw<{ id: string }[]>`
+      const kandidat = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
         SELECT id FROM loker
         WHERE unit_id = ${unit.id}::uuid
           AND loker_kategori_id = ${durasiHarga.lokerKategoriId}::uuid
           AND status = 'tersedia'
           AND deleted_at IS NULL
+          ${dto.lokerId ? Prisma.sql`AND id = ${dto.lokerId}::uuid` : Prisma.empty}
           AND NOT EXISTS (
             SELECT 1 FROM member m
             WHERE m.loker_id = loker.id AND m.aktif = true AND m.deleted_at IS NULL
@@ -144,7 +171,7 @@ export class KioskSewaService {
         ORDER BY LENGTH(nomor_loker), nomor_loker
         LIMIT 1
         FOR UPDATE SKIP LOCKED
-      `;
+      `);
 
       const loker = kandidat[0];
       if (!loker) {

@@ -6,7 +6,7 @@
     "selesai": "Selesai"
   },
   "steps": {
-    "sewa": ["Nomor HP", "Email", "Ukuran", "Durasi", "Bayar", "Ambil Barang"],
+    "sewa": ["Nomor HP", "Email", "Ukuran", "Loker", "Durasi", "Bayar", "Ambil Barang"],
     "ambil": ["Nomor HP", "Verifikasi OTP", "Buka Pintu"]
   },
   "idle": {
@@ -38,6 +38,17 @@
     "ukuran": "{{w}} × {{h}} mm",
     "tersedia": "{{jumlah}} tersedia",
     "penuh": "Penuh"
+  },
+  "loker": {
+    "title": "Pilih Nomor Loker",
+    "nomor": "Loker {{nomor}}",
+    "status": {
+      "TERSEDIA": "Tersedia",
+      "TERISI": "Terisi",
+      "MAINTENANCE": "Maintenance",
+      "OFFLINE": "Offline",
+      "NONAKTIF": "Nonaktif"
+    }
   },
   "durasi": {
     "title": "Pilih Durasi Sewa",

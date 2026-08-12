@@ -1,8 +1,25 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import type { CreateLokasiDto } from './dto/create-lokasi.dto';
 import type { UpdateLokasiDto } from './dto/update-lokasi.dto';
 import type { LokasiPilihanDto } from './dto/wilayah.dto';
+
+/**
+ * Sertakan jumlah pemakaian (di luar cakupan PRD awal) — Super Admin perlu
+ * tahu "lokasi ini masih dipakai atau tidak" sebelum mencoba hapus. Filter
+ * `deletedAt: null` WAJIB eksplisit di sini — soft-delete.extension.ts
+ * cuma otomatis memfilter panggilan top-level (`unit.findMany()` dst.),
+ * BUKAN nested `_count` seperti ini, jadi loker/unit yang sudah
+ * dinonaktifkan tidak boleh ikut dihitung sebagai "masih dipakai".
+ */
+const lokasiListInclude = {
+  _count: {
+    select: {
+      units: { where: { deletedAt: null } },
+      mitraLokasi: { where: { deletedAt: null } },
+    },
+  },
+} as const;
 
 @Injectable()
 export class LokasiService {
@@ -14,6 +31,7 @@ export class LokasiService {
         skip: (page - 1) * pageSize,
         take: pageSize,
         orderBy: { createdAt: 'desc' },
+        include: lokasiListInclude,
       }),
       this.prisma.db.lokasi.count(),
     ]);
@@ -57,6 +75,35 @@ export class LokasiService {
         ...dto.wilayah,
       },
     });
+  }
+
+  /**
+   * Hapus (soft-delete) Lokasi — HANYA kalau tidak dipakai siapa pun (di
+   * luar cakupan PRD awal, permintaan bisnis langsung). "Dipakai" =
+   * punya Unit aktif ATAU baris MitraLokasi aktif yang menunjuk ke sini —
+   * kalau salah satu masih ada, tolak dengan pesan jelas (bukan cascade
+   * diam-diam yang bisa mematahkan riwayat transaksi/revenue-sharing).
+   */
+  async remove(id: string) {
+    const existing = await this.prisma.db.lokasi.findUnique({ where: { id } });
+    if (!existing) throw this.lokasiTidakDitemukan();
+
+    const [jumlahUnit, jumlahMitraLokasi] = await Promise.all([
+      this.prisma.db.unit.count({ where: { lokasiId: id, deletedAt: null } }),
+      this.prisma.db.mitraLokasi.count({ where: { lokasiId: id, deletedAt: null } }),
+    ]);
+
+    if (jumlahUnit > 0 || jumlahMitraLokasi > 0) {
+      throw new ConflictException({
+        error: {
+          code: 'LOKASI_MASIH_DIPAKAI',
+          message: `Lokasi ini masih dipakai oleh ${jumlahUnit} unit dan ${jumlahMitraLokasi} relasi mitra — nonaktifkan/pindahkan itu dulu sebelum menghapus lokasi.`,
+        },
+      });
+    }
+
+    await this.prisma.softDelete('lokasi', id);
+    return { deleted: true };
   }
 
   /**

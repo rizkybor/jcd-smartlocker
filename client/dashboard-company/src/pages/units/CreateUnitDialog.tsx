@@ -64,8 +64,18 @@ export function CreateUnitDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * `unitKey` cuma dikembalikan sekali oleh backend (§7.1) — setelah create
+   * sukses, dialog berhenti dulu di layar ini (bukan langsung tertutup)
+   * supaya Super Admin sempat menyalinnya ke `VITE_UNIT_KEY` kiosk.
+   */
+  const [unitBaru, setUnitBaru] = useState<{ kodeUnit: string; unitKey: string } | null>(null);
+  const [disalin, setDisalin] = useState(false);
+
   useEffect(() => {
     if (!open) return;
+    setUnitBaru(null);
+    setDisalin(false);
     companyApi
       .mitra.list(1, 100)
       .then((res) => {
@@ -115,7 +125,7 @@ export function CreateUnitDialog({
     setSubmitting(true);
     setError(null);
     try {
-      await companyApi.units.create({
+      const res = await companyApi.units.create({
         mitraId,
         kodeUnit: kodeUnit.trim(),
         varianKompartemen: varianKompartemen.trim() || undefined,
@@ -134,6 +144,7 @@ export function CreateUnitDialog({
       setKodeUnit('');
       setVarianKompartemen('');
       setKategoriRows([kategoriKosong()]);
+      setUnitBaru({ kodeUnit: res.data.kodeUnit, unitKey: res.data.unitKey });
       onCreated();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : t('createUnitDialog.gagalSimpan'));
@@ -142,11 +153,58 @@ export function CreateUnitDialog({
     }
   }
 
+  function handleSelesai() {
+    setUnitBaru(null);
+    setDisalin(false);
+    onOpenChange(false);
+  }
+
+  async function handleSalinKey() {
+    if (!unitBaru) return;
+    await navigator.clipboard.writeText(unitBaru.unitKey);
+    setDisalin(true);
+  }
+
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay style={DIALOG_STYLE.overlay} />
         <Dialog.Content style={DIALOG_STYLE.content}>
+          {unitBaru ? (
+            <>
+              <Dialog.Title style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-20)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
+                {t('createUnitDialog.unitDibuat', { kodeUnit: unitBaru.kodeUnit })}
+              </Dialog.Title>
+              <p style={{ color: 'var(--sl-status-offline-strong)', fontSize: 'var(--sl-fs-13)', marginTop: 'var(--sl-space-3)' }}>
+                {t('createUnitDialog.unitKeyPeringatan')}
+              </p>
+              <div style={{ marginTop: 'var(--sl-space-2)' }}>
+                <span style={{ display: 'block', marginBottom: 6, fontSize: 'var(--sl-fs-13)', fontWeight: 'var(--sl-fw-semibold)', color: 'var(--sl-text-body)' }}>
+                  {t('createUnitDialog.unitKeyLabel')}
+                </span>
+                <code
+                  style={{
+                    display: 'block',
+                    padding: 'var(--sl-space-3)',
+                    background: 'var(--sl-n-100)',
+                    borderRadius: 'var(--sl-radius-md)',
+                    fontSize: 'var(--sl-fs-13)',
+                    wordBreak: 'break-all',
+                    userSelect: 'all',
+                  }}
+                >
+                  {unitBaru.unitKey}
+                </code>
+              </div>
+              <div style={{ marginTop: 'var(--sl-space-6)', display: 'flex', justifyContent: 'flex-end', gap: 'var(--sl-space-3)' }}>
+                <Button tone="outline" onClick={handleSalinKey}>
+                  {disalin ? t('createUnitDialog.tersalin') : t('createUnitDialog.salinKey')}
+                </Button>
+                <Button onClick={handleSelesai}>{t('common.selesai')}</Button>
+              </div>
+            </>
+          ) : (
+            <>
           <Dialog.Title style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-20)', fontWeight: 'var(--sl-fw-bold)', color: 'var(--sl-text-strong)', margin: 0 }}>
             {t('createUnitDialog.judul')}
           </Dialog.Title>
@@ -262,6 +320,8 @@ export function CreateUnitDialog({
               {submitting ? t('common.menyimpan') : t('common.simpan')}
             </Button>
           </div>
+            </>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

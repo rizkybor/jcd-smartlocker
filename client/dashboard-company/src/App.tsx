@@ -7,6 +7,7 @@ import { OverviewPage } from './pages/OverviewPage';
 import { UnitsPage } from './pages/UnitsPage';
 import { UnitDetailPage } from './pages/UnitDetailPage';
 import { PartnerPage } from './pages/PartnerPage';
+import { LokasiPage } from './pages/LokasiPage';
 import { MitraDetailPage } from './pages/MitraDetailPage';
 import { LaporanTransaksiPage } from './pages/LaporanTransaksiPage';
 import { LaporanBagiHasilPage } from './pages/LaporanBagiHasilPage';
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/units" element={<UnitsPage />} />
           <Route path="/units/:id" element={<UnitDetailPage />} />
           <Route path="/partner" element={<PartnerPage />} />
+          <Route path="/lokasi" element={<LokasiPage />} />
           <Route path="/partner/:id" element={<MitraDetailPage />} />
           <Route path="/laporan/transaksi" element={<LaporanTransaksiPage />} />
           <Route path="/laporan/bagi-hasil" element={<LaporanBagiHasilPage />} />

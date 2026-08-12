@@ -19,6 +19,7 @@
     "nonaktif": "Nonaktif",
     "hapus": "Hapus",
     "opsional": "opsional",
+    "selesai": "Selesai",
     "tipeSkema": {
       "revenueSharing": "Revenue Sharing",
       "fixedRental": "Fixed Rental"
@@ -51,6 +52,7 @@
       "unitLocker": "Unit Locker",
       "partner": "Partner",
       "mitraSkema": "Mitra & Skema",
+      "lokasi": "Lokasi",
       "laporan": "Laporan",
       "transaksi": "Transaksi",
       "bagiHasil": "Bagi Hasil",
@@ -135,7 +137,23 @@
     "bolehKelolaMember": "Boleh kelola member RFID",
     "bolehKelolaMemberHint": "Kalau dicentang, mitra ini bisa buat & kelola member umum (diskon) miliknya sendiri lewat Dashboard Mitra.",
     "lokasiSkema": "Lokasi & Skema",
-    "kosongLokasi": "Belum ada lokasi terhubung."
+    "kosongLokasi": "Belum ada lokasi terhubung.",
+    "zonaBerbahaya": "Zona Berbahaya",
+    "zonaBerbahayaDeskripsi": "Menghapus mitra tidak bisa dibatalkan. Cuma bisa dihapus kalau mitra ini tidak punya Unit aktif.",
+    "hapusMitra": "Hapus Mitra",
+    "hapusTitle": "Hapus {{nama}}?",
+    "hapusDeskripsi": "Mitra ini akan dihapus permanen beserta akun login Dashboard Mitra-nya. Cuma bisa dihapus kalau tidak ada Unit aktif yang masih dimiliki mitra ini.",
+    "gagalHapus": "Gagal menghapus mitra.",
+    "penghasilan": "Penghasilan",
+    "pendapatanTotal": "Pendapatan Total",
+    "pendapatanBulanIni": "Pendapatan Bulan Ini",
+    "gagalMuatPenghasilan": "Gagal memuat data penghasilan.",
+    "belumAdaUnit": "Belum ada Unit Locker.",
+    "kolomUnit": "Unit",
+    "kolomLokasi": "Lokasi",
+    "kolomOkupansi": "Okupansi",
+    "kolomPendapatanBulanIni": "Pendapatan Bulan Ini",
+    "kolomPendapatanTotal": "Pendapatan Total"
   },
   "overviewPage": {
     "judul": "Overview",
@@ -155,6 +173,7 @@
     "kolomJumlahUnit": "Jumlah Unit",
     "kolomOkupansi": "Okupansi",
     "kolomPendapatanBulanIni": "Pendapatan Bulan Ini",
+    "kolomPendapatanTotal": "Pendapatan Total",
     "kolomLoker": "Loker",
     "kolomUnit": "Unit",
     "kolomLokasi": "Lokasi",
@@ -166,6 +185,22 @@
     "cariPlaceholder": "Nomor loker, kode unit, atau lokasi...",
     "gagalMuatLoker": "Gagal memuat daftar loker.",
     "itemLabelLoker": "loker"
+  },
+  "lokasiPage": {
+    "judul": "Lokasi",
+    "gagalMuat": "Gagal memuat daftar lokasi.",
+    "gagalHapus": "Gagal menghapus lokasi.",
+    "belumAdaLokasi": "Belum ada lokasi.",
+    "itemLabel": "lokasi",
+    "toastDihapus": "Lokasi dihapus",
+    "kolomNama": "Nama",
+    "kolomAlamat": "Alamat",
+    "kolomWilayah": "Wilayah",
+    "kolomPemakaian": "Pemakaian",
+    "tidakDipakai": "Tidak dipakai",
+    "dipakai": "{{unit}} unit, {{mitra}} mitra",
+    "hapusTitle": "Hapus {{nama}}?",
+    "hapusDeskripsi": "Lokasi ini akan dihapus permanen. Cuma bisa dihapus kalau tidak ada Unit atau relasi Mitra aktif yang masih menunjuk ke sini."
   },
   "partnerPage": {
     "judul": "Mitra & Skema",
@@ -205,6 +240,7 @@
     "gagalBukaPaksa": "Gagal memicu buka paksa.",
     "gagalBukaSuspend": "Gagal membuka loker yang disuspend.",
     "gagalNonaktifkan": "Gagal menonaktifkan unit.",
+    "gagalRegenerate": "Gagal regenerate unit key.",
     "kolomNomor": "Nomor",
     "kolomKategori": "Kategori",
     "kolomStatus": "Status",
@@ -242,7 +278,12 @@
     "bukaPaksaTitle": "Buka Paksa Loker {{nomor}}",
     "bukaPaksaDeskripsi": "Perintah buka pintu dikirim jarak jauh ke unit. Wajib dicatat alasannya (log keamanan).",
     "nonaktifkanTitle": "Nonaktifkan {{kode}}?",
-    "nonaktifkanDeskripsi": "Unit tidak bisa dipakai kiosk lagi sampai diaktifkan ulang."
+    "nonaktifkanDeskripsi": "Unit tidak bisa dipakai kiosk lagi sampai diaktifkan ulang.",
+    "unitKeyHeading": "Unit Key",
+    "unitKeyPeringatan": "Unit Key baru ini HANYA ditampilkan sekali sekarang — tidak bisa dilihat lagi setelah ditutup. Salin dan pasang sebagai VITE_UNIT_KEY di kiosk unit ini.",
+    "regenerateKey": "Regenerate Unit Key",
+    "regenerateKeyTitle": "Regenerate Unit Key {{kode}}?",
+    "regenerateKeyDeskripsi": "Unit Key LAMA langsung tidak berlaku setelah ini — kiosk fisik yang masih pakai key lama harus di-update ulang VITE_UNIT_KEY-nya, kalau tidak kiosk tidak bisa memuat status unit. Cuma dipakai kalau key lama hilang/lupa dicatat."
   },
   "usersPage": {
     "judul": "Manajemen User",
@@ -383,7 +424,12 @@
     "placeholderHarga": "Harga (Rp)",
     "tambahDurasi": "+ Tambah Durasi",
     "gagalMuatLokasi": "Gagal memuat daftar lokasi.",
-    "gagalSimpan": "Gagal membuat unit."
+    "gagalSimpan": "Gagal membuat unit.",
+    "unitDibuat": "{{kodeUnit}} berhasil dibuat",
+    "unitKeyPeringatan": "Unit Key ini HANYA ditampilkan sekali sekarang — tidak bisa dilihat lagi setelah ditutup. Salin dan pasang sebagai VITE_UNIT_KEY di kiosk unit ini.",
+    "unitKeyLabel": "Unit Key",
+    "salinKey": "Salin",
+    "tersalin": "Tersalin ✓"
   },
   "createUserDialog": {
     "judul": "Tambah User Internal",

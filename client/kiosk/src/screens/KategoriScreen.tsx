@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { KioskButton } from '@smartbox/ui';
+import { KioskButton, KioskButtonGrid } from '@smartbox/ui';
 import type { KategoriLoker } from '../api/client';
 import { KioskShell } from './KioskShell';
 
@@ -23,7 +23,7 @@ export function KategoriScreen({
   const { t } = useTranslation();
   return (
     <KioskShell step={2} title={t('kategori.title')}>
-      <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <KioskButtonGrid minColumnWidth={200}>
         {pilihan.map((k) => {
           const penuh = k.jumlahTersedia === 0;
           return (
@@ -31,6 +31,7 @@ export function KategoriScreen({
               key={k.id}
               tone={penuh ? 'neutral' : 'secondary'}
               size="xl"
+              fullWidth
               disabled={penuh}
               onClick={() => onPilih(k)}
             >
@@ -48,7 +49,7 @@ export function KategoriScreen({
             </KioskButton>
           );
         })}
-      </div>
+      </KioskButtonGrid>
       <div style={{ marginTop: 'var(--sl-space-6)', textAlign: 'center' }}>
         <KioskButton tone="neutral" size="md" onClick={onKembali}>
           {t('common.kembali')}

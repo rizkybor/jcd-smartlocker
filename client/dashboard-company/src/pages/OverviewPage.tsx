@@ -62,6 +62,7 @@ export function OverviewPage() {
     { header: t('overviewPage.kolomJumlahUnit'), align: 'center', render: (m) => m.jumlahUnit },
     { header: t('overviewPage.kolomOkupansi'), align: 'right', render: (m) => `${m.okupansiPersen}%` },
     { header: t('overviewPage.kolomPendapatanBulanIni'), align: 'right', render: (m) => formatRupiah(m.pendapatanBulanIni) },
+    { header: t('overviewPage.kolomPendapatanTotal'), align: 'right', render: (m) => formatRupiah(m.pendapatanTotal) },
   ];
 
   const lokerColumns: DataTableColumn<OverviewLokerRow>[] = [

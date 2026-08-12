@@ -23,6 +23,8 @@ export type SewaContext = {
   email: string;
   // --- Kategori ukuran loker (fitur harga & pilihan per ukuran, di luar PRD awal) ---
   pilihanKategori: KategoriLoker | null;
+  // --- Loker spesifik pilihan pelanggan (fitur pilih loker spesifik, di luar PRD awal) ---
+  lokerId: string | null;
   pilihanDurasi: UnitDurasiHarga | null;
   sesi: SesiTransaksi | null;
   pembayaran: BuatPembayaranResult | null;
@@ -49,6 +51,7 @@ const initialContext: SewaContext = {
   nomorHp: '',
   email: '',
   pilihanKategori: null,
+  lokerId: null,
   pilihanDurasi: null,
   sesi: null,
   pembayaran: null,
@@ -95,6 +98,7 @@ export const sewaMachine = setup({
       | { type: 'SET_EMAIL'; value: string }
       | { type: 'LANJUT_EMAIL' }
       | { type: 'PILIH_KATEGORI'; kategori: KategoriLoker }
+      | { type: 'PILIH_LOKER'; lokerId: string }
       | { type: 'PILIH_DURASI'; durasi: UnitDurasiHarga }
       | { type: 'SET_AMBIL_NOMOR_HP'; value: string }
       | { type: 'LANJUT_AMBIL_NOMOR_HP' }
@@ -112,7 +116,7 @@ export const sewaMachine = setup({
       async ({
         input,
       }: {
-        input: { unitDurasiHargaId: string } & ({ nomorHp: string; email: string } | { memberId: string });
+        input: { unitDurasiHargaId: string; lokerId?: string } & ({ nomorHp: string; email: string } | { memberId: string });
       }) => {
         const res = await kioskApi.mulaiSewa(input);
         return res.data;
@@ -328,7 +332,7 @@ export const sewaMachine = setup({
     // KATEGORI ITU ditampilkan di layar berikutnya (§ konfirmasi bisnis).
     pilihKategori: {
       on: {
-        PILIH_KATEGORI: 'durasi',
+        PILIH_KATEGORI: 'pilihLoker',
         // Masuk lewat tap RFID (memberId sudah terisi, tidak pernah lewat
         // nomorHp/email) -> KEMBALI ke menu, bukan ke layar email yang
         // tidak pernah dilalui.
@@ -340,10 +344,23 @@ export const sewaMachine = setup({
       exit: assign({ pilihanKategori: ({ event }) => (event.type === 'PILIH_KATEGORI' ? event.kategori : null) }),
     },
 
+    // Fitur pilih loker spesifik (di luar PRD awal) — customer pilih NOMOR
+    // loker langsung (001, 002, dst) dari kategori yang sudah dipilih,
+    // bukan cuma auto-assign server-side. `context.lokerId` dikirim ke
+    // mulaiSewa() supaya backend klaim loker itu spesifik (tetap atomik
+    // lewat row lock, lihat kiosk-sewa.service.ts::mulaiSewa()).
+    pilihLoker: {
+      on: {
+        PILIH_LOKER: 'durasi',
+        KEMBALI: 'pilihKategori',
+      },
+      exit: assign({ lokerId: ({ event }) => (event.type === 'PILIH_LOKER' ? event.lokerId : null) }),
+    },
+
     durasi: {
       on: {
         PILIH_DURASI: 'memulaiSewa',
-        KEMBALI: 'pilihKategori',
+        KEMBALI: 'pilihLoker',
       },
       exit: assign({ pilihanDurasi: ({ event }) => (event.type === 'PILIH_DURASI' ? event.durasi : null) }),
     },
@@ -353,16 +370,24 @@ export const sewaMachine = setup({
         src: 'mulaiSewa',
         input: ({ context }) =>
           context.memberId !== null
-            ? { memberId: context.memberId, unitDurasiHargaId: context.pilihanDurasi!.id }
-            : { nomorHp: context.nomorHp, email: context.email, unitDurasiHargaId: context.pilihanDurasi!.id },
+            ? { memberId: context.memberId, unitDurasiHargaId: context.pilihanDurasi!.id, lokerId: context.lokerId ?? undefined }
+            : {
+                nomorHp: context.nomorHp,
+                email: context.email,
+                unitDurasiHargaId: context.pilihanDurasi!.id,
+                lokerId: context.lokerId ?? undefined,
+              },
         onDone: { target: 'bayar', actions: assign({ sesi: ({ event }) => event.output }) },
         onError: [
           {
+            // Loker pilihan customer baru saja terisi (kalah race) — balik
+            // ke pilihLoker (bukan durasi) supaya customer pilih NOMOR lain,
+            // bukan cuma ganti durasi.
             guard: ({ event }) => event.error instanceof ApiError && event.error.code === 'LOKER_TIDAK_TERSEDIA',
-            target: 'durasi',
+            target: 'pilihLoker',
             actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }),
           },
-          { target: 'durasi', actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }) },
+          { target: 'pilihLoker', actions: assign({ errorMessage: ({ event }) => errorMessageOf(event.error) }) },
         ],
       },
     },
@@ -398,7 +423,11 @@ export const sewaMachine = setup({
 
     bayarGagal: {
       on: {
-        ULANGI: 'durasi',
+        // Loker yang tadi diklaim (`context.lokerId`) mungkin sudah TERISI
+        // dari percobaan yang gagal ini — balik ke pilihLoker (bukan
+        // langsung durasi) & reset lokerId, supaya customer pilih ULANG
+        // (bisa nomor sama kalau masih tersedia, atau nomor lain).
+        ULANGI: { target: 'pilihLoker', actions: assign({ lokerId: null }) },
         BATAL: 'idle',
       },
     },

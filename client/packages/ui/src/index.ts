@@ -4,6 +4,9 @@ export type { IconName, IconProps } from './components/icons/Icon';
 export { KioskButton } from './components/kiosk/KioskButton';
 export type { KioskButtonProps, KioskButtonTone, KioskButtonSize } from './components/kiosk/KioskButton';
 
+export { KioskButtonGrid } from './components/kiosk/KioskButtonGrid';
+export type { KioskButtonGridProps } from './components/kiosk/KioskButtonGrid';
+
 export { Numpad } from './components/kiosk/Numpad';
 export type { NumpadProps } from './components/kiosk/Numpad';
 

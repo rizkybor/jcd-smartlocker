@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { LokerStatus, StatusBayar } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { GatewayService } from '../gateway/gateway.service';
@@ -120,12 +120,20 @@ export class OverviewService {
     awalBulan.setDate(1);
     awalBulan.setHours(0, 0, 0, 0);
 
-    const transaksiBulanIni = semuaLokerIds.length
-      ? await this.prisma.db.sesiTransaksi.findMany({
-          where: { lokerId: { in: semuaLokerIds }, statusBayar: StatusBayar.PAID, createdAt: { gte: awalBulan } },
-          select: { lokerId: true, nominal: true },
-        })
-      : [];
+    const [transaksiBulanIni, transaksiTotal] = await Promise.all([
+      semuaLokerIds.length
+        ? this.prisma.db.sesiTransaksi.findMany({
+            where: { lokerId: { in: semuaLokerIds }, statusBayar: StatusBayar.PAID, createdAt: { gte: awalBulan } },
+            select: { lokerId: true, nominal: true },
+          })
+        : [],
+      semuaLokerIds.length
+        ? this.prisma.db.sesiTransaksi.findMany({
+            where: { lokerId: { in: semuaLokerIds }, statusBayar: StatusBayar.PAID },
+            select: { lokerId: true, nominal: true },
+          })
+        : [],
+    ]);
 
     const lokerIdKeMitra = new Map<string, string>();
     for (const m of mitraList) {
@@ -133,12 +141,17 @@ export class OverviewService {
         for (const l of u.lokers) lokerIdKeMitra.set(l.id, m.id);
       }
     }
-    const pendapatanPerMitra = new Map<string, number>();
-    for (const t of transaksiBulanIni) {
-      const mitraId = lokerIdKeMitra.get(t.lokerId);
-      if (!mitraId) continue;
-      pendapatanPerMitra.set(mitraId, (pendapatanPerMitra.get(mitraId) ?? 0) + Number(t.nominal));
-    }
+    const jumlahkanPerMitra = (transaksi: { lokerId: string; nominal: unknown }[]) => {
+      const hasil = new Map<string, number>();
+      for (const t of transaksi) {
+        const mitraId = lokerIdKeMitra.get(t.lokerId);
+        if (!mitraId) continue;
+        hasil.set(mitraId, (hasil.get(mitraId) ?? 0) + Number(t.nominal));
+      }
+      return hasil;
+    };
+    const pendapatanBulanIniPerMitra = jumlahkanPerMitra(transaksiBulanIni);
+    const pendapatanTotalPerMitra = jumlahkanPerMitra(transaksiTotal);
 
     return {
       data: mitraList.map((m) => {
@@ -150,9 +163,82 @@ export class OverviewService {
           mitraNama: m.nama,
           jumlahUnit: m.units.length,
           okupansiPersen,
-          pendapatanBulanIni: pendapatanPerMitra.get(m.id) ?? 0,
+          pendapatanBulanIni: pendapatanBulanIniPerMitra.get(m.id) ?? 0,
+          pendapatanTotal: pendapatanTotalPerMitra.get(m.id) ?? 0,
         };
       }),
+    };
+  }
+
+  /**
+   * Detail penghasilan 1 mitra: total & bulan ini, dirinci per Unit Locker
+   * (di luar cakupan PRD awal — permintaan bisnis langsung, dipakai
+   * MitraDetailPage). `groupBy` sekali per rentang waktu (bukan per-unit
+   * query) lalu dijumlah per unit di memori.
+   */
+  async mitraDetailPenghasilan(mitraId: string) {
+    const mitra = await this.prisma.db.mitra.findUnique({
+      where: { id: mitraId },
+      include: {
+        units: {
+          include: {
+            lokasi: { select: { nama: true } },
+            lokers: { select: { id: true, status: true } },
+          },
+        },
+      },
+    });
+    if (!mitra) {
+      throw new NotFoundException({ error: { code: 'MITRA_TIDAK_DITEMUKAN', message: 'Mitra tidak ditemukan.' } });
+    }
+
+    const semuaLokerIds = mitra.units.flatMap((u) => u.lokers.map((l) => l.id));
+    const awalBulan = new Date();
+    awalBulan.setDate(1);
+    awalBulan.setHours(0, 0, 0, 0);
+
+    const [totalPerLoker, bulanIniPerLoker] = await Promise.all([
+      semuaLokerIds.length
+        ? this.prisma.db.sesiTransaksi.groupBy({
+            by: ['lokerId'],
+            where: { lokerId: { in: semuaLokerIds }, statusBayar: StatusBayar.PAID },
+            _sum: { nominal: true },
+          })
+        : [],
+      semuaLokerIds.length
+        ? this.prisma.db.sesiTransaksi.groupBy({
+            by: ['lokerId'],
+            where: { lokerId: { in: semuaLokerIds }, statusBayar: StatusBayar.PAID, createdAt: { gte: awalBulan } },
+            _sum: { nominal: true },
+          })
+        : [],
+    ]);
+    const totalMap = new Map(totalPerLoker.map((r) => [r.lokerId, Number(r._sum.nominal ?? 0)]));
+    const bulanIniMap = new Map(bulanIniPerLoker.map((r) => [r.lokerId, Number(r._sum.nominal ?? 0)]));
+
+    const units = mitra.units.map((u) => {
+      const lokerIds = u.lokers.map((l) => l.id);
+      const pendapatanTotal = lokerIds.reduce((s, id) => s + (totalMap.get(id) ?? 0), 0);
+      const pendapatanBulanIni = lokerIds.reduce((s, id) => s + (bulanIniMap.get(id) ?? 0), 0);
+      const terisi = u.lokers.filter((l) => l.status === LokerStatus.TERISI).length;
+      const okupansiPersen = u.lokers.length === 0 ? 0 : Math.round((terisi / u.lokers.length) * 1000) / 10;
+      return {
+        unitId: u.id,
+        kodeUnit: u.kodeUnit,
+        lokasiNama: u.lokasi.nama,
+        jumlahLoker: u.lokers.length,
+        okupansiPersen,
+        pendapatanBulanIni,
+        pendapatanTotal,
+      };
+    });
+
+    return {
+      mitraId: mitra.id,
+      mitraNama: mitra.nama,
+      pendapatanTotal: units.reduce((s, u) => s + u.pendapatanTotal, 0),
+      pendapatanBulanIni: units.reduce((s, u) => s + u.pendapatanBulanIni, 0),
+      units,
     };
   }
 

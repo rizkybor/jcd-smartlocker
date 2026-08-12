@@ -52,6 +52,17 @@ function omitUnitKey<T extends { unitKey: string }>({ unitKey: _unitKey, ...rest
   return rest;
 }
 
+/**
+ * Preview aman (di luar cakupan PRD awal) — cuma 2 karakter depan supaya
+ * Super Admin bisa mengenali unit key sudah ada TANPA nilai lengkapnya
+ * pernah terekspos lagi di luar response create()/regenerate (§7.1).
+ * Jumlah bintang FIXED (bukan sepanjang sisa key sungguhan) — supaya
+ * panjang aslinya tidak ikut bocor.
+ */
+function maskUnitKey(unitKey: string): string {
+  return `${unitKey.slice(0, 2)}${'*'.repeat(10)}`;
+}
+
 @Injectable()
 export class UnitService {
   constructor(
@@ -99,7 +110,40 @@ export class UnitService {
       include: { loker: { select: { nomorLoker: true } } },
     });
 
-    return { ...omitUnitKey(unit), lokers: await this.lokersDenganOverdueStatus(unit), riwayatTransaksi };
+    return {
+      ...omitUnitKey(unit),
+      unitKeyPreview: maskUnitKey(unit.unitKey),
+      lokers: await this.lokersDenganOverdueStatus(unit),
+      riwayatTransaksi,
+    };
+  }
+
+  /**
+   * Regenerate unit key — dipakai kalau key lama hilang/lupa dicatat
+   * (di luar cakupan PRD awal). Key LAMA langsung invalid setelah ini
+   * (kiosk fisik yang masih pakai key lama harus di-update manual), jadi
+   * dicatat sebagai aksi KEAMANAN (§7.1) — sama kelas sensitivitas dengan
+   * `bukaPaksa()`. Key baru cuma dikembalikan SEKALI di response ini,
+   * sama seperti `create()`.
+   */
+  async regenerateUnitKey(id: string, actor: AuthenticatedInternalUser) {
+    const existing = await this.prisma.db.unit.findUnique({ where: { id } });
+    if (!existing) throw this.unitTidakDitemukan();
+
+    const unitKey = generateUnitKey();
+    await this.prisma.db.unit.update({ where: { id }, data: { unitKey } });
+
+    await this.activityLog.log({
+      aktorId: actor.id,
+      aktorRole: actor.role,
+      kategori: LogKategori.KEAMANAN,
+      aksi: 'regenerate_unit_key',
+      entitas: 'unit',
+      entitasId: id,
+      detail: { kodeUnit: existing.kodeUnit },
+    });
+
+    return { kodeUnit: existing.kodeUnit, unitKey, unitKeyPreview: maskUnitKey(unitKey) };
   }
 
   /**

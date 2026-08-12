@@ -9,6 +9,7 @@ import { UnitPenuhScreen } from './screens/UnitPenuhScreen';
 import { NomorHpScreen } from './screens/NomorHpScreen';
 import { EmailScreen } from './screens/EmailScreen';
 import { KategoriScreen } from './screens/KategoriScreen';
+import { LokerScreen } from './screens/LokerScreen';
 import { DurasiScreen } from './screens/DurasiScreen';
 import { BayarScreen } from './screens/BayarScreen';
 import { BayarGagalScreen } from './screens/BayarGagalScreen';
@@ -152,6 +153,16 @@ export default function App() {
           pilihan={state.context.unit?.kategori ?? []}
           onPilih={(kategori) => send({ type: 'PILIH_KATEGORI', kategori })}
           onKembali={() => send({ type: 'KEMBALI' })}
+        />
+      );
+    }
+    if (state.matches('pilihLoker')) {
+      return (
+        <LokerScreen
+          pilihan={state.context.pilihanKategori?.lokers ?? []}
+          onPilih={(lokerId) => send({ type: 'PILIH_LOKER', lokerId })}
+          onKembali={() => send({ type: 'KEMBALI' })}
+          errorMessage={state.context.errorMessage}
         />
       );
     }

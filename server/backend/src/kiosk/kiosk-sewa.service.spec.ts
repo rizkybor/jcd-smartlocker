@@ -66,6 +66,10 @@ describe('KioskSewaService', () => {
           ukuranWMm: 300,
           ukuranHMm: 300,
           durasiHarga: [{ id: 'dh-1', durasiJam: 1, harga: 5_000 }],
+          lokers: [
+            { id: 'loker-1', nomorLoker: '001', status: 'TERSEDIA' },
+            { id: 'loker-2', nomorLoker: '002', status: 'TERISI' },
+          ],
           _count: { lokers: 2 },
         },
         {
@@ -74,6 +78,7 @@ describe('KioskSewaService', () => {
           ukuranWMm: 400,
           ukuranHMm: 860,
           durasiHarga: [{ id: 'dh-2', durasiJam: 1, harga: 12_000 }],
+          lokers: [],
           _count: { lokers: 0 },
         },
       ]);
@@ -86,6 +91,7 @@ describe('KioskSewaService', () => {
               .mockResolvedValueOnce(2) // jumlahTersedia keseluruhan unit
               .mockResolvedValueOnce(6), // jumlahTotal keseluruhan unit
           },
+          mitra: { findUnique: jest.fn().mockResolvedValue({ nama: 'Mitra Test' }) },
         },
       } as unknown as PrismaService;
       const service = new KioskSewaService(prisma, { name: 'xendit' } as unknown as PaymentProvider, {} as MqttClientService);
@@ -93,10 +99,30 @@ describe('KioskSewaService', () => {
       const result = await service.statusUnit(unit);
 
       expect(result.kategori).toEqual([
-        { id: 'kategori-kecil', nama: 'Kecil', ukuranWMm: 300, ukuranHMm: 300, jumlahTersedia: 2, durasiHarga: [{ id: 'dh-1', durasiJam: 1, harga: 5_000 }] },
-        { id: 'kategori-besar', nama: 'Besar', ukuranWMm: 400, ukuranHMm: 860, jumlahTersedia: 0, durasiHarga: [{ id: 'dh-2', durasiJam: 1, harga: 12_000 }] },
+        {
+          id: 'kategori-kecil',
+          nama: 'Kecil',
+          ukuranWMm: 300,
+          ukuranHMm: 300,
+          jumlahTersedia: 2,
+          durasiHarga: [{ id: 'dh-1', durasiJam: 1, harga: 5_000 }],
+          lokers: [
+            { id: 'loker-1', nomorLoker: '001', status: 'TERSEDIA' },
+            { id: 'loker-2', nomorLoker: '002', status: 'TERISI' },
+          ],
+        },
+        {
+          id: 'kategori-besar',
+          nama: 'Besar',
+          ukuranWMm: 400,
+          ukuranHMm: 860,
+          jumlahTersedia: 0,
+          durasiHarga: [{ id: 'dh-2', durasiJam: 1, harga: 12_000 }],
+          lokers: [],
+        },
       ]);
       expect(result.unitPenuh).toBe(false);
+      expect(result.mitraNama).toBe('Mitra Test');
     });
   });
 
@@ -150,8 +176,8 @@ describe('KioskSewaService', () => {
 
       await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1' });
 
-      const queryRawArgs = (tx.$queryRaw as jest.Mock).mock.calls[0];
-      expect(queryRawArgs).toContain('kategori-besar');
+      const sqlFragment = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { values: unknown[] };
+      expect(sqlFragment.values).toContain('kategori-besar');
     });
 
     it('query kandidat loker WAJIB mengecualikan loker yang diikat eksklusif ke member (NOT EXISTS member)', async () => {
@@ -159,10 +185,29 @@ describe('KioskSewaService', () => {
 
       await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1' });
 
-      const sqlParts = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { join: (s: string) => string };
-      const sql = sqlParts.join(' ');
+      const sqlFragment = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { strings: string[] };
+      const sql = sqlFragment.strings.join(' ');
       expect(sql).toContain('NOT EXISTS');
       expect(sql).toContain('member');
+    });
+
+    it('fitur pilih loker spesifik: lokerId dari pelanggan disisipkan sebagai filter tambahan di query kandidat', async () => {
+      const { service, tx } = buildService();
+
+      await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1', lokerId: 'loker-pilihan' });
+
+      const sqlFragment = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { strings: string[]; values: unknown[] };
+      expect(sqlFragment.values).toContain('loker-pilihan');
+      expect(sqlFragment.strings.join(' ')).toContain('AND id =');
+    });
+
+    it('tanpa lokerId (jalur lama/RFID) — query TIDAK menambahkan filter id spesifik', async () => {
+      const { service, tx } = buildService();
+
+      await service.mulaiSewa(unit, { nomorHp: '081234567890', email: 'a@b.com', unitDurasiHargaId: 'durasi-1' });
+
+      const sqlFragment = (tx.$queryRaw as jest.Mock).mock.calls[0][0] as { strings: string[] };
+      expect(sqlFragment.strings.join(' ')).not.toContain('AND id =');
     });
 
     describe('fitur member RFID — sewa via memberId (diskon, bukan nomorHp/email)', () => {

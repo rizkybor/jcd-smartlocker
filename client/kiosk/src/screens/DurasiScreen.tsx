@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { KioskButton } from '@smartbox/ui';
+import { KioskButton, KioskButtonGrid } from '@smartbox/ui';
 import type { UnitDurasiHarga } from '../api/client';
 import { formatRupiah } from '../utils/format';
 import { KioskShell } from './KioskShell';
@@ -20,17 +20,17 @@ export function DurasiScreen({
 }) {
   const { t } = useTranslation();
   return (
-    <KioskShell step={3} title={t('durasi.title')}>
-      <div style={{ display: 'flex', gap: 'var(--sl-touch-gap)', flexWrap: 'wrap', justifyContent: 'center' }}>
+    <KioskShell step={4} title={t('durasi.title')}>
+      <KioskButtonGrid minColumnWidth={180}>
         {pilihan.map((d) => (
-          <KioskButton key={d.id} tone="secondary" size="xl" disabled={loading} onClick={() => onPilih(d)}>
+          <KioskButton key={d.id} tone="secondary" size="xl" fullWidth disabled={loading} onClick={() => onPilih(d)}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <span>{t('durasi.jam', { jumlah: d.durasiJam })}</span>
               <span style={{ fontSize: 'var(--sl-kiosk-fs-body)', fontWeight: 'var(--sl-fw-regular)' }}>{formatRupiah(d.harga)}</span>
             </div>
           </KioskButton>
         ))}
-      </div>
+      </KioskButtonGrid>
       {loading ? (
         <div
           style={{

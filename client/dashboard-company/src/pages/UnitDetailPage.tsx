@@ -59,6 +59,13 @@ export function UnitDetailPage() {
   const [nonaktifkanLoading, setNonaktifkanLoading] = useState(false);
   const [nonaktifkanError, setNonaktifkanError] = useState<string | null>(null);
 
+  // --- Regenerate unit key (di luar cakupan PRD awal) ---
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
+  const [regenerateLoading, setRegenerateLoading] = useState(false);
+  const [regenerateError, setRegenerateError] = useState<string | null>(null);
+  const [unitKeyBaru, setUnitKeyBaru] = useState<string | null>(null);
+  const [disalinKey, setDisalinKey] = useState(false);
+
   function reload() {
     if (!id) return;
     companyApi.units
@@ -174,6 +181,29 @@ export function UnitDetailPage() {
     } finally {
       setBukaSuspendLoading(false);
     }
+  }
+
+  async function handleRegenerateConfirm() {
+    if (!id) return;
+    setRegenerateLoading(true);
+    setRegenerateError(null);
+    try {
+      const res = await companyApi.units.regenerateKey(id);
+      setRegenerateOpen(false);
+      setUnitKeyBaru(res.data.unitKey);
+      setDisalinKey(false);
+      reload();
+    } catch (err) {
+      setRegenerateError(err instanceof ApiError ? err.message : t('unitDetailPage.gagalRegenerate'));
+    } finally {
+      setRegenerateLoading(false);
+    }
+  }
+
+  async function handleSalinKeyBaru() {
+    if (!unitKeyBaru) return;
+    await navigator.clipboard.writeText(unitKeyBaru);
+    setDisalinKey(true);
   }
 
   async function handleNonaktifkanConfirm() {
@@ -367,6 +397,49 @@ export function UnitDetailPage() {
           </div>
         </Panel>
 
+        {profile?.role === 'SUPER_ADMIN' ? (
+          <Panel>
+            <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>
+              {t('unitDetailPage.unitKeyHeading')}
+            </h2>
+            {unitKeyBaru ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sl-space-3)' }}>
+                <p style={{ color: 'var(--sl-status-offline-strong)', fontSize: 'var(--sl-fs-13)', margin: 0 }}>
+                  {t('unitDetailPage.unitKeyPeringatan')}
+                </p>
+                <code
+                  style={{
+                    display: 'block',
+                    padding: 'var(--sl-space-3)',
+                    background: 'var(--sl-n-100)',
+                    borderRadius: 'var(--sl-radius-md)',
+                    fontSize: 'var(--sl-fs-13)',
+                    wordBreak: 'break-all',
+                    userSelect: 'all',
+                  }}
+                >
+                  {unitKeyBaru}
+                </code>
+                <div style={{ display: 'flex', gap: 'var(--sl-space-3)' }}>
+                  <Button tone="outline" size="sm" onClick={handleSalinKeyBaru}>
+                    {disalinKey ? t('createUnitDialog.tersalin') : t('createUnitDialog.salinKey')}
+                  </Button>
+                  <Button size="sm" onClick={() => setUnitKeyBaru(null)}>
+                    {t('common.selesai')}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sl-space-4)' }}>
+                <code style={{ fontSize: 'var(--sl-fs-13)', color: 'var(--sl-text-muted)' }}>{unit.unitKeyPreview}</code>
+                <Button tone="danger" size="sm" onClick={() => setRegenerateOpen(true)}>
+                  {t('unitDetailPage.regenerateKey')}
+                </Button>
+              </div>
+            )}
+          </Panel>
+        ) : null}
+
         <Panel>
           <h2 style={{ fontFamily: 'var(--sl-font-display)', fontSize: 'var(--sl-fs-16)', fontWeight: 'var(--sl-fw-bold)', marginTop: 0 }}>
             {t('unitDetailPage.lokerHeading', { jumlah: unit.lokers.length })}
@@ -438,6 +511,21 @@ export function UnitDetailPage() {
         loading={bukaSuspendLoading}
         errorMessage={bukaSuspendError}
         onConfirm={handleBukaSuspendConfirm}
+      />
+
+      <ConfirmDialog
+        open={regenerateOpen}
+        onOpenChange={(open) => {
+          setRegenerateOpen(open);
+          if (!open) setRegenerateError(null);
+        }}
+        title={t('unitDetailPage.regenerateKeyTitle', { kode: unit.kodeUnit })}
+        description={t('unitDetailPage.regenerateKeyDeskripsi')}
+        tone="danger"
+        confirmLabel={t('unitDetailPage.regenerateKey')}
+        loading={regenerateLoading}
+        errorMessage={regenerateError}
+        onConfirm={handleRegenerateConfirm}
       />
 
       <ConfirmDialog

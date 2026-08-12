@@ -67,6 +67,13 @@ export class UnitController {
     return this.unitService.softDelete(id, dto.alasan, actor);
   }
 
+  /** Regenerate unit key — dipakai kalau lupa/hilang (di luar cakupan PRD awal), lihat unit.service.ts::regenerateUnitKey(). */
+  @Post(':id/regenerate-key')
+  @Roles(AkunInternalRole.SUPER_ADMIN)
+  regenerateUnitKey(@Param('id') id: string, @CurrentUser() actor: AuthenticatedInternalUser) {
+    return this.unitService.regenerateUnitKey(id, actor);
+  }
+
   @Post(':id/buka-paksa')
   @Roles(AkunInternalRole.SUPER_ADMIN, AkunInternalRole.OPS)
   bukaPaksa(

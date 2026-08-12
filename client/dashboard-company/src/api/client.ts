@@ -65,6 +65,26 @@ export type OverviewMitraRow = {
   jumlahUnit: number;
   okupansiPersen: number;
   pendapatanBulanIni: number;
+  pendapatanTotal: number;
+};
+
+/** Rincian penghasilan per Unit Locker milik 1 mitra — dipakai MitraDetailPage. */
+export type OverviewMitraUnitRow = {
+  unitId: string;
+  kodeUnit: string;
+  lokasiNama: string;
+  jumlahLoker: number;
+  okupansiPersen: number;
+  pendapatanBulanIni: number;
+  pendapatanTotal: number;
+};
+
+export type OverviewMitraDetail = {
+  mitraId: string;
+  mitraNama: string;
+  pendapatanTotal: number;
+  pendapatanBulanIni: number;
+  units: OverviewMitraUnitRow[];
 };
 
 export type OverviewLokerRow = {
@@ -90,6 +110,9 @@ export type Wilayah = {
 };
 
 export type Lokasi = { id: string; nama: string; alamat: string; timezone: string } & Wilayah;
+
+/** Jumlah pemakaian aktif (di luar cakupan PRD awal) — dipakai LokasiPage untuk tahu "aman dihapus atau tidak" sebelum mencoba. */
+export type LokasiDenganPemakaian = Lokasi & { _count: { units: number; mitraLokasi: number } };
 
 /** Buat Lokasi baru inline (dipakai Mitra & Unit creation) — lihat `LokasiPilihan`. */
 export type LokasiBaruInput = { nama: string; alamat: string; timezone: string; wilayah: Wilayah };
@@ -162,7 +185,14 @@ export type SesiTransaksiRingkas = {
   loker: { nomorLoker: string };
 };
 
-export type UnitDetail = Unit & { riwayatTransaksi: SesiTransaksiRingkas[] };
+/** `unitKeyPreview` = 2 karakter depan + bintang tetap — cuma penanda "sudah ada", bukan bisa dipakai ulang (§7.1). */
+export type UnitDetail = Unit & { riwayatTransaksi: SesiTransaksiRingkas[]; unitKeyPreview: string };
+
+/** `unitKey` HANYA muncul di response create/regenerate ini — tidak pernah lagi setelahnya (§7.1, lihat unit.service.ts::create()). */
+export type UnitDenganKey = Unit & { unitKey: string };
+
+/** Response regenerate-key — bentuknya lebih ramping (tidak perlu semua field Unit). */
+export type UnitKeyRegenerated = { kodeUnit: string; unitKey: string; unitKeyPreview: string };
 
 export type Paginated<T> = { data: T[]; meta: { page: number; pageSize: number; totalItems: number; totalPages: number } };
 
@@ -357,6 +387,7 @@ export const companyApi = {
   overview: () => request<{ data: OverviewRingkasan }>('/company/overview'),
   overviewTren: () => request<{ data: OverviewTrenPoin[] }>('/company/overview/tren'),
   overviewMitra: () => request<{ data: OverviewMitraRow[] }>('/company/overview/mitra'),
+  overviewMitraDetail: (id: string) => request<{ data: OverviewMitraDetail }>(`/company/overview/mitra/${id}`),
   overviewLokers: (page: number, pageSize = 25, status?: LokerStatus, search?: string) =>
     request<Paginated<OverviewLokerRow>>(
       `/company/overview/lokers?page=${page}&pageSize=${pageSize}${status ? `&status=${status}` : ''}${search ? `&search=${encodeURIComponent(search)}` : ''}`,
@@ -364,12 +395,20 @@ export const companyApi = {
 
   lokasiList: () => request<Paginated<Lokasi>>('/company/lokasi?pageSize=100'),
 
+  /** Manajemen Lokasi (di luar cakupan PRD awal) — Super Admin only, lihat lokasi.controller.ts. */
+  lokasi: {
+    list: (page: number, pageSize = 25) =>
+      request<Paginated<LokasiDenganPemakaian>>(`/company/lokasi?page=${page}&pageSize=${pageSize}`),
+    /** Ditolak (409, LOKASI_MASIH_DIPAKAI) kalau masih ada Unit/MitraLokasi aktif yang menunjuk ke lokasi ini. */
+    remove: (id: string) => request<{ data: { deleted: true } }>(`/company/lokasi/${id}`, { method: 'DELETE' }),
+  },
+
   units: {
     list: (page: number, pageSize = 25) =>
       request<Paginated<Unit>>(`/company/units?page=${page}&pageSize=${pageSize}`),
     detail: (id: string) => request<{ data: UnitDetail }>(`/company/units/${id}`),
     create: (input: CreateUnitInput) =>
-      request<{ data: Unit }>('/company/units', { method: 'POST', body: JSON.stringify(input) }),
+      request<{ data: UnitDenganKey }>('/company/units', { method: 'POST', body: JSON.stringify(input) }),
     update: (id: string, input: UpdateUnitInput) =>
       request<{ data: Unit }>(`/company/units/${id}`, { method: 'PATCH', body: JSON.stringify(input) }),
     remove: (id: string, alasan: string) =>
@@ -382,6 +421,9 @@ export const companyApi = {
         method: 'POST',
         body: JSON.stringify({ lokerId, alasan }),
       }),
+    /** Regenerate unit key (di luar cakupan PRD awal) — key LAMA langsung invalid, dipakai kalau lupa/hilang. */
+    regenerateKey: (id: string) =>
+      request<{ data: UnitKeyRegenerated }>(`/company/units/${id}/regenerate-key`, { method: 'POST' }),
     /** Fitur overdue/denda/suspend (di luar cakupan PRD awal) — cuma Super Admin, lihat unit.service.ts::bukaLokerSuspended(). */
     bukaSuspend: (id: string, lokerId: string, alasan: string) =>
       request<{ data: { triggered: true; jamTerlambat: number } }>(`/company/units/${id}/buka-suspend`, {

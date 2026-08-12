@@ -25,6 +25,14 @@ export const mulaiSewaObjectSchema = z.object({
   email: z.string().email('Format email tidak valid.').optional(),
   memberId: z.string().uuid('memberId harus UUID yang valid.').optional(),
   unitDurasiHargaId: z.string().uuid('unitDurasiHargaId harus UUID yang valid.'),
+  /**
+   * Loker spesifik pilihan pelanggan (fitur pilih loker spesifik, di luar
+   * cakupan PRD awal — permintaan bisnis langsung, lihat
+   * client/kiosk/src/screens/LokerScreen.tsx). Opsional — kalau kosong,
+   * `mulaiSewa()` tetap fallback ke assign otomatis kandidat pertama
+   * (mis. jalur RFID member yang belum diperbarui, atau test lama).
+   */
+  lokerId: z.string().uuid('lokerId harus UUID yang valid.').optional(),
 });
 
 export const mulaiSewaSchema = mulaiSewaObjectSchema.refine(

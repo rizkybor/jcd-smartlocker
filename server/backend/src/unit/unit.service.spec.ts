@@ -197,6 +197,69 @@ describe('UnitService.findOneOrThrow — sisipkan overdueStatus per loker', () =
 
     await expect(service.findOneOrThrow('unit-x')).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('unitKeyPreview cuma 2 karakter depan + bintang, unitKey asli TIDAK ikut di response', async () => {
+    const { service } = buildService({});
+
+    const result = await service.findOneOrThrow('unit-1');
+
+    expect(result.unitKeyPreview).toBe('ra**********');
+    expect(result).not.toHaveProperty('unitKey');
+  });
+});
+
+/**
+ * Regenerate unit key (di luar cakupan PRD awal) — dipakai kalau key lama
+ * hilang/lupa dicatat. Logika paling berisiko: (1) key baru HANYA muncul
+ * sekali di response ini, (2) dicatat sebagai aksi KEAMANAN (bukan
+ * OPERASIONAL) karena meng-invalidate kredensial hardware.
+ */
+describe('UnitService.regenerateUnitKey', () => {
+  const actor: AuthenticatedInternalUser = {
+    kind: 'internal',
+    id: 'admin-1',
+    supabaseAuthUid: 'uid-1',
+    email: 'admin@b.com',
+    nama: 'Super Admin',
+    role: AkunInternalRole.SUPER_ADMIN,
+  };
+
+  function buildService(opts: { unit?: Record<string, unknown> | null } = {}) {
+    const unit = opts.unit !== undefined ? opts.unit : { id: 'unit-1', kodeUnit: 'UNIT-01', unitKey: 'lama' };
+    const unitFindUnique = jest.fn().mockResolvedValue(unit);
+    const unitUpdate = jest.fn().mockResolvedValue({});
+    const logActivity = jest.fn().mockResolvedValue({});
+    const prisma = {
+      db: { unit: { findUnique: unitFindUnique, update: unitUpdate } },
+    } as unknown as PrismaService;
+    const activityLog = { log: logActivity } as unknown as ActivityLogService;
+
+    return {
+      service: new UnitService(prisma, activityLog, {} as MqttClientService, {} as LokasiService),
+      unitUpdate,
+      logActivity,
+    };
+  }
+
+  it('lempar NotFoundException kalau unit tidak ada', async () => {
+    const { service } = buildService({ unit: null });
+
+    await expect(service.regenerateUnitKey('unit-x', actor)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('generate key baru, update DB, catat aksi KEAMANAN, & kembalikan key lengkap SEKALI', async () => {
+    const { service, unitUpdate, logActivity } = buildService();
+
+    const result = await service.regenerateUnitKey('unit-1', actor);
+
+    expect(unitUpdate).toHaveBeenCalledWith({ where: { id: 'unit-1' }, data: { unitKey: expect.stringMatching(/^uk_/) } });
+    expect(logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ aktorId: 'admin-1', aksi: 'regenerate_unit_key', kategori: 'KEAMANAN', entitas: 'unit', entitasId: 'unit-1' }),
+    );
+    expect(result.kodeUnit).toBe('UNIT-01');
+    expect(result.unitKey).toMatch(/^uk_/);
+    expect(result.unitKeyPreview).toBe(`${result.unitKey.slice(0, 2)}**********`);
+  });
 });
 
 /**

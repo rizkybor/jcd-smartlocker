@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { AkunInternalRole, LokerStatus } from '@prisma/client';
 import { SupabaseAuthGuard } from '../auth/guards/supabase-auth.guard';
@@ -29,6 +29,12 @@ export class OverviewController {
   @Get('mitra')
   mitraRingkasan() {
     return this.overviewService.mitraRingkasan();
+  }
+
+  /** Detail penghasilan 1 mitra dirinci per Unit Locker — dipakai MitraDetailPage. */
+  @Get('mitra/:id')
+  mitraDetailPenghasilan(@Param('id') id: string) {
+    return this.overviewService.mitraDetailPenghasilan(id);
   }
 
   @Get('lokers')

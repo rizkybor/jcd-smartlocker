@@ -119,7 +119,27 @@ export class MitraService {
     return this.findOneOrThrow(mitra.id);
   }
 
+  /**
+   * Hapus (soft-delete) Mitra — HANYA kalau tidak ada Unit aktif yang
+   * masih menunjuk ke mitra ini sebagai owner (di luar cakupan PRD awal,
+   * permintaan bisnis langsung, sama alasannya seperti
+   * `LokasiService.remove()`) — mencegah `Unit.mitraId` jadi "yatim",
+   * menunjuk ke Mitra yang sudah dihapus.
+   */
   async softDelete(id: string) {
+    const existing = await this.prisma.db.mitra.findUnique({ where: { id } });
+    if (!existing) throw this.mitraTidakDitemukan();
+
+    const jumlahUnit = await this.prisma.db.unit.count({ where: { mitraId: id, deletedAt: null } });
+    if (jumlahUnit > 0) {
+      throw new ConflictException({
+        error: {
+          code: 'MITRA_MASIH_PUNYA_UNIT',
+          message: `Mitra ini masih memiliki ${jumlahUnit} unit aktif — pindahkan/nonaktifkan unit itu dulu sebelum menghapus mitra.`,
+        },
+      });
+    }
+
     return this.prisma.softDelete('mitra', id);
   }
 }
