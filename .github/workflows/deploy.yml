@@ -1,0 +1,124 @@
+name: Deploy
+
+# Strategi CI monorepo — "Deployment Phase": jalan otomatis tiap push ke
+# `master` (artinya: abis PR di-merge). Cuma app yang KENA DAMPAK oleh
+# commit yang baru masuk yang di-build & (nanti) di-deploy ulang — bukan
+# build+deploy semua app tiap kali ada 1 commit ke master.
+#
+# Aturan dampak (path folder yang berubah dibanding commit SEBELUM push
+# ini, `github.event.before` -> `github.sha`):
+#   - client/packages/**  berubah -> kiosk + dashboard-company +
+#     dashboard-mitra SEMUA kena (mereka semua depend ke @smartbox/ui,
+#     workspace package, lihat pnpm-workspace.yaml) — TAPI backend TIDAK
+#     (backend tidak depend ke package client manapun).
+#   - client/kiosk/**            berubah -> cuma kiosk
+#   - client/dashboard-company/** berubah -> cuma dashboard-company
+#   - client/dashboard-mitra/**   berubah -> cuma dashboard-mitra
+#   - server/backend/**          berubah -> cuma backend
+#   - server/gateway/** — belum diimplementasi (masih stub TODO di
+#     package.json-nya), SENGAJA tidak ada entri deploy untuknya di sini
+#     sampai layanannya benar-benar ada.
+#
+# Langkah "Deploy" tiap app SAAT INI masih placeholder (echo) — repo ini
+# belum punya target hosting terpasang (tidak ada Dockerfile/vercel.json/
+# fly.toml dst. per app saat workflow ini ditulis). Langkah "Build" di
+# atasnya SUDAH nyata (bukan placeholder) — jadi minimal tiap merge ke
+# master sudah tervalidasi "app yang berubah masih bisa di-build", tinggal
+# ganti langkah placeholder-nya begitu hosting provider dipilih.
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # jangan batalkan deploy yang sedang jalan gara-gara push berikutnya
+
+jobs:
+  detect:
+    name: Deteksi app yang terdampak
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.detect.outputs.matrix }}
+      any: ${{ steps.detect.outputs.any }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Hitung app terdampak dari path yang berubah
+        id: detect
+        run: |
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.sha }}"
+
+          if git cat-file -e "$BEFORE" 2>/dev/null; then
+            CHANGED=$(git diff --name-only "$BEFORE" "$AFTER")
+          else
+            # before = all-zero (push pertama ke branch/repo ini, atau
+            # histori di-force-push) -> tidak ada basis diff yang valid,
+            # anggap semua file "berubah" supaya semua app ke-build sekali.
+            CHANGED=$(git ls-files)
+          fi
+
+          UI_CHANGED=false
+          echo "$CHANGED" | grep -q '^client/packages/' && UI_CHANGED=true
+
+          APPS=()
+          { [ "$UI_CHANGED" = true ] || echo "$CHANGED" | grep -q '^client/kiosk/'; } && APPS+=("kiosk")
+          { [ "$UI_CHANGED" = true ] || echo "$CHANGED" | grep -q '^client/dashboard-company/'; } && APPS+=("dashboard-company")
+          { [ "$UI_CHANGED" = true ] || echo "$CHANGED" | grep -q '^client/dashboard-mitra/'; } && APPS+=("dashboard-mitra")
+          echo "$CHANGED" | grep -q '^server/backend/' && APPS+=("backend")
+
+          if [ "${#APPS[@]}" -eq 0 ]; then
+            echo "matrix=[]" >> "$GITHUB_OUTPUT"
+            echo "any=false" >> "$GITHUB_OUTPUT"
+          else
+            MATRIX=$(printf '%s\n' "${APPS[@]}" | jq -R . | jq -s -c .)
+            echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+            echo "any=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "App terdampak: ${APPS[*]:-(tidak ada)}"
+
+  build-and-deploy:
+    name: Build & deploy — ${{ matrix.app }}
+    needs: detect
+    if: needs.detect.outputs.any == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.detect.outputs.matrix) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Nama package pnpm-nya SELALU `@smartbox/<matrix.app>` (lihat
+      # "name" di package.json tiap app) — jadi tidak perlu tabel mapping
+      # terpisah, nilai matrix ini dipakai langsung.
+      - name: Generate Prisma Client
+        if: matrix.app == 'backend'
+        run: pnpm --filter @smartbox/backend run prisma:generate
+
+      - name: Build
+        run: pnpm --filter @smartbox/${{ matrix.app }} run build
+
+      # TODO: ganti placeholder ini begitu hosting provider dipilih (mis.
+      # push image ke registry + redeploy container, rsync dist/ ke VPS,
+      # atau CLI provider PaaS). Output build client ada di
+      # client/${{ matrix.app }}/dist, output backend ada di
+      # server/backend/dist.
+      - name: Deploy (placeholder)
+        run: |
+          echo "TODO: deploy @smartbox/${{ matrix.app }} — belum ada target hosting dikonfigurasi."

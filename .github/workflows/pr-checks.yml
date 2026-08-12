@@ -1,0 +1,80 @@
+name: PR Checks
+
+# Strategi CI monorepo — "PR Phase": jalankan lint/typecheck/unit-test
+# HANYA pada package yang benar-benar berubah di PR ini, PLUS package lain
+# yang depend ke package itu (dependents) — bukan seluruh monorepo tiap
+# PR. Contoh: kalau cuma client/kiosk/** berubah, hanya @smartbox/kiosk
+# yang di-lint/typecheck/test. Kalau client/packages/ui/** berubah, ketiga
+# app client (kiosk/dashboard-company/dashboard-mitra) yang consume
+# @smartbox/ui ikut ke-lint/typecheck/test juga (karena perubahan di sana
+# bisa mematahkan mereka), tapi server/backend TIDAK (tidak depend ke
+# @smartbox/ui).
+#
+# Dipakai: `pnpm --filter "...[<merge-base>]"` — filtering affected-package
+# BAWAAN pnpm workspace (berbasis `git diff` + graf dependency dari
+# pnpm-lock.yaml), BUKAN Turborepo/Nx. Repo ini sudah pnpm workspaces
+# (pnpm-workspace.yaml) jadi tidak perlu tool tambahan untuk fitur ini.
+#
+# e2e (Playwright, `test:e2e` tiap app) SENGAJA TIDAK ikut di sini — butuh
+# browser binary & jauh lebih lambat dari unit test, bukan gerbang tiap PR.
+#
+# `server/gateway` masih stub TODO (lihat package.json-nya) — kalau
+# ada yang menyentuh foldernya, script lint/test stub-nya SENGAJA exit 1,
+# jadi PR itu akan gagal sampai layanannya benar-benar diimplementasi.
+# Itu bukan bug di workflow ini.
+
+on:
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  affected:
+    name: Lint, typecheck & test (affected packages)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Histori penuh (bukan shallow) — dibutuhkan `git merge-base` &
+          # pnpm untuk menghitung diff terhadap branch dasar PR.
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Prisma Client di-generate statis dari schema.prisma (TIDAK butuh
+      # koneksi DB sungguhan) — wajib sebelum tsc/jest bisa resolve tipe
+      # `@prisma/client` di backend. Murah, aman dijalankan selalu (bukan
+      # cuma saat backend affected) supaya langkah di bawah tidak perlu
+      # tahu apakah backend termasuk affected atau tidak.
+      - name: Generate Prisma Client
+        run: pnpm --filter @smartbox/backend run prisma:generate
+
+      - name: Tentukan merge-base terhadap branch dasar PR
+        id: base
+        run: |
+          echo "sha=$(git merge-base "origin/${{ github.event.pull_request.base.ref }}" HEAD)" >> "$GITHUB_OUTPUT"
+
+      # `--if-present` di posisi INI (sebelum nama script) — pnpm butuh
+      # urutan persis begini, kalau ditaruh setelah nama script dia malah
+      # ke-pass sebagai argumen ke tool di dalamnya (eslint/tsc/dst) dan
+      # gagal dengan "Invalid option '--if-present'".
+      - name: Lint (package terdampak)
+        run: pnpm --filter "...[${{ steps.base.outputs.sha }}]" run --if-present lint
+
+      - name: Typecheck (package terdampak)
+        run: pnpm --filter "...[${{ steps.base.outputs.sha }}]" run --if-present typecheck
+
+      - name: Unit test (package terdampak)
+        run: pnpm --filter "...[${{ steps.base.outputs.sha }}]" run --if-present test
